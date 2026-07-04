@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -137,7 +138,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                 onChanged: (v) => setState(() => _code = v),
                 onCompleted: (v) {
                   setState(() => _code = v);
-                  if (!busy) _verify();
+                  if (!busy) unawaited(_verify());
                 },
               ),
               const SizedBox(height: 24),

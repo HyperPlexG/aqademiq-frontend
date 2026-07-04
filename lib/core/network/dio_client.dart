@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/token_store.dart';
 import '../env/env.dart';
 import 'auth_interceptor.dart';
+import 'logging_interceptor.dart';
 
 /// The shared [AuthInterceptor] (holds the single-flight refresh + the
 /// session-expired hook the auth repository wires into).
@@ -32,5 +33,8 @@ final dioProvider = Provider<Dio>((ref) {
     ),
   );
   dio.interceptors.add(ref.watch(authInterceptorProvider));
+  // Added last so request logs include the final auth header + idempotency key,
+  // and response logs run first on the way back. Silent in release builds.
+  dio.interceptors.add(LoggingInterceptor());
   return dio;
 });

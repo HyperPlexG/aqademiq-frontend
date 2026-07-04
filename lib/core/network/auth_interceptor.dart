@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 
 import '../auth/token_store.dart';
+import 'logging_interceptor.dart';
 
 /// Attaches the Bearer access token, auto-adds an `Idempotency-Key` on
 /// mutations, and transparently refreshes + retries once on a 401
@@ -17,7 +18,10 @@ class AuthInterceptor extends Interceptor {
     required TokenStore tokenStore,
     required String baseUrl,
   })  : _tokens = tokenStore,
-        _bare = Dio(BaseOptions(baseUrl: baseUrl));
+        _bare = Dio(BaseOptions(baseUrl: baseUrl)) {
+    // Log refresh calls + retried requests too (they bypass the main pipeline).
+    _bare.interceptors.add(LoggingInterceptor());
+  }
 
   final TokenStore _tokens;
   final Dio _bare;
