@@ -95,7 +95,6 @@ class ObStudyScreen extends ConsumerWidget {
   ) async {
     final subject = await showModalBottomSheet<Subject>(
       context: context,
-      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const SubjectFormSheet(),

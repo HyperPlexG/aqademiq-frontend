@@ -23,7 +23,6 @@ const _uncheckedColor = Color(0xFFCFCBC4);
 Future<LinkTaskResult?> showLinkTaskSheet(BuildContext context) {
   return showModalBottomSheet<LinkTaskResult>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x66140F1C),
     isScrollControlled: true,

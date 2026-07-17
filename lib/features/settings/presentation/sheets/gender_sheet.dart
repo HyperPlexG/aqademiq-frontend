@@ -11,7 +11,6 @@ import '../../../../core/theme/app_text.dart';
 Future<String?> showGenderSheet(BuildContext context) {
   return showModalBottomSheet<String>(
     context: context,
-    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x6B140F1C),
     isScrollControlled: true,

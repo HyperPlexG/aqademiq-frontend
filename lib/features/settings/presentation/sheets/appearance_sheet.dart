@@ -11,7 +11,6 @@ import '../../../../core/theme/theme_controller.dart';
 Future<void> showAppearanceSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
-    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x6B140F1C),

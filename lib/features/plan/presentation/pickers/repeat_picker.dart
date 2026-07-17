@@ -12,7 +12,6 @@ import '../../../../data/models/task.dart';
 Future<RepeatRule?> showRepeatPicker(BuildContext context) {
   return showModalBottomSheet<RepeatRule>(
     context: context,
-    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),

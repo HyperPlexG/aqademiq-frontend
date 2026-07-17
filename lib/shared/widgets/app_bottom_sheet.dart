@@ -24,7 +24,6 @@ Future<T?> showAppBottomSheet<T>(
 }) {
   return showModalBottomSheet<T>(
     context: context,
-    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: scrim,

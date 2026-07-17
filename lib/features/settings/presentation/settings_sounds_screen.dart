@@ -1,15 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../services/sound_settings_service.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
-import '../../focus/providers/prism_audio_provider.dart';
 import '../providers/prism_settings_provider.dart';
 import 'widgets/settings_scaffold.dart';
 
@@ -22,23 +18,12 @@ class PrismSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
-  late double _masterVolume;
-  late double _environmentVolume;
-  late double _systemVolume;
+  bool _playInFocus = true;
   bool _allInApp = true;
   bool _createTask = true;
   bool _completeTask = true;
   bool _taskCountdown = true;
   bool _completeSubtask = true;
-
-  @override
-  void initState() {
-    super.initState();
-    final settings = SoundSettingsService.instance;
-    _masterVolume = settings.masterVolume;
-    _environmentVolume = settings.environmentVolume;
-    _systemVolume = settings.systemVolume;
-  }
 
   Future<void> _pickDefaultMode() async {
     final current = ref.read(prismDefaultModeProvider);
@@ -63,8 +48,6 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final defaultMode = ref.watch(prismDefaultModeProvider);
-    final autoplay = ref.watch(prismAutoplayProvider);
-    final audio = ref.read(prismAudioControllerProvider.notifier);
     return SettingsScaffold(
       title: 'Prism',
       children: [
@@ -73,8 +56,8 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
           children: [
             SettingsRow(
               label: 'Play Prism in Focus',
-              toggle: autoplay,
-              onToggle: (v) => ref.read(prismAutoplayProvider.notifier).set(v),
+              toggle: _playInFocus,
+              onToggle: (v) => setState(() => _playInFocus = v),
             ),
             SettingsRow(
               label: 'Default mode',
@@ -82,39 +65,6 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
               showChevron: true,
               last: true,
               onTap: _pickDefaultMode,
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        const GroupLabel('Prism volumes'),
-        SetGroup(
-          children: [
-            _VolumeRow(
-              label: 'Master',
-              value: _masterVolume,
-              onChanged: (v) {
-                setState(() => _masterVolume = v);
-                unawaited(audio.setMasterVolume(v));
-              },
-            ),
-            _VolumeRow(
-              label: 'Environment',
-              sub: 'Rain, sea, ambience',
-              value: _environmentVolume,
-              onChanged: (v) {
-                setState(() => _environmentVolume = v);
-                unawaited(audio.setEnvironmentVolume(v));
-              },
-            ),
-            _VolumeRow(
-              label: 'Rhythm',
-              sub: 'Pulse beats',
-              value: _systemVolume,
-              last: true,
-              onChanged: (v) {
-                setState(() => _systemVolume = v);
-                unawaited(audio.setSystemVolume(v));
-              },
             ),
           ],
         ),
@@ -151,76 +101,6 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// A [SetGroup] row holding a Prism volume slider (matches [SettingsRow]
-/// metrics: 12/15 padding, bottom border unless [last]).
-class _VolumeRow extends StatelessWidget {
-  const _VolumeRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-    this.sub,
-    this.last = false,
-  });
-
-  final String label;
-  final String? sub;
-  final double value;
-  final bool last;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        border:
-            last ? null : Border(bottom: BorderSide(color: colors.border)),
-      ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: AppText.sans(size: 13.5, height: 1.3, color: colors.text)),
-                if (sub != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      sub!,
-                      style: AppText.sans(size: 11, height: 1.4, color: colors.textMed),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 132,
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 4,
-                activeTrackColor: colors.accent,
-                inactiveTrackColor: colors.accentSoft,
-                thumbColor: colors.accent,
-                overlayShape: SliderComponentShape.noOverlay,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 8),
-              ),
-              child: Slider(
-                value: value.clamp(0.0, 1.0),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
