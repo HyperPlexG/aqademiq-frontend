@@ -11,6 +11,7 @@ import '../../core/theme/app_text.dart';
 Future<void> showShareSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),

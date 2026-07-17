@@ -5,6 +5,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'data/realtime/revision_sync.dart';
+import 'features/focus/providers/prism_audio_provider.dart';
 
 /// Root widget: wires the router, the light/dark themes (rebuilt on accent
 /// change), and the Light/Dark/System mode.
@@ -17,8 +18,12 @@ class AqademiqApp extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
     final router = ref.watch(routerProvider);
 
-    // Keep the realtime revision→refetch loop alive (no-op under mocks).
-    ref.watch(revisionSyncProvider);
+    // Keep the realtime revision→refetch loop alive (no-op under mocks) and
+    // the Prism audio bridge alive so focus-session transitions drive the
+    // soundscape from any tab.
+    ref
+      ..watch(revisionSyncProvider)
+      ..watch(prismAudioControllerProvider);
 
     return MaterialApp.router(
       title: 'Aqademiq',

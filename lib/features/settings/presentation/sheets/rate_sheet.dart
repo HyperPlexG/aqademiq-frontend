@@ -10,6 +10,7 @@ import '../../../../core/theme/app_text.dart';
 Future<void> showRateSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x6B140F1C),
     isScrollControlled: true,

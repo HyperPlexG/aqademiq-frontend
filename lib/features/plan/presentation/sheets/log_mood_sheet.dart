@@ -24,6 +24,7 @@ const List<Color> _moodColors = [
 Future<int?> showLogMoodSheet(BuildContext context) {
   return showModalBottomSheet<int>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x42140F1C),
     isScrollControlled: true,

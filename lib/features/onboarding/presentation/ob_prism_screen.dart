@@ -11,17 +11,36 @@ import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../focus/providers/prism_audio_provider.dart';
+import '../../settings/providers/prism_settings_provider.dart';
 import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 6 (prototype `ob5`): introduces Prism focus audio and lets
-/// the user pick a default mode. The CTA advances to the building/loading step.
-class ObPrismScreen extends ConsumerWidget {
+/// the user pick a default mode. Tapping a mode previews its soundscape live;
+/// leaving the screen (CTA or system back) stops the preview.
+class ObPrismScreen extends ConsumerStatefulWidget {
   const ObPrismScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ObPrismScreen> createState() => _ObPrismScreenState();
+}
+
+class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
+  @override
+  void dispose() {
+    // Fires on back-pop and stack replacement; the forward push to obLoading
+    // keeps this state alive, so that path is covered by the CTA below.
+    unawaited(
+      ref.read(prismAudioControllerProvider.notifier).stopPreview(),
+    );
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
+    final selected = ref.watch(onboardingProvider).prismMode;
 
     final modes = <_PrismMode>[
       _PrismMode(
@@ -66,8 +85,17 @@ class ObPrismScreen extends ConsumerWidget {
           for (final mode in modes) ...[
             AppCard(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-              onTap: () =>
-                  ref.read(onboardingProvider.notifier).setPrismMode(mode.name),
+              onTap: () {
+                ref.read(onboardingProvider.notifier).setPrismMode(mode.name);
+                // This pick doubles as the persisted default mode, and the
+                // soundscape previews live so the choice is audible.
+                ref.read(prismDefaultModeProvider.notifier).set(mode.name);
+                unawaited(
+                  ref
+                      .read(prismAudioControllerProvider.notifier)
+                      .previewMode(mode.name),
+                );
+              },
               child: Row(
                 children: [
                   Container(
@@ -78,7 +106,8 @@ class ObPrismScreen extends ConsumerWidget {
                       color: mode.color.alpha8(0x18),
                       borderRadius: BorderRadius.circular(AppRadius.tile),
                       border: Border.all(
-                        color: mode.color.alpha8(0x44),
+                        color:
+                            mode.color.alpha8(selected == mode.name ? 0xFF : 0x44),
                         width: 1.5,
                       ),
                     ),
@@ -104,6 +133,8 @@ class ObPrismScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  if (selected == mode.name)
+                    Icon(Icons.check_circle, size: 18, color: mode.color),
                 ],
               ),
             ),
@@ -113,7 +144,12 @@ class ObPrismScreen extends ConsumerWidget {
       ),
       footer: PrimaryButton(
         label: "Let's go →",
-        onPressed: () => unawaited(context.push(Routes.obLoading)),
+        onPressed: () {
+          unawaited(
+            ref.read(prismAudioControllerProvider.notifier).stopPreview(),
+          );
+          unawaited(context.push(Routes.obLoading));
+        },
       ),
     );
   }

@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_toggle.dart';
 Future<String?> showSortSubjectsSheet(BuildContext context) {
   return showModalBottomSheet<String>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),
     isScrollControlled: true,

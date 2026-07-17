@@ -19,6 +19,7 @@ typedef QuickAddResult = ({TaskDraft draft, bool details});
 Future<QuickAddResult?> showQuickAddSheet(BuildContext context) {
   return showModalBottomSheet<QuickAddResult>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x47140F1C),

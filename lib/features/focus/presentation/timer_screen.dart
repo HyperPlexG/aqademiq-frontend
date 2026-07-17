@@ -16,6 +16,7 @@ import '../../../data/repositories/tasks_repository.dart';
 import '../../../shared/mascot/ice_timer.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../plan/providers/plan_providers.dart';
+import '../../settings/providers/prism_settings_provider.dart';
 import '../providers/linked_task_provider.dart';
 import 'sheets/focus_duration_dialog.dart';
 import 'sheets/link_task_sheet.dart';
@@ -48,6 +49,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
     final taskTitle = linked?.title ?? 'Focus session';
     final tag = linked != null ? tagsById[linked.tagId] : null;
     final taskSubject = tag?.label ?? (linked != null ? linked.tagId : 'No task linked');
+    final defaultPrismMode = ref.watch(prismDefaultModeProvider);
+    final prismMode = session.prismMode ?? defaultPrismMode;
 
     ref.listen(focusControllerProvider, (prev, next) {
       if (prev?.status != FocusStatus.completed && next.status == FocusStatus.completed) {
@@ -70,10 +73,12 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
       child: isRunning
           ? _RunningView(
               paused: paused,
+              prismMode: prismMode,
               taskTitle: taskTitle,
               taskSubject: taskSubject,
               remaining: _clock(session.durationMin * 60 - session.elapsedSec),
               progress: session.progress,
+              onPrism: _prism,
               onFreeze: ctrl.pause,
               onResume: ctrl.resume,
               onEnd: ctrl.complete,
@@ -103,7 +108,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   Future<void> _prism() async {
-    final mode = await showPrismPicker(context);
+    final session = ref.read(focusControllerProvider);
+    final current = session.prismMode ?? ref.read(prismDefaultModeProvider);
+    final mode = await showPrismPicker(context, current: current);
+    // Configuring mid-session crossfades the running soundscape (the prism
+    // audio bridge listens for prismMode changes).
     if (mode != null) ref.read(focusControllerProvider.notifier).configure(prismMode: mode);
   }
 }
@@ -158,20 +167,24 @@ class _SetupView extends StatelessWidget {
 class _RunningView extends StatelessWidget {
   const _RunningView({
     required this.paused,
+    required this.prismMode,
     required this.taskTitle,
     required this.taskSubject,
     required this.remaining,
     required this.progress,
+    required this.onPrism,
     required this.onFreeze,
     required this.onResume,
     required this.onEnd,
   });
 
   final bool paused;
+  final String prismMode;
   final String taskTitle;
   final String taskSubject;
   final String remaining;
   final double progress;
+  final VoidCallback onPrism;
   final VoidCallback onFreeze;
   final VoidCallback onResume;
   final VoidCallback onEnd;
@@ -182,11 +195,11 @@ class _RunningView extends StatelessWidget {
     return Column(
       children: [
         const SizedBox(height: 4),
-        const Row(
+        Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            FocusPill(glyph: '◈', label: 'Deep Work'),
-            FocusPill(icon: Icons.timer, label: 'Set time'),
+            FocusPill(glyph: '◈', label: prismMode, onTap: onPrism),
+            const FocusPill(icon: Icons.timer, label: 'Set time'),
           ],
         ),
         const SizedBox(height: 14),
