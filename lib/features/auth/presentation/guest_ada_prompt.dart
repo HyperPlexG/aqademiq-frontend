@@ -53,7 +53,7 @@ class GuestAdaPrompt extends StatelessWidget {
                 const SizedBox(height: 22),
                 PrimaryButton(
                   label: 'Set up Ada · 2 min →',
-                  onPressed: () => context.go(Routes.obReferral),
+                  onPressed: () => context.go(Routes.obAge),
                 ),
                 const SizedBox(height: 9),
                 GestureDetector(

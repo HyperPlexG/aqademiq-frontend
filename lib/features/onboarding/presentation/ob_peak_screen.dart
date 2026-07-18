@@ -33,7 +33,7 @@ class ObPeakScreen extends ConsumerWidget {
     final hrs = draft.focusGoalHrs;
 
     return OnboardingScaffold(
-      activeStep: 5,
+      activeStep: 7,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

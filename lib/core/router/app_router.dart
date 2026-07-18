@@ -18,6 +18,9 @@ import '../../features/focus/presentation/timer_screen.dart';
 import '../../features/mood/presentation/mood_evening_screen.dart';
 import '../../features/mood/presentation/mood_morning_screen.dart';
 import '../../features/onboarding/presentation/ada_loading_screen.dart';
+import '../../features/onboarding/presentation/ob_age_screen.dart';
+import '../../features/onboarding/presentation/ob_blocked_screen.dart';
+import '../../features/onboarding/presentation/ob_consent_screen.dart';
 import '../../features/onboarding/presentation/ob_mood_screen.dart';
 import '../../features/onboarding/presentation/ob_name_screen.dart';
 import '../../features/onboarding/presentation/ob_peak_screen.dart';
@@ -48,6 +51,9 @@ abstract final class Routes {
   static const verify = '/verify';
 
   // Onboarding steps.
+  static const obAge = '/onboarding/age';
+  static const obBlocked = '/onboarding/age-blocked';
+  static const obConsent = '/onboarding/consent';
   static const obReferral = '/onboarding/referral';
   static const obName = '/onboarding/name';
   static const obStudy = '/onboarding/study';
@@ -107,6 +113,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.guestAda, builder: (_, _) => const GuestAdaPrompt()),
       GoRoute(path: Routes.guestStats, builder: (_, _) => const GuestStatsPrompt()),
       GoRoute(path: Routes.guestSave, builder: (_, _) => const GuestSavePrompt()),
+      GoRoute(path: Routes.obAge, builder: (_, _) => const ObAgeScreen()),
+      GoRoute(path: Routes.obBlocked, builder: (_, _) => const ObBlockedScreen()),
+      GoRoute(path: Routes.obConsent, builder: (_, _) => const ObConsentScreen()),
       GoRoute(path: Routes.obReferral, builder: (_, _) => const ObReferralScreen()),
       GoRoute(path: Routes.obName, builder: (_, _) => const ObNameScreen()),
       GoRoute(path: Routes.obStudy, builder: (_, _) => const ObStudyScreen()),

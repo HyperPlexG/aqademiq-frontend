@@ -33,7 +33,7 @@ class ObStudyScreen extends ConsumerWidget {
     final controller = ref.read(onboardingProvider.notifier);
 
     return OnboardingScaffold(
-      activeStep: 2,
+      activeStep: 4,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

@@ -26,7 +26,7 @@ class ObSyllabusScreen extends ConsumerWidget {
     }
 
     return OnboardingScaffold(
-      activeStep: 4,
+      activeStep: 6,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

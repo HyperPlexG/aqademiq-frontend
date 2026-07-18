@@ -40,7 +40,7 @@ class ObMoodScreen extends ConsumerWidget {
         : ref.watch(onboardingProvider).subjectMoods;
 
     return OnboardingScaffold(
-      activeStep: 3,
+      activeStep: 5,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -66,7 +66,7 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
     ];
 
     return OnboardingScaffold(
-      activeStep: 6,
+      activeStep: 8,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -44,7 +44,7 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 1,
+      activeStep: 3,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

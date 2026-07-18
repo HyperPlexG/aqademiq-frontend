@@ -147,7 +147,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
             GuestNudgeCard(
               body: 'Set up so Ada can plan your week & track stats.',
               ctaLabel: 'Set up now · 2 min →',
-              onCta: () => context.go(Routes.obReferral),
+              onCta: () => context.go(Routes.obAge),
             ),
             const SizedBox(height: 10),
           ],

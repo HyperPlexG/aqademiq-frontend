@@ -59,7 +59,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final ok = await ref.read(authControllerProvider.notifier).verify(_code);
     if (!mounted) return;
     if (ok) {
-      context.go(Routes.obReferral);
+      context.go(Routes.obAge);
     } else {
       _showError(ref.read(authControllerProvider).error);
     }

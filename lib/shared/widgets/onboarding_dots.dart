@@ -5,7 +5,7 @@ import '../../core/theme/app_colors.dart';
 /// Step indicator for onboarding (prototype `Dots`): active segment is a wide
 /// accent bar, inactive segments are short grey bars.
 class OnboardingDots extends StatelessWidget {
-  const OnboardingDots({super.key, required this.active, this.total = 7});
+  const OnboardingDots({super.key, required this.active, this.total = 9});
 
   final int active;
   final int total;

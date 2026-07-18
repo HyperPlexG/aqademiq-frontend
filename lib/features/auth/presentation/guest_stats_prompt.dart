@@ -239,7 +239,7 @@ class _SetupSheet extends StatelessWidget {
           const SizedBox(height: 14),
           PrimaryButton(
             label: 'Set up now · 2 min →',
-            onPressed: () => context.go(Routes.obReferral),
+            onPressed: () => context.go(Routes.obAge),
           ),
           const SizedBox(height: 8),
           Center(

@@ -13,6 +13,7 @@ class PrimaryButton extends StatelessWidget {
     this.onPressed,
     this.ghost = false,
     this.icon,
+    this.enabled = true,
   });
 
   final String label;
@@ -20,11 +21,19 @@ class PrimaryButton extends StatelessWidget {
   final bool ghost;
   final IconData? icon;
 
+  /// When `false`, the button renders greyed-out and ignores taps. Defaults to
+  /// `true`, so existing call sites are unaffected.
+  final bool enabled;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final bg = ghost ? colors.surface : colors.ink;
-    final fg = ghost ? colors.text : Colors.white;
+    final bg = !enabled
+        ? colors.hilite
+        : (ghost ? colors.surface : colors.ink);
+    final fg = !enabled
+        ? colors.textDim
+        : (ghost ? colors.text : Colors.white);
     final borderRadius = BorderRadius.circular(AppRadius.pill);
 
     return Material(
@@ -32,7 +41,7 @@ class PrimaryButton extends StatelessWidget {
       borderRadius: borderRadius,
       child: InkWell(
         borderRadius: borderRadius,
-        onTap: onPressed,
+        onTap: enabled ? onPressed : null,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),

@@ -24,7 +24,7 @@ class ObReferralScreen extends ConsumerWidget {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 0,
+      activeStep: 2,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
