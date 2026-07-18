@@ -6,10 +6,15 @@ import '../../../data/repositories/onboarding_repository.dart';
 import '../../../data/repositories/subjects_repository.dart';
 
 /// The multi-step onboarding draft (README §6: name, subjects, moods, peak time,
-/// goal, prism). Held across the step routes; on [OnboardingController.finish]
+/// goal, prism) plus the PDPL age + consent captured on the first two steps
+/// (`ONBOARDING_CONSENT_AGE_INTEGRATION.md`). Held across the step routes; on
+/// [OnboardingController.finish] age + consent are submitted with the rest and
 /// the guest is linked to a real account so the app shows the onboarded state.
 class OnboardingDraft {
   const OnboardingDraft({
+    this.age,
+    this.consentGiven = false,
+    this.consentVersion = '',
     this.referral = '',
     this.name = '',
     this.level = 'Undergraduate',
@@ -19,6 +24,16 @@ class OnboardingDraft {
     this.focusGoalHrs = 3,
     this.prismMode = 'Deep Work',
   });
+
+  /// Age entered on the age gate (`ob-age`). Null until the user enters one.
+  final int? age;
+
+  /// Whether the user granted data-use consent (`ob-consent`).
+  final bool consentGiven;
+
+  /// The privacy/terms version shown on the consent screen when [consentGiven]
+  /// was granted (audit trail). Empty when not yet consented.
+  final String consentVersion;
 
   final String referral;
   final String name;
@@ -30,6 +45,9 @@ class OnboardingDraft {
   final String prismMode;
 
   OnboardingDraft copyWith({
+    int? age,
+    bool? consentGiven,
+    String? consentVersion,
     String? referral,
     String? name,
     String? level,
@@ -40,6 +58,9 @@ class OnboardingDraft {
     String? prismMode,
   }) {
     return OnboardingDraft(
+      age: age ?? this.age,
+      consentGiven: consentGiven ?? this.consentGiven,
+      consentVersion: consentVersion ?? this.consentVersion,
       referral: referral ?? this.referral,
       name: name ?? this.name,
       level: level ?? this.level,
@@ -58,6 +79,13 @@ final onboardingProvider =
 class OnboardingController extends Notifier<OnboardingDraft> {
   @override
   OnboardingDraft build() => const OnboardingDraft();
+
+  /// Record the age from the age gate (`ob-age`).
+  void setAge(int v) => state = state.copyWith(age: v);
+
+  /// Record the consent decision + the policy version shown (`ob-consent`).
+  void setConsent({required bool given, required String version}) =>
+      state = state.copyWith(consentGiven: given, consentVersion: version);
 
   void setReferral(String v) => state = state.copyWith(referral: v);
   void setName(String v) => state = state.copyWith(name: v);
@@ -89,10 +117,26 @@ class OnboardingController extends Notifier<OnboardingDraft> {
   ];
 
   /// Completes onboarding. Live: submit `POST /onboarding/complete` (creates the
-  /// semester + subjects server-side) and refresh the read models. Mock: keep
-  /// the demo behavior of flipping the guest to an onboarded account.
+  /// semester + subjects server-side, records PDPL age + consent) and refresh
+  /// the read models. Mock: keep the demo behavior of flipping the guest to an
+  /// onboarded account.
+  ///
+  /// Throws an [OnboardingCompletionException] on rejection: the client-side
+  /// guards below fail fast (doc §5 step 3), and the repository maps the
+  /// server's 403/400/401 envelope to the same typed surface so the loading
+  /// screen can route/keep the user on the right step.
   Future<void> finish() async {
     final draft = state;
+
+    // Fail fast client-side, but the server stays the source of truth.
+    if (!draft.consentGiven) {
+      throw const ConsentRequiredException();
+    }
+    final age = draft.age;
+    if (age == null || age < 18) {
+      throw const AgeRestrictedException();
+    }
+
     final subjects = [
       for (var i = 0; i < draft.subjects.length; i++)
         OnboardingSubjectEntry(
@@ -103,6 +147,10 @@ class OnboardingController extends Notifier<OnboardingDraft> {
     ];
     await ref.read(onboardingRepositoryProvider).complete(
           OnboardingSubmission(
+            consentGiven: draft.consentGiven,
+            consentVersion:
+                draft.consentVersion.isEmpty ? null : draft.consentVersion,
+            age: age,
             name: draft.name,
             educationLevel: draft.level,
             dailyFocusGoalMin: (draft.focusGoalHrs * 60).round(),

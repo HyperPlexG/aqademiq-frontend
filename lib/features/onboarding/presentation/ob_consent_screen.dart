@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
@@ -10,22 +11,39 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
+
+/// The privacy-policy / terms version this consent screen renders. Sent as
+/// `consent_version` for the PDPL audit trail
+/// (`ONBOARDING_CONSENT_AGE_INTEGRATION.md` §2). Bump this whenever the policy
+/// copy or the linked documents change.
+const String consentPolicyVersion = '2026-07-01';
 
 /// Onboarding step 1 (`ob-consent`): data-collection consent. "Yes" enables
 /// Continue and surfaces the privacy/terms links; "No" disables Continue with a
-/// warning. Proceeding (Yes only) advances to the referral step. Consent is a
-/// local gate — it is not persisted (UI-only per this change).
-class ObConsentScreen extends StatefulWidget {
+/// warning. Proceeding (Yes only) persists consent + [consentPolicyVersion] to
+/// the onboarding draft (submitted on completion) and advances to the referral
+/// step.
+class ObConsentScreen extends ConsumerStatefulWidget {
   const ObConsentScreen({super.key});
 
   @override
-  State<ObConsentScreen> createState() => _ObConsentScreenState();
+  ConsumerState<ObConsentScreen> createState() => _ObConsentScreenState();
 }
 
-class _ObConsentScreenState extends State<ObConsentScreen> {
+class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
   /// null = nothing chosen, true = consented, false = declined.
   bool? _consent;
+
+  void _continue() {
+    if (_consent != true) return;
+    ref.read(onboardingProvider.notifier).setConsent(
+          given: true,
+          version: consentPolicyVersion,
+        );
+    unawaited(context.push(Routes.obReferral));
+  }
 
   late final TapGestureRecognizer _privacyTap;
   late final TapGestureRecognizer _termsTap;
@@ -95,7 +113,7 @@ class _ObConsentScreenState extends State<ObConsentScreen> {
       footer: PrimaryButton(
         label: 'Continue →',
         enabled: _consent == true,
-        onPressed: () => unawaited(context.push(Routes.obReferral)),
+        onPressed: _continue,
       ),
     );
   }

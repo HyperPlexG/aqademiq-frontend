@@ -151,3 +151,34 @@ class FeedbackCommentDto {
         'createdAt': createdAt.toIso8601String(),
       };
 }
+
+/// Board config from `GET /feedback/meta` (statuses + categories).
+class FeedbackMetaDto {
+  const FeedbackMetaDto({this.statuses = const [], this.categories = const []});
+
+  final List<FeedbackStatusMetaDto> statuses;
+  final List<FeedbackCategoryMetaDto> categories;
+}
+
+/// One `{ key, label, color, on_roadmap }` status entry.
+class FeedbackStatusMetaDto {
+  const FeedbackStatusMetaDto({
+    required this.key,
+    required this.label,
+    this.color,
+    this.onRoadmap = false,
+  });
+
+  final String key;
+  final String label;
+  final String? color;
+  final bool onRoadmap;
+}
+
+/// One `{ key, label }` category entry.
+class FeedbackCategoryMetaDto {
+  const FeedbackCategoryMetaDto({required this.key, required this.label});
+
+  final String key;
+  final String label;
+}

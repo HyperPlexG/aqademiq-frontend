@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/feedback_post.dart';
 import '../providers/feedback_providers.dart';
+import 'sheets/create_account_prompt.dart';
 import 'widgets/feedback_bits.dart';
 
 /// A single suggestion: full text, vote control, and the comment thread with
@@ -25,6 +27,7 @@ class FeedbackDetailScreen extends ConsumerStatefulWidget {
 class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
   final TextEditingController _comment = TextEditingController();
   bool _sending = false;
+  bool _locked = false;
 
   @override
   void initState() {
@@ -47,24 +50,40 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
 
   Future<void> _send() async {
     final text = _comment.text.trim();
-    if (text.isEmpty || _sending) return;
+    if (text.isEmpty || _sending || _locked) return;
+    // Guests may read but not comment — prompt sign-up at the point of action.
+    if (ref.read(isGuestProvider)) {
+      unawaited(showCreateAccountPrompt(context, reason: 'comment'));
+      return;
+    }
     setState(() => _sending = true);
-    final ok = await ref.read(feedbackCommentsProvider.notifier).add(text);
+    final outcome = await ref.read(feedbackCommentsProvider.notifier).add(text);
     if (!mounted) return;
     setState(() => _sending = false);
-    if (ok) {
-      _comment.clear();
-      FocusScope.of(context).unfocus();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not post your comment. Try again.')),
-      );
+    switch (outcome) {
+      case AddCommentOutcome.ok:
+        _comment.clear();
+        FocusScope.of(context).unfocus();
+      case AddCommentOutcome.locked:
+        // The thread was locked — disable the composer and tell the user.
+        setState(() => _locked = true);
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This thread is locked.')),
+        );
+      case AddCommentOutcome.failed:
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not post your comment. Try again.'),
+          ),
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isGuest = ref.watch(isGuestProvider);
     final postsAsync = ref.watch(feedbackPostsProvider);
     final post =
         postsAsync.value?.where((p) => p.id == widget.id).firstOrNull;
@@ -140,68 +159,120 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
             if (post != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.rowInput),
-                          boxShadow: colors.cardShadow,
-                        ),
-                        padding: const EdgeInsets.fromLTRB(15, 4, 12, 4),
-                        child: TextField(
-                          controller: _comment,
-                          minLines: 1,
-                          maxLines: 4,
-                          style: AppText.sans(size: 13, color: colors.text),
-                          cursorColor: colors.accent,
-                          decoration: InputDecoration(
-                            isDense: true,
-                            border: InputBorder.none,
-                            hintText: 'Add a comment…',
-                            hintStyle: AppText.sans(
-                              size: 13,
-                              color: colors.textDim,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () => unawaited(_send()),
-                      child: Container(
-                        width: 34,
-                        height: 34,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: colors.ink,
-                          shape: BoxShape.circle,
-                        ),
-                        child: _sending
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.arrow_upward,
-                                size: 18,
-                                color: Colors.white,
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: _buildComposer(colors, isGuest: isGuest),
               ),
           ],
         ),
       ),
+    );
+  }
+
+  /// The bottom bar: a "Create an account to comment" button for guests, a
+  /// locked notice when the thread is locked (a comment POST returned 409), or
+  /// the comment composer otherwise (INTEGRATION.md §4 step 4).
+  Widget _buildComposer(AppColors colors, {required bool isGuest}) {
+    if (isGuest) {
+      return GestureDetector(
+        onTap: () =>
+            unawaited(showCreateAccountPrompt(context, reason: 'comment')),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.ink,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          child: Text(
+            'Create an account to comment',
+            style: AppText.sans(
+              size: 13,
+              weight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+    if (_locked) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: colors.hilite,
+          borderRadius: BorderRadius.circular(AppRadius.rowInput),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 14, color: colors.textMed),
+            const SizedBox(width: 6),
+            Text(
+              'This thread is locked',
+              style: AppText.sans(
+                size: 12,
+                weight: FontWeight.w700,
+                color: colors.textMed,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.rowInput),
+              boxShadow: colors.cardShadow,
+            ),
+            padding: const EdgeInsets.fromLTRB(15, 4, 12, 4),
+            child: TextField(
+              controller: _comment,
+              minLines: 1,
+              maxLines: 4,
+              style: AppText.sans(size: 13, color: colors.text),
+              cursorColor: colors.accent,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Add a comment…',
+                hintStyle: AppText.sans(size: 13, color: colors.textDim),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        GestureDetector(
+          onTap: () => unawaited(_send()),
+          child: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.ink,
+              shape: BoxShape.circle,
+            ),
+            child: _sending
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(
+                    Icons.arrow_upward,
+                    size: 18,
+                    color: Colors.white,
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -229,7 +300,6 @@ class _PostBody extends ConsumerWidget {
               feedbackAgo(post.createdAt),
               style: AppText.sans(
                 size: 10,
-                weight: FontWeight.w600,
                 color: colors.textDim,
               ),
             ),
@@ -263,9 +333,20 @@ class _PostBody extends ConsumerWidget {
             VotePill(
               votes: post.votes,
               voted: post.hasVoted,
-              onTap: () => unawaited(
-                ref.read(feedbackPostsProvider.notifier).toggleVote(post),
-              ),
+              onTap: () {
+                if (ref.read(isGuestProvider)) {
+                  unawaited(
+                    showCreateAccountPrompt(
+                      context,
+                      reason: 'vote on suggestions',
+                    ),
+                  );
+                  return;
+                }
+                unawaited(
+                  ref.read(feedbackPostsProvider.notifier).toggleVote(post),
+                );
+              },
             ),
             const SizedBox(width: 10),
             Text(

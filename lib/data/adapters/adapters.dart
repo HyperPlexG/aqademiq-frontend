@@ -10,6 +10,7 @@ import '../dtos/user_stats_dto.dart';
 import '../models/ada_message.dart';
 import '../models/app_user.dart';
 import '../models/enums.dart';
+import '../models/feedback_meta.dart';
 import '../models/feedback_post.dart';
 import '../models/focus_session.dart';
 import '../models/mood_log.dart';
@@ -254,5 +255,23 @@ extension FeedbackCommentX on FeedbackComment {
         body: body,
         isTeam: isTeam,
         createdAt: createdAt,
+      );
+}
+
+extension FeedbackMetaDtoX on FeedbackMetaDto {
+  FeedbackMeta toModel() => FeedbackMeta(
+        statuses: statuses
+            .map(
+              (s) => FeedbackStatusMeta(
+                key: s.key,
+                label: s.label,
+                color: s.color,
+                onRoadmap: s.onRoadmap,
+              ),
+            )
+            .toList(growable: false),
+        categories: categories
+            .map((c) => FeedbackCategoryMeta(key: c.key, label: c.label))
+            .toList(growable: false),
       );
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
@@ -9,19 +10,22 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 0 (`ob-age`): the age gate. Aqademiq is 18+. Entering a
 /// valid age enables Continue; under-18 routes to the block screen, 18+ to the
-/// consent step. Age is used only for this local gate — it is not persisted.
-class ObAgeScreen extends StatefulWidget {
+/// consent step. The age is persisted to the onboarding draft so it can be
+/// submitted with `POST /onboarding/complete`
+/// (`ONBOARDING_CONSENT_AGE_INTEGRATION.md`).
+class ObAgeScreen extends ConsumerStatefulWidget {
   const ObAgeScreen({super.key});
 
   @override
-  State<ObAgeScreen> createState() => _ObAgeScreenState();
+  ConsumerState<ObAgeScreen> createState() => _ObAgeScreenState();
 }
 
-class _ObAgeScreenState extends State<ObAgeScreen> {
+class _ObAgeScreenState extends ConsumerState<ObAgeScreen> {
   final _controller = TextEditingController();
 
   int? get _age => int.tryParse(_controller.text);
@@ -34,9 +38,12 @@ class _ObAgeScreenState extends State<ObAgeScreen> {
   }
 
   void _continue() {
-    if (!_valid) return;
+    final age = _age;
+    if (age == null || !_valid) return;
+    // Persist the collected age; the server re-checks the ≥18 rule on submit.
+    ref.read(onboardingProvider.notifier).setAge(age);
     unawaited(
-      context.push(_age! < 18 ? Routes.obBlocked : Routes.obConsent),
+      context.push(age < 18 ? Routes.obBlocked : Routes.obConsent),
     );
   }
 

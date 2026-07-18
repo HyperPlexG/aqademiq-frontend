@@ -3,8 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/env/env.dart';
 import '../../core/network/dio_client.dart';
 import '../adapters/adapters.dart';
+import '../models/feedback_meta.dart';
 import '../models/feedback_post.dart';
 import '../sources/feedback_source.dart';
+
+/// One page of board posts (models) plus the cursor for the next page.
+typedef FeedbackPostsPage = ({List<FeedbackPost> posts, String? nextCursor});
 
 /// Feedback board — suggestions, votes and comments. Widgets never touch the
 /// source or DTOs (README §7 seams); the repository converts both ways via
@@ -14,9 +18,26 @@ class FeedbackRepository {
 
   final FeedbackSource _source;
 
-  Future<List<FeedbackPost>> posts() async {
-    final dtos = await _source.posts();
-    return dtos.map((d) => d.toModel()).toList(growable: false);
+  Future<FeedbackMeta> meta() async => (await _source.meta()).toModel();
+
+  Future<FeedbackPostsPage> posts({
+    String sort = 'top',
+    String? status,
+    String? category,
+    String? query,
+    String? cursor,
+  }) async {
+    final page = await _source.posts(
+      sort: sort,
+      status: status,
+      category: category,
+      query: query,
+      cursor: cursor,
+    );
+    return (
+      posts: page.posts.map((d) => d.toModel()).toList(growable: false),
+      nextCursor: page.nextCursor,
+    );
   }
 
   Future<FeedbackPost> create(FeedbackPost draft) async {
@@ -24,10 +45,9 @@ class FeedbackRepository {
     return dto.toModel();
   }
 
-  Future<FeedbackPost> setVote(String id, {required bool voted}) async {
-    final dto = await _source.setVote(id, voted: voted);
-    return dto.toModel();
-  }
+  /// Returns the server's authoritative `(votes, voted)` after the toggle.
+  Future<FeedbackVoteResult> setVote(String id, {required bool voted}) =>
+      _source.setVote(id, voted: voted);
 
   Future<List<FeedbackComment>> comments(String postId) async {
     final dtos = await _source.comments(postId);

@@ -17,6 +17,17 @@ import '../models/app_user.dart';
 /// system**, NOT Identity Platform / Firebase. [ApiAuthRepository] implements
 /// the REST flow (`/auth/guest|signup|verify-otp|signin|refresh|link-guest…`);
 /// [MockAuthRepository] keeps the same surface for `Env.useMocks`.
+///
+/// ⚠️ Token-terminology reconciliation: the feature integration docs
+/// (`FEEDBACK_BOARD_INTEGRATION.md`, `ONBOARDING_CONSENT_AGE_INTEGRATION.md`)
+/// call the bearer token a `supabase_access_token`, and README §8 calls it an
+/// "Identity Platform ID token". These are the **same token** as far as the
+/// client is concerned: the `access_token` returned by `/v1/auth/*`, which
+/// `openapi.json` documents as a plain `bearer` (JWT) security scheme. Whatever
+/// the server uses internally (Supabase, Identity Platform, its own signer) is
+/// invisible here — the app just attaches `Authorization: Bearer <access_token>`
+/// via the `AuthInterceptor` on every request (reads included). No client change is
+/// required to satisfy those docs; the wording differs, the mechanism does not.
 abstract interface class AuthRepository {
   /// Emits the current user (or `null` when signed out).
   Stream<AppUser?> authState();

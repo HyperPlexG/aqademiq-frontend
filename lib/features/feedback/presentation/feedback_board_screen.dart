@@ -4,16 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/launch_external.dart';
+import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_post.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/feedback_providers.dart';
+import 'sheets/create_account_prompt.dart';
 import 'sheets/feedback_sort_sheet.dart';
 import 'sheets/new_suggestion_sheet.dart';
 import 'widgets/feedback_bits.dart';
@@ -31,17 +34,47 @@ class FeedbackBoardScreen extends ConsumerStatefulWidget {
 
 class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
   final TextEditingController _search = TextEditingController();
+  Timer? _debounce;
+  bool _hasText = false;
 
   @override
   void initState() {
     super.initState();
     _search.text = ref.read(feedbackSearchProvider);
+    _hasText = _search.text.isNotEmpty;
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _search.dispose();
     super.dispose();
+  }
+
+  /// Debounce keystrokes into a single applied query so search is one server
+  /// round-trip, not one per character.
+  void _onSearchChanged(String value) {
+    if (_hasText != value.isNotEmpty) setState(() => _hasText = value.isNotEmpty);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) ref.read(feedbackSearchProvider.notifier).set(value.trim());
+    });
+  }
+
+  void _clearSearch() {
+    _debounce?.cancel();
+    _search.clear();
+    setState(() => _hasText = false);
+    ref.read(feedbackSearchProvider.notifier).set('');
+  }
+
+  /// Guests may browse but not write — prompt sign-up at the point of action
+  /// (FEEDBACK_BOARD_INTEGRATION.md §"Guest rule"). Returns true if the caller
+  /// may proceed.
+  bool _requireAccount(String reason) {
+    if (!ref.read(isGuestProvider)) return true;
+    unawaited(showCreateAccountPrompt(context, reason: reason));
+    return false;
   }
 
   void _open(FeedbackPost post) {
@@ -49,31 +82,50 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     unawaited(context.push(Routes.feedbackPost(post.id)));
   }
 
+  void _vote(FeedbackPost post) {
+    if (!_requireAccount('vote on suggestions')) return;
+    unawaited(ref.read(feedbackPostsProvider.notifier).toggleVote(post));
+  }
+
   Future<void> _suggest() async {
+    if (!_requireAccount('post a suggestion')) return;
     var draft = await showNewSuggestionSheet(context);
     while (true) {
       if (draft == null || !mounted) return;
-      final created = await ref.read(feedbackPostsProvider.notifier).submit(
-            title: draft.title,
-            body: draft.body,
-            category: draft.category,
-          );
-      if (!mounted) return;
-      if (created != null) {
+      try {
+        await ref.read(feedbackPostsProvider.notifier).submit(
+              title: draft.title,
+              body: draft.body,
+              category: draft.category,
+            );
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Thanks! Your suggestion is on the board.'),
           ),
         );
         return;
+      } on Failure catch (e) {
+        if (!mounted) return;
+        // 403 (guest) → prompt sign-up and stop; 429 (daily limit) → tell them
+        // and stop. Otherwise keep the draft and let them retry.
+        if (e is AuthFailure) {
+          unawaited(showCreateAccountPrompt(context, reason: 'post a suggestion'));
+          return;
+        }
+        if (e is ServerFailure && e.statusCode == 429) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You can post up to 2 suggestions per day.'),
+            ),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+        draft = await showNewSuggestionSheet(context, initial: draft);
       }
-      // Keep the draft: reopen the sheet prefilled so nothing typed is lost.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not share your suggestion. Try again.'),
-        ),
-      );
-      draft = await showNewSuggestionSheet(context, initial: draft);
     }
   }
 
@@ -86,30 +138,18 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     ref.read(feedbackSortProvider.notifier).set(result);
   }
 
-  /// Search + status filter + sort applied to the raw post list.
-  List<FeedbackPost> _visible(
-    List<FeedbackPost> posts, {
-    required String query,
-    required FeedbackStatus? status,
-    required FeedbackSort sort,
-  }) {
-    final q = query.trim().toLowerCase();
-    final filtered = [
-      for (final p in posts)
-        if ((status == null || p.status == status) &&
-            (q.isEmpty ||
-                p.title.toLowerCase().contains(q) ||
-                p.body.toLowerCase().contains(q)))
-          p,
-    ]..sort(
-        (a, b) => switch (sort) {
-          FeedbackSort.top => a.votes == b.votes
-              ? b.createdAt.compareTo(a.createdAt)
-              : b.votes.compareTo(a.votes),
-          FeedbackSort.newest => b.createdAt.compareTo(a.createdAt),
-        },
-      );
-    return filtered;
+  /// Status filter pills, driven by `GET /feedback/meta` when loaded and
+  /// falling back to the built-in status enum otherwise. The pill's filter
+  /// value maps the meta key through [FeedbackStatusX.fromWire].
+  List<({String label, FeedbackStatus value})> _statusPills() {
+    final meta = ref.watch(feedbackMetaProvider).value;
+    if (meta != null && meta.statuses.isNotEmpty) {
+      return [
+        for (final s in meta.statuses)
+          (label: s.label, value: FeedbackStatusX.fromWire(s.key)),
+      ];
+    }
+    return [for (final s in FeedbackStatus.values) (label: s.label, value: s)];
   }
 
   @override
@@ -118,7 +158,6 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     final view = ref.watch(feedbackViewProvider);
     final sort = ref.watch(feedbackSortProvider);
     final statusFilter = ref.watch(feedbackStatusFilterProvider);
-    final query = ref.watch(feedbackSearchProvider);
     final postsAsync = ref.watch(feedbackPostsProvider);
 
     return Scaffold(
@@ -159,13 +198,9 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                   Expanded(
                     child: _SearchField(
                       controller: _search,
-                      hasQuery: query.isNotEmpty,
-                      onChanged: (v) =>
-                          ref.read(feedbackSearchProvider.notifier).set(v),
-                      onClear: () {
-                        _search.clear();
-                        ref.read(feedbackSearchProvider.notifier).set('');
-                      },
+                      hasQuery: _hasText,
+                      onChanged: _onSearchChanged,
+                      onClear: _clearSearch,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -188,14 +223,16 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                           .read(feedbackStatusFilterProvider.notifier)
                           .set(null),
                     ),
-                    for (final status in FeedbackStatus.values)
+                    for (final status in _statusPills())
                       _StatusChip(
                         label: status.label,
-                        dot: status.color(colors),
-                        selected: statusFilter == status,
+                        dot: status.value.color(colors),
+                        selected: statusFilter == status.value,
                         onTap: () => ref
                             .read(feedbackStatusFilterProvider.notifier)
-                            .set(statusFilter == status ? null : status),
+                            .set(statusFilter == status.value
+                                ? null
+                                : status.value),
                       ),
                   ],
                 ),
@@ -215,32 +252,17 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                 ),
                 data: (posts) => view == FeedbackView.list
                     ? _ListBody(
-                        posts: _visible(
-                          posts,
-                          query: query,
-                          status: statusFilter,
-                          sort: sort,
-                        ),
+                        posts: posts,
                         onOpen: _open,
-                        onVote: (p) => unawaited(
-                          ref
-                              .read(feedbackPostsProvider.notifier)
-                              .toggleVote(p),
+                        onVote: _vote,
+                        onLoadMore: () => unawaited(
+                          ref.read(feedbackPostsProvider.notifier).loadMore(),
                         ),
                       )
                     : _BoardBody(
-                        posts: _visible(
-                          posts,
-                          query: query,
-                          status: null,
-                          sort: sort,
-                        ),
+                        posts: posts,
                         onOpen: _open,
-                        onVote: (p) => unawaited(
-                          ref
-                              .read(feedbackPostsProvider.notifier)
-                              .toggleVote(p),
-                        ),
+                        onVote: _vote,
                       ),
               ),
             ),
@@ -265,18 +287,27 @@ class _ListBody extends StatelessWidget {
     required this.posts,
     required this.onOpen,
     required this.onVote,
+    required this.onLoadMore,
   });
 
   final List<FeedbackPost> posts;
   final ValueChanged<FeedbackPost> onOpen;
   final ValueChanged<FeedbackPost> onVote;
 
+  /// Called when the list is scrolled near the bottom, to fetch the next page.
+  final VoidCallback onLoadMore;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
-      children: [
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.metrics.pixels >= n.metrics.maxScrollExtent - 300) onLoadMore();
+        return false;
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+        children: [
         const _IntroCard(),
         const SizedBox(height: 14),
         Text(
@@ -327,7 +358,8 @@ class _ListBody extends StatelessWidget {
                 onVote: () => onVote(post),
               ),
             ),
-      ],
+        ],
+      ),
     );
   }
 }
