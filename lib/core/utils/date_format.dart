@@ -38,4 +38,18 @@ abstract final class AppDate {
   /// Whether two dates are the same calendar day.
   static bool sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Compact "how long ago" label ("3d", "2w", "5mo", "now") — used by the
+  /// feedback board. [from] defaults to the wall clock; pass a fixed date in
+  /// tests/goldens.
+  static String ago(DateTime d, {DateTime? from}) {
+    final diff = (from ?? DateTime.now()).difference(d);
+    if (diff.inDays >= 365) return '${diff.inDays ~/ 365}y';
+    if (diff.inDays >= 30) return '${diff.inDays ~/ 30}mo';
+    if (diff.inDays >= 7) return '${diff.inDays ~/ 7}w';
+    if (diff.inDays >= 1) return '${diff.inDays}d';
+    if (diff.inHours >= 1) return '${diff.inHours}h';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m';
+    return 'now';
+  }
 }

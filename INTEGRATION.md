@@ -61,6 +61,11 @@ One row per data action. `Provider` = the Riverpod provider that owns it. `socke
 | `settings-home` (tags) | CRUD study tags | `TODO /tags` | `TagInput` | `TagDto[]` | `tagsProvider` | ☐ |
 | `settings-notif` | Get/set prefs | `TODO /me/notification-prefs` | | | | ☐ |
 | `settings-email`/`settings-appearance` | Update prefs | `TODO PATCH /me/prefs` | | | | ☐ |
+| `feedback-board` | Load suggestions | `TODO GET /feedback` | | `{posts: FeedbackPostDto[]}` | `feedbackPostsProvider` | ☐ |
+| `feedback-board` (vote) | Toggle upvote | `TODO PUT /feedback/:id/vote` | `{voted}` | `FeedbackPostDto` | optimistic in `feedbackPostsProvider` | ☐ |
+| `feedback-new` | Create suggestion | `TODO POST /feedback` | `{title,body,category}` | `FeedbackPostDto` | invalidate `feedbackPostsProvider` | ☐ |
+| `feedback-detail` | Load comments | `TODO GET /feedback/:id/comments` | | `{comments: FeedbackCommentDto[]}` | `feedbackCommentsProvider` | ☐ |
+| `feedback-detail` | Add comment | `TODO POST /feedback/:id/comments` | `{body}` | `FeedbackCommentDto` | invalidate comments + posts | ☐ |
 
 ---
 

@@ -11,6 +11,8 @@ import '../../features/auth/presentation/signin_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/welcome_screen.dart';
+import '../../features/feedback/presentation/feedback_board_screen.dart';
+import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/focus/presentation/focus_end_screen.dart';
 import '../../features/focus/presentation/timer_screen.dart';
 import '../../features/mood/presentation/mood_evening_screen.dart';
@@ -73,6 +75,10 @@ abstract final class Routes {
   static const settingsSounds = '/settings/prism';
   static const settingsEmail = '/settings/email';
 
+  // Feedback board (full-screen, pushed over the shell).
+  static const settingsFeedback = '/settings/feedback';
+  static String feedbackPost(String id) => '/settings/feedback/post/$id';
+
   // Mood check-ins (full-screen, time/system-triggered).
   static const moodMorning = '/mood/morning';
   static const moodEvening = '/mood/evening';
@@ -118,6 +124,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.settingsNotif, builder: (_, _) => const NotificationsScreen()),
       GoRoute(path: Routes.settingsSounds, builder: (_, _) => const PrismSettingsScreen()),
       GoRoute(path: Routes.settingsEmail, builder: (_, _) => const EmailSettingsScreen()),
+      GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
+      GoRoute(
+        path: '/settings/feedback/post/:id',
+        builder: (_, state) => FeedbackDetailScreen(id: state.pathParameters['id']!),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
