@@ -1,5 +1,6 @@
 import '../dtos/ada_message_dto.dart';
 import '../dtos/app_user_dto.dart';
+import '../dtos/feedback_dto.dart';
 import '../dtos/focus_session_dto.dart';
 import '../dtos/mood_log_dto.dart';
 import '../dtos/subject_dto.dart';
@@ -9,6 +10,7 @@ import '../dtos/user_stats_dto.dart';
 import '../models/ada_message.dart';
 import '../models/app_user.dart';
 import '../models/enums.dart';
+import '../models/feedback_post.dart';
 import '../models/focus_session.dart';
 import '../models/mood_log.dart';
 import '../models/subject.dart';
@@ -198,5 +200,59 @@ extension UserStatsDtoX on UserStatsDto {
         focusMinutesThisWeek: focusMinutesThisWeek,
         tasksCompletedThisWeek: tasksCompletedThisWeek,
         weekMoods: weekMoods.map((m) => m.toModel()).toList(),
+      );
+}
+
+extension FeedbackPostDtoX on FeedbackPostDto {
+  FeedbackPost toModel() => FeedbackPost(
+        id: id,
+        number: number,
+        title: title,
+        body: body,
+        status: FeedbackStatusX.fromWire(status),
+        category: FeedbackCategoryX.fromWire(category),
+        votes: votes,
+        hasVoted: hasVoted,
+        commentCount: commentCount,
+        author: author,
+        createdAt: createdAt,
+      );
+}
+
+extension FeedbackPostX on FeedbackPost {
+  FeedbackPostDto toDto() => FeedbackPostDto(
+        id: id,
+        number: number,
+        title: title,
+        body: body,
+        status: status.wire,
+        category: category.wire,
+        votes: votes,
+        hasVoted: hasVoted,
+        commentCount: commentCount,
+        author: author,
+        createdAt: createdAt,
+      );
+}
+
+extension FeedbackCommentDtoX on FeedbackCommentDto {
+  FeedbackComment toModel() => FeedbackComment(
+        id: id,
+        postId: postId,
+        author: author,
+        body: body,
+        isTeam: isTeam,
+        createdAt: createdAt,
+      );
+}
+
+extension FeedbackCommentX on FeedbackComment {
+  FeedbackCommentDto toDto() => FeedbackCommentDto(
+        id: id,
+        postId: postId,
+        author: author,
+        body: body,
+        isTeam: isTeam,
+        createdAt: createdAt,
       );
 }
