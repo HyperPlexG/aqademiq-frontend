@@ -25,6 +25,7 @@ const _activeMinutes = 30;
 Future<int?> showDurationPicker(BuildContext context) {
   return showModalBottomSheet<int>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),

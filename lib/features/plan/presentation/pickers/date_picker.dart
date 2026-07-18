@@ -12,6 +12,7 @@ import '../../../../shared/widgets/calendar_grid.dart';
 Future<String?> showTaskDatePicker(BuildContext context) {
   return showModalBottomSheet<String>(
     context: context,
+    useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),

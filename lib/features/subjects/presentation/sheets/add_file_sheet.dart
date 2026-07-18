@@ -59,6 +59,7 @@ Future<void> showAddFileSheet(
 }) {
   return showModalBottomSheet<void>(
     context: context,
+    useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),
     isScrollControlled: true,

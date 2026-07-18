@@ -137,6 +137,7 @@ class SubjectDetailScreen extends ConsumerWidget {
   ) async {
     await showModalBottomSheet<Subject>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x4C140F1C),

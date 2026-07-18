@@ -93,6 +93,7 @@ class SubjectsScreen extends ConsumerWidget {
     // The controller refreshes the list on save, so we only need to await it.
     await showModalBottomSheet<Subject>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x4C140F1C),
