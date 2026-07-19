@@ -19,8 +19,8 @@ class SigninScreen extends ConsumerStatefulWidget {
 }
 
 class _SigninScreenState extends ConsumerState<SigninScreen> {
-  final _email = TextEditingController(text: 'ridhwan@bits.ac.in');
-  final _password = TextEditingController(text: 'password');
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _obscure = true;
 
   @override
