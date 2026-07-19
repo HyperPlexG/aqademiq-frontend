@@ -140,16 +140,24 @@ class AuthController extends AsyncNotifier<void> {
       state = const AsyncData(null);
       return true;
     } on GoogleSignInException catch (e) {
-      // User dismissed the Google sheet — not an error worth surfacing.
+      // Log the real cause: on Android, a SHA-1 / OAuth-client misconfig is
+      // surfaced by Credential Manager as `canceled`, so this line disambiguates
+      // a genuine user cancel from a broken config.
+      debugPrint(
+          'Google sign-in failed: code=${e.code.name} description=${e.description} details=${e.details}');
       if (e.code == GoogleSignInExceptionCode.canceled) {
         state = const AsyncData(null);
         return false;
       }
       state = AsyncError(
-          AuthFailure(message: e.description ?? 'Google sign-in failed.'),
+          AuthFailure(
+              message: (e.description?.isNotEmpty ?? false)
+                  ? e.description!
+                  : 'Google sign-in failed (${e.code.name}).'),
           StackTrace.current);
       return false;
     } on Object catch (e, st) {
+      debugPrint('Google sign-in failed (unexpected): $e');
       state = AsyncError(e, st);
       return false;
     }
