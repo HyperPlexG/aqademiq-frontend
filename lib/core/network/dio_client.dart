@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/token_store.dart';
 import '../env/env.dart';
 import 'auth_interceptor.dart';
 import 'logging_interceptor.dart';
@@ -9,10 +8,7 @@ import 'logging_interceptor.dart';
 /// The shared [AuthInterceptor] (holds the single-flight refresh + the
 /// session-expired hook the auth repository wires into).
 final authInterceptorProvider = Provider<AuthInterceptor>((ref) {
-  return AuthInterceptor(
-    tokenStore: ref.watch(tokenStoreProvider),
-    baseUrl: Env.apiBaseUrl,
-  );
+  return AuthInterceptor(baseUrl: Env.apiBaseUrl);
 });
 
 /// The shared Dio instance for the NestJS REST API (contract §1, §2).

@@ -40,4 +40,16 @@ abstract final class Env {
 
   /// Whether a non-mock base URL is configured.
   static bool get hasLiveConfig => apiBaseUrl.isNotEmpty;
+
+  /// Supabase project URL — identity (auth) is Supabase Auth. Required live.
+  /// e.g. https://qwvuoooentacjslzpbqy.supabase.co
+  static const String supabaseUrl = String.fromEnvironment('SUPABASE_URL');
+
+  /// Supabase anon/publishable key — safe to ship in the client.
+  static const String supabaseAnonKey =
+      String.fromEnvironment('SUPABASE_ANON_KEY');
+
+  /// Whether Supabase Auth is configured (live builds).
+  static bool get hasSupabase =>
+      supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
 }

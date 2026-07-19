@@ -1,13 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../../core/auth/token_store.dart';
 import '../../core/env/env.dart';
 import '../../core/error/failure.dart';
-import '../../core/network/api_error.dart';
 import '../../core/network/dio_client.dart';
 import '../models/app_user.dart';
 
@@ -212,20 +210,31 @@ class MockAuthRepository implements AuthRepository {
 // ---------------------------------------------------------------------------
 
 class ApiAuthRepository implements AuthRepository {
-  ApiAuthRepository(this._dio, this._tokens) {
-    _controller = StreamController<AppUser?>.broadcast(
-      onListen: () => _controller.add(_user),
-    );
-    unawaited(_bootstrap());
+  ApiAuthRepository(this._dio) {
+    _controller = StreamController<AppUser?>.broadcast();
+    // Mirror Supabase auth state into AppUser. `initialSession` fires on launch
+    // with the persisted session (or null), so a returning user stays signed in.
+    _sub = _auth.onAuthStateChange.listen((state) async {
+      final session = state.session;
+      if (session == null) {
+        _emit(null);
+        return;
+      }
+      final hydrate = state.event != AuthChangeEvent.tokenRefreshed;
+      _emit(await _mapSession(session, hydrate: hydrate));
+    });
   }
 
   final Dio _dio;
-  final TokenStore _tokens;
-
   late final StreamController<AppUser?> _controller;
+  late final StreamSubscription<AuthState> _sub;
+
+  GoTrueClient get _auth => Supabase.instance.client.auth;
+
   AppUser? _user;
   String? _pendingEmail;
   String? _pendingName;
+  OtpType _pendingOtpType = OtpType.signup;
 
   @override
   AppUser? get currentUser => _user;
@@ -244,71 +253,55 @@ class ApiAuthRepository implements AuthRepository {
   /// Called by the interceptor when a refresh fails — session is dead.
   void handleSessionExpired() => _emit(null);
 
-  /// On boot: if we hold tokens, reconstruct the user from the JWT + profile.
-  Future<void> _bootstrap() async {
-    await _tokens.load();
-    if (!_tokens.hasSession) {
-      _emit(null);
-      return;
-    }
-    final claims = _decodeJwt(_tokens.accessToken!);
-    final id = claims?['sub'] as String? ?? '';
-    final isGuest = claims?['is_guest'] as bool? ?? true;
-    // Enrich with profile (name/email) — best effort.
+  /// Build an [AppUser] from the SDK session, enriching from /profile when asked.
+  Future<AppUser> _mapSession(Session session, {bool hydrate = true}) async {
+    final u = session.user;
+    var user = AppUser(
+      id: u.id,
+      name: (u.userMetadata?['name'] as String?) ??
+          (u.email != null ? u.email!.split('@').first : (u.isAnonymous ? 'Guest' : 'You')),
+      email: u.email,
+      isGuest: u.isAnonymous,
+    );
+    if (!hydrate) return user;
     try {
       final res = await _dio.get<Map<String, dynamic>>('/profile');
       final p = res.data ?? const {};
-      _emit(AppUser(
-        id: id,
-        name: (p['name'] as String?)?.trim().isNotEmpty ?? false ? p['name'] as String : 'You',
-        email: p['email'] as String?,
-        isGuest: (p['is_guest'] as bool?) ?? isGuest,
-      ));
+      final name = p['name'] as String?;
+      user = user.copyWith(
+        name: (name != null && name.trim().isNotEmpty) ? name : user.name,
+        email: (p['email'] as String?) ?? user.email,
+        isGuest: (p['is_guest'] as bool?) ?? user.isGuest,
+      );
     } on Object {
-      _emit(AppUser(id: id, name: isGuest ? 'Guest' : 'You', isGuest: isGuest));
+      // best-effort profile hydration
     }
+    return user;
   }
 
-  /// Parse a `{access_token, refresh_token, user}` login body; persist + emit.
-  Future<AppUser> _consumeTokenPair(Map<String, dynamic> data) async {
-    final access = data['access_token'] as String;
-    final refresh = data['refresh_token'] as String;
-    await _tokens.save(AuthTokens(accessToken: access, refreshToken: refresh));
-    final u = (data['user'] as Map?)?.cast<String, dynamic>();
-    final claims = _decodeJwt(access);
-    final user = AppUser(
-      id: (u?['id'] as String?) ?? (claims?['sub'] as String? ?? ''),
-      name: _pendingName ??
-          (u?['email'] as String?)?.split('@').first ??
-          ((u?['is_guest'] as bool? ?? false) ? 'Guest' : 'You'),
-      email: u?['email'] as String?,
-      isGuest: (u?['is_guest'] as bool?) ?? (claims?['is_guest'] as bool? ?? false),
-    );
+  Future<AppUser> _require(Session? session, {bool hydrate = true}) async {
+    if (session == null) {
+      throw const AuthFailure(message: 'Sign-in failed — no session returned.');
+    }
+    final user = await _mapSession(session, hydrate: hydrate);
     _emit(user);
     return user;
   }
 
-  Future<Map<String, dynamic>> _post(String path, [Object? body]) async {
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(path, data: body);
-      return res.data ?? const {};
-    } on Object catch (e, st) {
-      throw mapDioError(e, st);
-    }
-  }
-
   @override
-  Future<AppUser> signInAnonymously() async =>
-      _consumeTokenPair(await _post('/auth/guest'));
+  Future<AppUser> signInAnonymously() async {
+    final res = await _auth.signInAnonymously();
+    return _require(res.session, hydrate: false);
+  }
 
   @override
   Future<AppUser> signInWithEmail({
     required String email,
     required String password,
-  }) async =>
-      _consumeTokenPair(
-        await _post('/auth/signin', {'email': email, 'password': password}),
-      );
+  }) async {
+    final res = await _auth.signInWithPassword(email: email, password: password);
+    return _require(res.session);
+  }
 
   @override
   Future<AppUser> signUp({
@@ -318,7 +311,9 @@ class ApiAuthRepository implements AuthRepository {
   }) async {
     _pendingEmail = email;
     _pendingName = name.trim().isEmpty ? null : name.trim();
-    await _post('/auth/signup', {'email': email, 'password': password});
+    _pendingOtpType = OtpType.signup;
+    final res = await _auth.signUp(email: email, password: password, data: {'name': name});
+    if (res.session != null) return _require(res.session);
     return AppUser(id: '', name: name, email: email);
   }
 
@@ -328,49 +323,54 @@ class ApiAuthRepository implements AuthRepository {
     if (email == null) {
       throw const AuthFailure(message: 'No pending verification. Start again.');
     }
-    final data = await _post('/auth/verify-otp', {'email': email, 'code': code});
-    final user = await _consumeTokenPair(data);
-    // Persist the collected name onto the profile if we have one.
+    final res = await _auth.verifyOTP(email: email, token: code, type: _pendingOtpType);
+    if (res.session == null) {
+      throw const AuthFailure(message: 'Verification failed. Check the code and try again.');
+    }
+    var user = await _mapSession(res.session!);
     if (_pendingName != null && _pendingName!.isNotEmpty) {
       try {
         await _dio.patch<Map<String, dynamic>>('/profile', data: {'name': _pendingName});
-        _emit(user.copyWith(name: _pendingName!));
+        user = user.copyWith(name: _pendingName!);
       } on Object {
         // Non-fatal.
       }
     }
+    _pendingEmail = null;
     _pendingName = null;
+    _emit(user);
   }
 
   @override
   Future<void> resendOtp() async {
     final email = _pendingEmail;
     if (email == null) return;
-    await _post('/auth/resend-otp', {'email': email});
+    await _auth.resend(type: _pendingOtpType, email: email);
   }
 
   @override
-  Future<AppUser> signInWithGoogle(String idToken) async =>
-      _consumeTokenPair(await _post('/auth/sso/google', {'id_token': idToken}));
+  Future<AppUser> signInWithGoogle(String idToken) async {
+    final res = await _auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+    return _require(res.session);
+  }
 
   @override
   Future<AppUser> signInWithApple({
     required String identityToken,
     String? fullName,
-  }) async =>
-      _consumeTokenPair(await _post('/auth/sso/apple', {
-        'identity_token': identityToken,
-        'full_name': ?fullName,
-      }));
+  }) async {
+    final res = await _auth.signInWithIdToken(provider: OAuthProvider.apple, idToken: identityToken);
+    return _require(res.session);
+  }
 
   @override
   Future<AppUser> linkGuestToAccount({
     required String email,
     required String password,
   }) async {
+    await _auth.updateUser(UserAttributes(email: email, password: password));
     _pendingEmail = email;
-    await _post('/auth/link-guest', {'email': email, 'password': password});
-    // Still a guest until verifyOtp completes; reflect the pending email.
+    _pendingOtpType = OtpType.email;
     final current = _user ?? const AppUser(id: '', name: 'Guest');
     return current.copyWith(email: email);
   }
@@ -378,32 +378,17 @@ class ApiAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() async {
     try {
-      await _post('/auth/signout');
+      await _auth.signOut();
     } on Object {
-      // Ignore — we clear locally regardless.
+      // Ignore — the state stream emits null on SIGNED_OUT regardless.
     }
-    await _tokens.clear();
     _emit(null);
   }
 
   @override
-  void dispose() => _controller.close();
-}
-
-Map<String, dynamic>? _decodeJwt(String token) {
-  final parts = token.split('.');
-  if (parts.length != 3) return null;
-  var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
-  switch (payload.length % 4) {
-    case 2:
-      payload += '==';
-    case 3:
-      payload += '=';
-  }
-  try {
-    return jsonDecode(utf8.decode(base64.decode(payload))) as Map<String, dynamic>;
-  } on Object {
-    return null;
+  void dispose() {
+    unawaited(_sub.cancel());
+    unawaited(_controller.close());
   }
 }
 
@@ -417,11 +402,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
     ref.onDispose(repo.dispose);
     return repo;
   }
-  final repo = ApiAuthRepository(
-    ref.watch(dioProvider),
-    ref.watch(tokenStoreProvider),
-  );
-  // Wire the interceptor's session-expiry hook to sign the user out.
+  final repo = ApiAuthRepository(ref.watch(dioProvider));
   ref.watch(authInterceptorProvider).onSessionExpired = repo.handleSessionExpired;
   ref.onDispose(repo.dispose);
   return repo;
