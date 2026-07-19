@@ -33,6 +33,12 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Local build config (client IDs / keys passed via --dart-define-from-file)
+/dart_defines.json
+# Stray file from a malformed --dart-define invocation
+/--dart-define
+audio.zip
+
 # Symbolication related
 app.*.symbols
 
