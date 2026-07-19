@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/env/env.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -72,6 +73,25 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS);
 
+  Future<void> _googleSignIn() async {
+    final ok = await ref.read(authControllerProvider.notifier).signInWithGoogle();
+    if (!mounted) return;
+    if (ok) {
+      await routeAfterAuth(context, ref);
+    } else if (ref.read(authControllerProvider).hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
+  }
+
+  /// Native Google sign-in is wired for mobile; hidden until the client IDs are
+  /// configured (and off the web build, which needs the button-render flow).
+  bool get _googleAvailable => !kIsWeb && Env.hasGoogleSignIn;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -97,12 +117,14 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                 ),
                 const SizedBox(height: 10),
               ],
-              SsoButton(
-                provider: SsoProvider.google,
-                label: 'Sign in with Google',
-                onTap: busy ? null : _signIn,
-              ),
-              const SizedBox(height: 18),
+              if (_googleAvailable) ...[
+                SsoButton(
+                  provider: SsoProvider.google,
+                  label: 'Sign in with Google',
+                  onTap: busy ? null : _googleSignIn,
+                ),
+                const SizedBox(height: 18),
+              ],
               const _OrDivider(),
               const SizedBox(height: 16),
               const FieldLabel('Email'),

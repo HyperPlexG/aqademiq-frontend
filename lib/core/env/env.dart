@@ -52,4 +52,19 @@ abstract final class Env {
   /// Whether Supabase Auth is configured (live builds).
   static bool get hasSupabase =>
       supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
+
+  /// Google OAuth **iOS** client ID (`…apps.googleusercontent.com`) — used for
+  /// native Google sign-in on iOS; its reversed form is the Info.plist URL
+  /// scheme. Empty when Google sign-in isn't configured.
+  static const String googleIosClientId =
+      String.fromEnvironment('GOOGLE_IOS_CLIENT_ID');
+
+  /// Google OAuth **Web** client ID, passed as `serverClientId` so the returned
+  /// ID token carries the audience Supabase's Google provider expects.
+  static const String googleServerClientId =
+      String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+
+  /// Whether native Google sign-in is configured (the web/server client ID is
+  /// the minimum; iOS additionally needs the iOS client ID + URL scheme).
+  static bool get hasGoogleSignIn => googleServerClientId.isNotEmpty;
 }

@@ -3,10 +3,13 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/env/env.dart';
 import '../../../core/error/failure.dart';
 import '../../../data/auth/auth_repository.dart';
 
@@ -95,6 +98,56 @@ class AuthController extends AsyncNotifier<void> {
         return false;
       }
       state = AsyncError(AuthFailure(message: e.message), StackTrace.current);
+      return false;
+    } on Object catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
+
+  bool _googleInitialized = false;
+
+  /// Native "Sign in with Google". Uses `google_sign_in` 7.x (`initialize` +
+  /// `authenticate`), passing the web/server client ID so the returned ID token
+  /// has the audience Supabase's Google provider expects. Cancellation returns
+  /// `false` with no error; real failures set the error state.
+  Future<bool> signInWithGoogle() async {
+    state = const AsyncLoading();
+    try {
+      final google = GoogleSignIn.instance;
+      if (!_googleInitialized) {
+        final isApple = !kIsWeb &&
+            (defaultTargetPlatform == TargetPlatform.iOS ||
+                defaultTargetPlatform == TargetPlatform.macOS);
+        await google.initialize(
+          // clientId is an iOS/macOS concept; Android rejects it.
+          clientId: isApple && Env.googleIosClientId.isNotEmpty
+              ? Env.googleIosClientId
+              : null,
+          serverClientId: Env.googleServerClientId.isNotEmpty
+              ? Env.googleServerClientId
+              : null,
+        );
+        _googleInitialized = true;
+      }
+      final account = await google.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) {
+        throw const AuthFailure(
+            message: 'Google sign-in failed — no ID token returned.');
+      }
+      await ref.read(authRepositoryProvider).signInWithGoogle(idToken);
+      state = const AsyncData(null);
+      return true;
+    } on GoogleSignInException catch (e) {
+      // User dismissed the Google sheet — not an error worth surfacing.
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        state = const AsyncData(null);
+        return false;
+      }
+      state = AsyncError(
+          AuthFailure(message: e.description ?? 'Google sign-in failed.'),
+          StackTrace.current);
       return false;
     } on Object catch (e, st) {
       state = AsyncError(e, st);

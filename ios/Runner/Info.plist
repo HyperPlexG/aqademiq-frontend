@@ -24,6 +24,22 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Google Sign-In callback. Replace the scheme below with your iOS OAuth
+	     client's REVERSED_CLIENT_ID: take the iOS client ID
+	     (xxxx-yyyy.apps.googleusercontent.com) and write it reversed as
+	     com.googleusercontent.apps.xxxx-yyyy. Without this, Google sign-in on
+	     iOS cannot return to the app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>REPLACE_WITH_REVERSED_IOS_CLIENT_ID</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
