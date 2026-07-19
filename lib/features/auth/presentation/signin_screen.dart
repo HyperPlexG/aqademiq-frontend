@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,6 +49,29 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
     }
   }
 
+  Future<void> _appleSignIn() async {
+    final ok = await ref.read(authControllerProvider.notifier).signInWithApple();
+    if (!mounted) return;
+    if (ok) {
+      await routeAfterAuth(context, ref);
+    } else if (ref.read(authControllerProvider).hasError) {
+      // Cancellations leave no error, so only real failures get a snackbar.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
+  }
+
+  /// Apple sign-in is native to Apple platforms; on Android/web it would need
+  /// the web OAuth flow (Services ID), which isn't set up, so hide it there.
+  bool get _appleAvailable =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -65,12 +89,14 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
               const SizedBox(height: 4),
               Text('Sign in to continue', style: AppText.sans(size: 12, color: colors.textMed)),
               const SizedBox(height: 22),
-              SsoButton(
-                provider: SsoProvider.apple,
-                label: 'Sign in with Apple',
-                onTap: busy ? null : _signIn,
-              ),
-              const SizedBox(height: 10),
+              if (_appleAvailable) ...[
+                SsoButton(
+                  provider: SsoProvider.apple,
+                  label: 'Sign in with Apple',
+                  onTap: busy ? null : _appleSignIn,
+                ),
+                const SizedBox(height: 10),
+              ],
               SsoButton(
                 provider: SsoProvider.google,
                 label: 'Sign in with Google',
