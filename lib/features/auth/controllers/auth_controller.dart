@@ -1,8 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../data/auth/auth_repository.dart';
+
+/// Human-readable message for an auth error, whether it's a Supabase
+/// [AuthException] (the SDK's errors), a domain [Failure], or anything else.
+String authErrorMessage(Object? error) {
+  if (error is AuthException) return error.message;
+  if (error is Failure) return error.message;
+  return 'Something went wrong. Please try again.';
+}
 
 /// Drives the auth actions (guest / sign-in / sign-up / verify). Screens watch
 /// its `isLoading` for button spinners and navigate on a `true` result. Backed

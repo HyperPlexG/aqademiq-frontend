@@ -34,7 +34,17 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
     final ok = await ref
         .read(authControllerProvider.notifier)
         .signIn(email: _email.text, password: _password.text);
-    if (ok && mounted) context.go(Routes.plan);
+    if (!mounted) return;
+    if (ok) {
+      context.go(Routes.plan);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
   }
 
   @override
