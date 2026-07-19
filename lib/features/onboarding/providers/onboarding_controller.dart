@@ -1,3 +1,4 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/env/env.dart';
@@ -23,6 +24,7 @@ class OnboardingDraft {
     this.peakTimes = const ['Afternoon'],
     this.focusGoalHrs = 3,
     this.prismMode = 'Deep Work',
+    this.materials = const [],
   });
 
   /// Age entered on the age gate (`ob-age`). Null until the user enters one.
@@ -44,6 +46,10 @@ class OnboardingDraft {
   final double focusGoalHrs;
   final String prismMode;
 
+  /// Syllabus/notes picked on the upload step, uploaded to the first created
+  /// subject once [OnboardingController.finish] provisions subjects server-side.
+  final List<XFile> materials;
+
   OnboardingDraft copyWith({
     int? age,
     bool? consentGiven,
@@ -56,6 +62,7 @@ class OnboardingDraft {
     List<String>? peakTimes,
     double? focusGoalHrs,
     String? prismMode,
+    List<XFile>? materials,
   }) {
     return OnboardingDraft(
       age: age ?? this.age,
@@ -69,6 +76,7 @@ class OnboardingDraft {
       peakTimes: peakTimes ?? this.peakTimes,
       focusGoalHrs: focusGoalHrs ?? this.focusGoalHrs,
       prismMode: prismMode ?? this.prismMode,
+      materials: materials ?? this.materials,
     );
   }
 }
@@ -100,6 +108,24 @@ class OnboardingController extends Notifier<OnboardingDraft> {
 
   void setFocusGoal(double v) => state = state.copyWith(focusGoalHrs: v);
   void setPrismMode(String v) => state = state.copyWith(prismMode: v);
+
+  /// Adds files picked on the syllabus/upload step (deduped by path).
+  void addMaterials(List<XFile> files) {
+    final seen = {for (final f in state.materials) f.path};
+    final next = [
+      ...state.materials,
+      for (final f in files)
+        if (seen.add(f.path)) f,
+    ];
+    state = state.copyWith(materials: next);
+  }
+
+  void removeMaterial(XFile file) => state = state.copyWith(
+        materials: [
+          for (final f in state.materials)
+            if (f.path != file.path) f,
+        ],
+      );
 
   void toggleSubject(String s) {
     final next = [...state.subjects];
@@ -159,6 +185,31 @@ class OnboardingController extends Notifier<OnboardingDraft> {
             workBestTimes: {'times': draft.peakTimes},
           ),
         );
+
+    // Live: `complete` provisioned the subjects server-side, so now push any
+    // syllabus/notes picked on the upload step to the first one. Best-effort —
+    // a failed upload never blocks onboarding (the user can re-add in Subjects).
+    if (!Env.useMocks && draft.materials.isNotEmpty) {
+      try {
+        final repo = ref.read(subjectsRepositoryProvider);
+        final subjects = await repo.all();
+        if (subjects.isNotEmpty) {
+          final subjectId = subjects.first.id;
+          for (final file in draft.materials) {
+            final bytes = await file.readAsBytes();
+            await repo.uploadFile(
+              subjectId: subjectId,
+              name: file.name,
+              kind: 'syllabus',
+              mimeType: file.mimeType,
+              bytes: bytes,
+            );
+          }
+        }
+      } on Object {
+        // Non-fatal.
+      }
+    }
 
     if (Env.useMocks) {
       final auth = ref.read(authRepositoryProvider);
