@@ -1,1 +1,2 @@
-*.wav filter=lfs diff=lfs merge=lfs -text
+# Prism sound stems ship as OGG Vorbis (committed directly — small enough to
+# not need Git LFS). No LFS-tracked binaries in this repo.

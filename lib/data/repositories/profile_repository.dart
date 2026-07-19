@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/env/env.dart';
 import '../../core/network/dio_client.dart';
 import '../adapters/adapters.dart';
+import '../models/user_profile.dart';
 import '../models/user_stats.dart';
 import '../sources/profile_source.dart';
 
@@ -12,6 +13,10 @@ class ProfileRepository {
   final ProfileSource _source;
 
   Future<UserStats> stats() async => (await _source.stats()).toModel();
+
+  Future<UserProfile> getProfile() => _source.getProfile();
+
+  Future<bool> shouldSkipOnboarding() => _source.shouldSkipOnboarding();
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {

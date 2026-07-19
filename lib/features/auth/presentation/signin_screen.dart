@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
 import 'widgets/sso_buttons.dart';
 
@@ -19,8 +21,8 @@ class SigninScreen extends ConsumerStatefulWidget {
 }
 
 class _SigninScreenState extends ConsumerState<SigninScreen> {
-  final _email = TextEditingController(text: 'ridhwan@bits.ac.in');
-  final _password = TextEditingController(text: 'password');
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   bool _obscure = true;
 
   @override
@@ -34,8 +36,41 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
     final ok = await ref
         .read(authControllerProvider.notifier)
         .signIn(email: _email.text, password: _password.text);
-    if (ok && mounted) context.go(Routes.plan);
+    if (!mounted) return;
+    if (ok) {
+      await routeAfterAuth(context, ref);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
   }
+
+  Future<void> _appleSignIn() async {
+    final ok = await ref.read(authControllerProvider.notifier).signInWithApple();
+    if (!mounted) return;
+    if (ok) {
+      await routeAfterAuth(context, ref);
+    } else if (ref.read(authControllerProvider).hasError) {
+      // Cancellations leave no error, so only real failures get a snackbar.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
+  }
+
+  /// Apple sign-in is native to Apple platforms; on Android/web it would need
+  /// the web OAuth flow (Services ID), which isn't set up, so hide it there.
+  bool get _appleAvailable =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
 
   @override
   Widget build(BuildContext context) {
@@ -54,12 +89,14 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
               const SizedBox(height: 4),
               Text('Sign in to continue', style: AppText.sans(size: 12, color: colors.textMed)),
               const SizedBox(height: 22),
-              SsoButton(
-                provider: SsoProvider.apple,
-                label: 'Sign in with Apple',
-                onTap: busy ? null : _signIn,
-              ),
-              const SizedBox(height: 10),
+              if (_appleAvailable) ...[
+                SsoButton(
+                  provider: SsoProvider.apple,
+                  label: 'Sign in with Apple',
+                  onTap: busy ? null : _appleSignIn,
+                ),
+                const SizedBox(height: 10),
+              ],
               SsoButton(
                 provider: SsoProvider.google,
                 label: 'Sign in with Google',

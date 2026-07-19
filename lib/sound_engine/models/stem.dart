@@ -10,7 +10,7 @@ class Stem {
     this.noteName,
   });
 
-  /// Flutter asset path, e.g. `assets/audio/stems/focus_mode/pads/...wav`.
+  /// Flutter asset path, e.g. `assets/audio/stems/focus_mode/pads/...ogg`.
   final String assetPath;
 
   final LayerType type;

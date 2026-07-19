@@ -61,9 +61,12 @@ abstract interface class AuthRepository {
   /// Google Sign-In — post the provider **ID token** (`POST /auth/sso/google`).
   Future<AppUser> signInWithGoogle(String idToken);
 
-  /// Apple Sign-In — post the identity token (`POST /auth/sso/apple`).
+  /// Apple Sign-In — exchange the Apple identity token for a Supabase session
+  /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
+  /// sent to Apple; Supabase needs the raw value to validate the token.
   Future<AppUser> signInWithApple({
     required String identityToken,
+    String? nonce,
     String? fullName,
   });
 
@@ -173,6 +176,7 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<AppUser> signInWithApple({
     required String identityToken,
+    String? nonce,
     String? fullName,
   }) async {
     final user = await _delayed(
@@ -357,9 +361,14 @@ class ApiAuthRepository implements AuthRepository {
   @override
   Future<AppUser> signInWithApple({
     required String identityToken,
+    String? nonce,
     String? fullName,
   }) async {
-    final res = await _auth.signInWithIdToken(provider: OAuthProvider.apple, idToken: identityToken);
+    final res = await _auth.signInWithIdToken(
+      provider: OAuthProvider.apple,
+      idToken: identityToken,
+      nonce: nonce,
+    );
     return _require(res.session);
   }
 
