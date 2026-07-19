@@ -15,6 +15,8 @@ class ProfileRepository {
   Future<UserStats> stats() async => (await _source.stats()).toModel();
 
   Future<UserProfile> getProfile() => _source.getProfile();
+
+  Future<bool> shouldSkipOnboarding() => _source.shouldSkipOnboarding();
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {

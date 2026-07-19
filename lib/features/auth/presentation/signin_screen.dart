@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
 import 'widgets/sso_buttons.dart';
 
@@ -36,7 +37,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
         .signIn(email: _email.text, password: _password.text);
     if (!mounted) return;
     if (ok) {
-      context.go(Routes.plan);
+      await routeAfterAuth(context, ref);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

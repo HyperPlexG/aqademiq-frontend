@@ -19,6 +19,11 @@ abstract interface class ProfileSource {
 
   /// The editable profile (name/email/university/…) from `GET /profile`.
   Future<UserProfile> getProfile();
+
+  /// Whether the signed-in account can skip onboarding — true if it has already
+  /// finished onboarding, or it's a guest ("jump right in"). Used to gate
+  /// post-auth routing (app vs. the onboarding flow).
+  Future<bool> shouldSkipOnboarding();
 }
 
 class MockProfileSource implements ProfileSource {
@@ -27,6 +32,9 @@ class MockProfileSource implements ProfileSource {
 
   @override
   Future<UserProfile> getProfile() => mockDelay(_demoProfile);
+
+  @override
+  Future<bool> shouldSkipOnboarding() => mockDelay(true);
 }
 
 /// Live impl — aggregated `/v1/me/stats` (contract §12.J). `weekMoods` is left
@@ -57,5 +65,13 @@ class ApiProfileSource implements ProfileSource {
       university: j['university'] as String?,
       program: j['program'] as String?,
     );
+  }
+
+  @override
+  Future<bool> shouldSkipOnboarding() async {
+    final j = await _dio.getMap('/profile');
+    final guest = j['is_guest'] as bool? ?? false;
+    final done = j['onboarding_complete'] as bool? ?? false;
+    return guest || done;
   }
 }
