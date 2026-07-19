@@ -7,68 +7,68 @@ const String _base = 'assets/audio/stems/focus_mode';
 // reuse the same Focus WAV files with different subsets.
 
 const Stem _padSlowFsharp = Stem(
-  assetPath: '$_base/pads/572778__deadrobotmusic__fubfmf-slow-f-sharp-minor.wav',
+  assetPath: '$_base/pads/572778__deadrobotmusic__fubfmf-slow-f-sharp-minor.ogg',
   type: LayerType.pad,
   noteName: 'F#',
 );
 const Stem _padChoirFsharp = Stem(
   assetPath:
-      '$_base/pads/808032__deadrobotmusic__ambient-f-sharp-minor-ethereal-choir-pad-1.wav',
+      '$_base/pads/808032__deadrobotmusic__ambient-f-sharp-minor-ethereal-choir-pad-1.ogg',
   type: LayerType.pad,
   noteName: 'F#',
 );
 
 const Stem _textureRain = Stem(
-  assetPath: '$_base/textures/mixkit-light-rain-loop-2393.wav',
+  assetPath: '$_base/textures/mixkit-light-rain-loop-2393.ogg',
   type: LayerType.texture,
   noteName: 'pink',
 );
 const Stem _textureHum = Stem(
-  assetPath: '$_base/textures/mixkit-space-ship-hum-2136.wav',
+  assetPath: '$_base/textures/mixkit-space-ship-hum-2136.ogg',
   type: LayerType.texture,
   noteName: 'brown',
 );
 const Stem _textureSea = Stem(
-  assetPath: '$_base/textures/mixkit-windy-sea-loop-1200.wav',
+  assetPath: '$_base/textures/mixkit-windy-sea-loop-1200.ogg',
   type: LayerType.texture,
   noteName: 'pink',
 );
 
 const Stem _pulseDreamsBass = Stem(
-  assetPath: '$_base/pulses/Cymatics - Dreams Synth Bass - E.wav',
+  assetPath: '$_base/pulses/Cymatics - Dreams Synth Bass - E.ogg',
   type: LayerType.pulse,
   probability: 0.6,
   noteName: 'E',
 );
 const Stem _pulseEternity808 = Stem(
-  assetPath: '$_base/pulses/Cymatics - Eternity 808 - E.wav',
+  assetPath: '$_base/pulses/Cymatics - Eternity 808 - E.ogg',
   type: LayerType.pulse,
   probability: 0.4,
   noteName: 'E',
 );
 
 const Stem _sparkKalimba = Stem(
-  assetPath: '$_base/sparks/kalimba-hit-note-high-f_F_minor.wav',
+  assetPath: '$_base/sparks/kalimba-hit-note-high-f_F_minor.ogg',
   type: LayerType.spark,
   noteName: 'F',
 );
 const Stem _sparkPluck = Stem(
-  assetPath: '$_base/sparks/pluck-shot-c-key.wav',
+  assetPath: '$_base/sparks/pluck-shot-c-key.ogg',
   type: LayerType.spark,
   noteName: 'C',
 );
 const Stem _sparkRhodesBassy = Stem(
-  assetPath: '$_base/sparks/rhodes-piano-one-shots-bassy_F.wav',
+  assetPath: '$_base/sparks/rhodes-piano-one-shots-bassy_F.ogg',
   type: LayerType.spark,
   noteName: 'F',
 );
 const Stem _sparkRhodesFull = Stem(
-  assetPath: '$_base/sparks/rhodes-piano-one-shots-full_F.wav',
+  assetPath: '$_base/sparks/rhodes-piano-one-shots-full_F.ogg',
   type: LayerType.spark,
   noteName: 'F',
 );
 const Stem _sparkRhodesWarm = Stem(
-  assetPath: '$_base/sparks/rhodes-piano-one-shots-warm-fat_F.wav',
+  assetPath: '$_base/sparks/rhodes-piano-one-shots-warm-fat_F.ogg',
   type: LayerType.spark,
   noteName: 'F',
 );
