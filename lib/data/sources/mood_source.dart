@@ -36,10 +36,33 @@ class ApiMoodSource implements MoodSource {
   @override
   Future<List<MoodLogDto>> week() async {
     final body = await _dio.getMap('/mood-entries/week');
-    return listOf(body, 'days')
-        .where((d) => d['mood_index'] != null)
-        .map((d) => _toDto(d, phase: 'adhoc'))
-        .toList(growable: false);
+    final out = <MoodLogDto>[];
+    for (final d in listOf(body, 'days')) {
+      final date = parseDateTime(d['date']) ?? DateTime.now();
+      final mi = d['mood_index'];
+      if (mi is num) {
+        out.add(MoodLogDto(
+          id: 'mood-${d['date']}-morning',
+          date: date,
+          phase: 'morning',
+          mood: mi.toInt(),
+          note: d['intention'] as String?,
+        ));
+      }
+      // Evening reflection — surfaced so the Stats "daily reflections" list can
+      // render it. Without this the reflection text never reaches the app.
+      final reflection = d['reflection'];
+      if (reflection is String && reflection.trim().isNotEmpty) {
+        out.add(MoodLogDto(
+          id: 'mood-${d['date']}-evening',
+          date: date,
+          phase: 'evening',
+          mood: mi is num ? mi.toInt() : 3,
+          note: reflection,
+        ));
+      }
+    }
+    return out.toList(growable: false);
   }
 
   @override

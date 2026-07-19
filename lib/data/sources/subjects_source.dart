@@ -10,8 +10,23 @@ abstract interface class SubjectsSource {
   Future<List<SemesterDto>> semesters();
   Future<SubjectDto> upsert(SubjectDto subject);
   Future<void> delete(String id);
-  Future<SemesterDto> upsertSemester(SemesterDto semester);
+  Future<SemesterDto> upsertSemester(
+    SemesterDto semester, {
+    DateTime? start,
+    DateTime? end,
+  });
   Future<void> deleteSemester(String id);
+
+  /// Uploads a material for [subjectId] and returns the created file id. The
+  /// live impl runs the presign → PUT → commit handshake; the mock impl fakes
+  /// it locally (bumping the subject's file count).
+  Future<String> uploadFile({
+    required String subjectId,
+    required String name,
+    required String kind,
+    String? mimeType,
+    required List<int> bytes,
+  });
 }
 
 class MockSubjectsSource implements SubjectsSource {
@@ -47,7 +62,13 @@ class MockSubjectsSource implements SubjectsSource {
   }
 
   @override
-  Future<SemesterDto> upsertSemester(SemesterDto semester) async {
+  Future<SemesterDto> upsertSemester(
+    SemesterDto semester, {
+    DateTime? start,
+    DateTime? end,
+  }) async {
+    // The Semester model only carries id + name, so start/end aren't stored in
+    // mock mode — they exist to drive the live API's date range.
     final created = semester.id.isEmpty
         ? semester.copyWith(id: 'sem-${DateTime.now().microsecondsSinceEpoch}')
         : semester;
@@ -64,6 +85,25 @@ class MockSubjectsSource implements SubjectsSource {
   Future<void> deleteSemester(String id) async {
     _semesters.removeWhere((s) => s.id == id);
     return mockDelayVoid();
+  }
+
+  @override
+  Future<String> uploadFile({
+    required String subjectId,
+    required String name,
+    required String kind,
+    String? mimeType,
+    required List<int> bytes,
+  }) async {
+    // No real storage in mock mode: bump the subject's file count so the
+    // materials header updates end-to-end.
+    final i = _subjects.indexWhere((s) => s.id == subjectId);
+    if (i >= 0) {
+      _subjects[i] = _subjects[i].copyWith(
+        fileCount: _subjects[i].fileCount + 1,
+      );
+    }
+    return mockDelay('file-${DateTime.now().microsecondsSinceEpoch}');
   }
 }
 
@@ -106,13 +146,20 @@ class ApiSubjectsSource implements SubjectsSource {
   Future<void> delete(String id) => _dio.deleteMap('/subjects/$id');
 
   @override
-  Future<SemesterDto> upsertSemester(SemesterDto semester) async {
+  Future<SemesterDto> upsertSemester(
+    SemesterDto semester, {
+    DateTime? start,
+    DateTime? end,
+  }) async {
     if (semester.id.isEmpty) {
       final now = DateTime.now();
+      final startDate = start ?? DateTime(now.year, now.month, now.day);
+      final endDate =
+          end ?? DateTime(now.year, now.month + 6, now.day);
       final json = await _dio.postMap('/semesters', {
         'name': semester.name,
-        'start': ymd(now),
-        'end': ymd(now.add(const Duration(days: 180))),
+        'start': ymd(startDate),
+        'end': ymd(endDate),
       });
       return _semToDto(json);
     }
@@ -123,6 +170,46 @@ class ApiSubjectsSource implements SubjectsSource {
 
   @override
   Future<void> deleteSemester(String id) => _dio.deleteMap('/semesters/$id');
+
+  @override
+  Future<String> uploadFile({
+    required String subjectId,
+    required String name,
+    required String kind,
+    String? mimeType,
+    required List<int> bytes,
+  }) async {
+    final contentType = mimeType ?? 'application/octet-stream';
+
+    // Presign → PUT bytes → commit. NOTE: this Dio's baseUrl already carries the
+    // `/v1` prefix, so these are relative resource paths ('/uploads/...'), not
+    // '/v1/uploads/...'.
+    final init = await _dio.postMap('/uploads/init', {
+      'subject_id': subjectId,
+      'name': name,
+      'kind': kind,
+      'mime_type': contentType,
+      'size_bytes': bytes.length,
+    });
+    final fileId = init['file_id'] as String;
+    final uploadUrl = init['upload_url'] as String;
+
+    // PUT straight to storage with a bare Dio so the signed URL isn't sent the
+    // API client's base URL or Authorization header.
+    await Dio().put<void>(
+      uploadUrl,
+      data: Stream<List<int>>.fromIterable([bytes]),
+      options: Options(
+        headers: <String, dynamic>{
+          Headers.contentTypeHeader: contentType,
+          Headers.contentLengthHeader: bytes.length,
+        },
+      ),
+    );
+
+    final commit = await _dio.postMap('/uploads/$fileId/commit');
+    return (commit['file_id'] as String?) ?? fileId;
+  }
 
   SubjectDto _subjToDto(Map<String, dynamic> j) => SubjectDto(
         id: j['id'] as String? ?? '',

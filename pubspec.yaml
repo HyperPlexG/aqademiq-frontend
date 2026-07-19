@@ -30,6 +30,7 @@ environment:
 dependencies:
   cupertino_icons: ^1.0.8
   dio: ^5.9.2
+  file_selector: ^1.0.3
   flutter:
     sdk: flutter
   flutter_foreground_task: ^9.1.0
