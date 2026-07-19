@@ -332,9 +332,9 @@ class _LinksCard extends ConsumerWidget {
     final colors = context.colors;
     final links = <(String, VoidCallback)>[
       ('Rate the app', () => unawaited(showRateSheet(context))),
-      ('Share feedback', () => unawaited(openExternal(context, Uri(scheme: 'mailto', path: 'hello@aqademiq.app', queryParameters: {'subject': 'Aqademiq feedback'})))),
-      ('FAQ', () => unawaited(openExternal(context, Uri.parse('https://aqademiq.app/faq')))),
-      ('Follow us on Instagram', () => unawaited(openExternal(context, Uri.parse('https://instagram.com/aqademiq')))),
+      ('Share feedback', () => unawaited(openExternal(context, Uri(scheme: 'mailto', path: 'support@aqademiq.com', queryParameters: {'subject': 'Aqademiq feedback'})))),
+      ('FAQ', () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/faq')))),
+      ('Follow us on Instagram', () => unawaited(openExternal(context, Uri.parse('https://www.instagram.com/tryaqademiq/')))),
     ];
     return AppCard(
       child: Column(

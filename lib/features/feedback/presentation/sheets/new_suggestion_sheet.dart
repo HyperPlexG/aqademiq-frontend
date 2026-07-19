@@ -144,7 +144,7 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
                   onTap: () => unawaited(
                     openExternal(
                       context,
-                      Uri.parse('mailto:hello@aqademiq.app?subject=Bug report'),
+                      Uri.parse('mailto:support@aqademiq.com?subject=Bug report'),
                     ),
                   ),
                   child: Text(

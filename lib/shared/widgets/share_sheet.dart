@@ -199,7 +199,7 @@ class _ShareInviteButton extends StatelessWidget {
       onTap: () async {
         await SharePlus.instance.share(
           ShareParams(
-            text: 'Join me on Aqademiq — my focus sanctuary. Use my referral code ADA42 → https://aqademiq.app',
+            text: 'Join me on Aqademiq — my focus sanctuary. Use my referral code ADA42 → https://www.aqademiq.com',
             subject: 'Join me on Aqademiq',
           ),
         );

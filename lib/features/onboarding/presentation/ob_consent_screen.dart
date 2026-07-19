@@ -53,11 +53,11 @@ class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
     super.initState();
     _privacyTap = TapGestureRecognizer()
       ..onTap = () => unawaited(
-            openExternal(context, Uri.parse('https://aqademiq.com/privacy-policy')),
+            openExternal(context, Uri.parse('https://www.aqademiq.com/privacy-policy')),
           );
     _termsTap = TapGestureRecognizer()
       ..onTap = () => unawaited(
-            openExternal(context, Uri.parse('https://aqademiq.com/terms-of-use')),
+            openExternal(context, Uri.parse('https://www.aqademiq.com/terms-of-use')),
           );
   }
 
@@ -259,13 +259,13 @@ class _TermsLine extends StatelessWidget {
         children: [
           const TextSpan(text: 'By continuing you agree to our '),
           TextSpan(
-            text: 'aqademiq.com/privacy-policy',
+            text: 'www.aqademiq.com/privacy-policy',
             style: link,
             recognizer: privacyTap,
           ),
           const TextSpan(text: ' and '),
           TextSpan(
-            text: 'aqademiq.com/terms-of-use',
+            text: 'www.aqademiq.com/terms-of-use',
             style: link,
             recognizer: termsTap,
           ),

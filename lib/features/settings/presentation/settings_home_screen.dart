@@ -126,8 +126,8 @@ class SettingsHomeScreen extends ConsumerWidget {
           children: [
             SettingsRow(label: 'Feedback & suggestions', icon: Icons.forum_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsFeedback))),
             SettingsRow(label: 'Rate Aqademiq', icon: Icons.star_outline, showChevron: true, onTap: () => unawaited(showRateSheet(context))),
-            SettingsRow(label: 'Privacy Policy', icon: Icons.description, showChevron: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://aqademiq.app/privacy')))),
-            SettingsRow(label: 'Terms of service', icon: Icons.help_outline, showChevron: true, last: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://aqademiq.app/terms')))),
+            SettingsRow(label: 'Privacy Policy', icon: Icons.description, showChevron: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/privacy-policy')))),
+            SettingsRow(label: 'Terms of service', icon: Icons.help_outline, showChevron: true, last: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/terms-of-use')))),
           ],
         ),
       ],

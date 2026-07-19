@@ -535,7 +535,7 @@ class _IntroCard extends StatelessWidget {
                 onTap: () => unawaited(
                   openExternal(
                     context,
-                    Uri.parse('https://aqademiq.app/research'),
+                    Uri.parse('https://www.aqademiq.com/research'),
                   ),
                 ),
                 child: Text(
@@ -553,7 +553,7 @@ class _IntroCard extends StatelessWidget {
                 onTap: () => unawaited(
                   openExternal(
                     context,
-                    Uri.parse('mailto:hello@aqademiq.app?subject=Bug report'),
+                    Uri.parse('mailto:support@aqademiq.com?subject=Bug report'),
                   ),
                 ),
                 child: Text(
