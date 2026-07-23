@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,6 +47,7 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _codeController;
   late final TextEditingController _professorController;
+  late final TextEditingController _creditsController;
 
   int _formatIdx = 0;
   int _gradeIdx = 1;
@@ -61,6 +63,8 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
     _codeController = TextEditingController(text: existing?.code ?? '');
     _professorController =
         TextEditingController(text: existing?.professor ?? '');
+    _creditsController =
+        TextEditingController(text: existing?.credits?.toString() ?? '');
     if (existing != null) {
       final gradeIdx = _letterGrades.indexOf(existing.targetGrade ?? '');
       if (gradeIdx >= 0) _gradeIdx = gradeIdx;
@@ -77,6 +81,7 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
     _nameController.dispose();
     _codeController.dispose();
     _professorController.dispose();
+    _creditsController.dispose();
     super.dispose();
   }
 
@@ -98,6 +103,8 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
         (ref.read(semestersProvider).value?.firstOrNull?.id ?? '');
     final code = _codeController.text.trim();
     final professor = _professorController.text.trim();
+    final creditsText = _creditsController.text.trim();
+    final credits = creditsText.isEmpty ? null : int.tryParse(creditsText);
 
     final subject = (existing ??
             const Subject(id: '', name: '', color: '', semesterId: ''))
@@ -108,6 +115,7 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
       code: code.isEmpty ? null : code,
       targetGrade: _formatIdx == 0 ? _letterGrades[_gradeIdx] : null,
       professor: professor.isEmpty ? null : professor,
+      credits: credits,
       mood: _moodIdx,
     );
 
@@ -290,23 +298,13 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
   // --- Body fields ----------------------------------------------------------
 
   /// A white body field shell: surface bg, radius 12, card shadow.
-  Widget _bodyField(AppColors colors, {required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.cellSmall),
-        boxShadow: colors.cardShadow,
-      ),
-      child: child,
-    );
-  }
-
   /// An editable body field matching [_bodyField]'s look.
   Widget _bodyTextField(
     AppColors colors, {
     required TextEditingController controller,
     required String hint,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -316,6 +314,8 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
       ),
       child: TextField(
         controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         cursorColor: colors.accent,
         style: AppText.sans(
           size: 12.5,
@@ -361,29 +361,15 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildCreditsLabel(colors),
-              _bodyField(
+              _bodyTextField(
                 colors,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Add',
-                      style: AppText.sans(
-                        size: 12.5,
-                        weight: FontWeight.w700,
-                        color: colors.textDim,
-                      ),
-                    ),
-                    Text(
-                      '＋',
-                      style: AppText.sans(
-                        size: 12.5,
-                        weight: FontWeight.w700,
-                        color: colors.text,
-                      ),
-                    ),
-                  ],
-                ),
+                controller: _creditsController,
+                hint: 'e.g. 3',
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(2),
+                ],
               ),
             ],
           ),
