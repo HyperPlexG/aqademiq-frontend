@@ -69,6 +69,8 @@ Future<void> showAddFileSheet(
   required String subjectName,
   required Color subjectColor,
 }) {
+  // No text entry here — drop any keyboard left focused on the screen behind.
+  FocusManager.instance.primaryFocus?.unfocus();
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
@@ -147,7 +149,14 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
         ),
         boxShadow: colors.sheetShadow,
       ),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
+      // Lift above the keyboard if one is up (e.g. left focused on the screen
+      // behind), so the file options are never hidden underneath it.
+      padding: EdgeInsets.fromLTRB(
+        18,
+        12,
+        18,
+        22 + MediaQuery.viewInsetsOf(context).bottom,
+      ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
