@@ -297,8 +297,8 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
 
   // --- Body fields ----------------------------------------------------------
 
-  /// A white body field shell: surface bg, radius 12, card shadow.
-  /// An editable body field matching [_bodyField]'s look.
+  /// A white editable body field: surface bg, radius 12, card shadow. Pass
+  /// [keyboardType]/[inputFormatters] for numeric fields (e.g. credits).
   Widget _bodyTextField(
     AppColors colors, {
     required TextEditingController controller,
