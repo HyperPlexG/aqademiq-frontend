@@ -104,8 +104,21 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
 
     const typeGroup = XTypeGroup(
       label: 'Documents',
+      // extensions/mimeTypes cover Android + desktop; iOS filters by UTIs, so
+      // omitting `uniformTypeIdentifiers` greys out every file in the picker.
       extensions: <String>['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'md'],
       mimeTypes: <String>['application/pdf', 'text/plain'],
+      uniformTypeIdentifiers: <String>[
+        'com.adobe.pdf',
+        'public.plain-text',
+        'public.text',
+        'net.daringfireball.markdown',
+        'com.microsoft.word.doc',
+        'org.openxmlformats.wordprocessingml.document',
+        'com.microsoft.powerpoint.ppt',
+        'org.openxmlformats.presentationml.presentation',
+        'public.image',
+      ],
     );
     final file = await openFile(acceptedTypeGroups: const [typeGroup]);
     if (file == null) return;
