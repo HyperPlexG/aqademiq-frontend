@@ -5,6 +5,9 @@ import '../fixtures/fixtures.dart';
 import 'api_helpers.dart';
 import 'mock_latency.dart';
 
+/// A stored material for a subject, for the detail screen's Materials list.
+typedef SubjectFileRef = ({String id, String name, String sizeLabel, String kind});
+
 abstract interface class SubjectsSource {
   Future<List<SubjectDto>> all();
   Future<List<SemesterDto>> semesters();
@@ -27,6 +30,12 @@ abstract interface class SubjectsSource {
     String? mimeType,
     required List<int> bytes,
   });
+
+  /// The stored materials for [subjectId] (from `GET /subjects/{id}`).
+  Future<List<SubjectFileRef>> files(String subjectId);
+
+  /// A short-lived signed URL to open/download the material [fileId].
+  Future<String> fileDownloadUrl(String fileId);
 }
 
 class MockSubjectsSource implements SubjectsSource {
@@ -105,6 +114,16 @@ class MockSubjectsSource implements SubjectsSource {
     }
     return mockDelay('file-${DateTime.now().microsecondsSinceEpoch}');
   }
+
+  @override
+  Future<List<SubjectFileRef>> files(String subjectId) => mockDelay(const [
+        (id: 'f1', name: 'Syllabus.pdf', sizeLabel: '2.4 MB', kind: 'syllabus'),
+        (id: 'f2', name: 'Lecture 1.pdf', sizeLabel: '1.1 MB', kind: 'slides'),
+      ]);
+
+  @override
+  Future<String> fileDownloadUrl(String fileId) =>
+      mockDelay('https://example.com/$fileId.pdf');
 }
 
 /// Live impl — `/v1/subjects` + `/v1/semesters` (contract §12.D, §12.E).
@@ -209,6 +228,25 @@ class ApiSubjectsSource implements SubjectsSource {
 
     final commit = await _dio.postMap('/uploads/$fileId/commit');
     return (commit['file_id'] as String?) ?? fileId;
+  }
+
+  @override
+  Future<List<SubjectFileRef>> files(String subjectId) async {
+    final body = await _dio.getMap('/subjects/$subjectId');
+    return listOf(body, 'files')
+        .map((j) => (
+              id: j['id'] as String? ?? '',
+              name: j['name'] as String? ?? 'File',
+              sizeLabel: j['size_label'] as String? ?? '',
+              kind: j['kind'] as String? ?? '',
+            ))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<String> fileDownloadUrl(String fileId) async {
+    final body = await _dio.getMap('/files/$fileId/download');
+    return body['url'] as String? ?? '';
   }
 
   SubjectDto _subjToDto(Map<String, dynamic> j) => SubjectDto(

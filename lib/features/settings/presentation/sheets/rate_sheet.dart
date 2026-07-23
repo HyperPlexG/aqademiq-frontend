@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../data/repositories/settings_repository.dart';
 
 /// Opens the settings-rate sheet ("Rate Aqademiq").
 ///
@@ -18,15 +22,32 @@ Future<void> showRateSheet(BuildContext context) {
   );
 }
 
-class _RateSheet extends StatefulWidget {
+class _RateSheet extends ConsumerStatefulWidget {
   const _RateSheet();
 
   @override
-  State<_RateSheet> createState() => _RateSheetState();
+  ConsumerState<_RateSheet> createState() => _RateSheetState();
 }
 
-class _RateSheetState extends State<_RateSheet> {
+class _RateSheetState extends ConsumerState<_RateSheet> {
   int _rating = 0;
+  bool _submitting = false;
+
+  Future<void> _submit() async {
+    if (_rating < 1 || _submitting) return;
+    setState(() => _submitting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await ref.read(settingsRepositoryProvider).submitRating(rating: _rating);
+    } on Object {
+      // Non-fatal — thank the user regardless of a transient write failure.
+    }
+    navigator.pop();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Thanks for the feedback! 💜')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +100,7 @@ class _RateSheetState extends State<_RateSheet> {
                   GestureDetector(
                     onTap: () => setState(() => _rating = i),
                     child: Icon(
-                      Icons.star_outline,
+                      i <= _rating ? Icons.star : Icons.star_outline,
                       size: 30,
                       color: i <= _rating
                           ? colors.accent
@@ -91,7 +112,7 @@ class _RateSheetState extends State<_RateSheet> {
             ),
             const SizedBox(height: 20),
             GestureDetector(
-              onTap: hasRating ? () => Navigator.of(context).pop() : null,
+              onTap: hasRating && !_submitting ? () => unawaited(_submit()) : null,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 13),
@@ -100,7 +121,7 @@ class _RateSheetState extends State<_RateSheet> {
                   borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
                 child: Text(
-                  'Submit rating',
+                  _submitting ? 'Submitting…' : 'Submit rating',
                   textAlign: TextAlign.center,
                   style: AppText.sans(
                     size: 13.5,

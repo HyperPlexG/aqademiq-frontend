@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/hex_color.dart';
+import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../shared/widgets/mood_blob.dart';
@@ -17,11 +18,24 @@ class SubjectDetailScreen extends ConsumerWidget {
   const SubjectDetailScreen({super.key, required this.id});
   final String id;
 
-  static const List<(IconData, String, String, Color)> _files = [
-    (Icons.picture_as_pdf, 'Course syllabus.pdf', '420 KB', Color(0xFFE85476)),
-    (Icons.slideshow, 'Lecture 1–9 slides.pdf', '8.2 MB', Color(0xFFE8A430)),
-    (Icons.description, 'My parsing notes.md', '12 KB', Color(0xFF5CBBFF)),
-  ];
+  /// Icon + accent for a material, chosen from its file extension.
+  static (IconData, Color) _fileVisual(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.pdf')) return (Icons.picture_as_pdf, const Color(0xFFE85476));
+    if (n.endsWith('.ppt') || n.endsWith('.pptx')) {
+      return (Icons.slideshow, const Color(0xFFE8A430));
+    }
+    if (n.endsWith('.doc') || n.endsWith('.docx')) {
+      return (Icons.article, const Color(0xFF5C7CFF));
+    }
+    if (n.endsWith('.png') || n.endsWith('.jpg') || n.endsWith('.jpeg')) {
+      return (Icons.image, const Color(0xFF2A9D6B));
+    }
+    if (n.endsWith('.md') || n.endsWith('.txt')) {
+      return (Icons.description, const Color(0xFF5CBBFF));
+    }
+    return (Icons.insert_drive_file, const Color(0xFF7A8699));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,6 +49,8 @@ class SubjectDetailScreen extends ConsumerWidget {
       );
     }
     final color = hexColor(subject.color);
+    final filesAsync = ref.watch(subjectFilesProvider(subject.id));
+    final files = filesAsync.value;
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 96),
@@ -96,7 +112,7 @@ class SubjectDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Text('MATERIALS (${subject.fileCount})', style: AppText.sans(size: 9, weight: FontWeight.w800, letterSpacing: AppText.em(0.12, 9), color: colors.textDim)),
+                  Text('MATERIALS (${files?.length ?? subject.fileCount})', style: AppText.sans(size: 9, weight: FontWeight.w800, letterSpacing: AppText.em(0.12, 9), color: colors.textDim)),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
@@ -111,16 +127,56 @@ class SubjectDetailScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 7),
-              for (final f in _files) ...[
-                _FileRow(
-                  icon: f.$1,
-                  name: f.$2,
-                  size: f.$3,
-                  color: f.$4,
-                  onTap: () => _previewFile(context),
-                ),
-                const SizedBox(height: 6),
-              ],
+              ...filesAsync.when(
+                data: (list) => list.isEmpty
+                    ? [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            'No materials yet — add your syllabus or notes.',
+                            style: AppText.sans(size: 11.5, color: colors.textMed),
+                          ),
+                        ),
+                      ]
+                    : [
+                        for (final f in list) ...[
+                          Builder(
+                            builder: (_) {
+                              final (icon, fileColor) = _fileVisual(f.name);
+                              return _FileRow(
+                                icon: icon,
+                                name: f.name,
+                                size: f.sizeLabel,
+                                color: fileColor,
+                                onTap: () => _openFile(context, ref, f.id),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 6),
+                        ],
+                      ],
+                loading: () => [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.2),
+                      ),
+                    ),
+                  ),
+                ],
+                error: (_, _) => [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      "Couldn't load materials.",
+                      style: AppText.sans(size: 11.5, color: colors.textMed),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -145,12 +201,20 @@ class SubjectDetailScreen extends ConsumerWidget {
     );
   }
 
-  /// Previewing a real material needs backend file storage (§8 pass) — stay
-  /// honest until then rather than faking a viewer.
-  void _previewFile(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('File preview is coming soon.')),
-    );
+  /// Fetch a short-lived signed URL for [fileId] and open it in the browser /
+  /// the OS document viewer.
+  Future<void> _openFile(BuildContext context, WidgetRef ref, String fileId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ref.read(subjectsRepositoryProvider).fileDownloadUrl(fileId);
+      if (url.isEmpty) throw Exception('empty url');
+      if (!context.mounted) return;
+      await openExternal(context, Uri.parse(url));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't open this file.")),
+      );
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../data/models/user_profile.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../providers/profile_controller.dart';
 import 'sheets/gender_sheet.dart';
@@ -18,7 +19,7 @@ const _months = [
 String _formatDob(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
 /// The eight preset avatars (server stores the chosen index as `avatar_index`).
-const _avatars = ['🎓', '📚', '✏️', '🧠', '🚀', '⭐', '🔥', '🌙'];
+const List<String> _avatars = kProfileAvatars;
 
 /// Bottom sheet to pick one of the eight preset avatars; persists via the
 /// controller (which PATCHes `avatar_index`).

@@ -59,6 +59,12 @@ class SubjectsRepository {
       bytes: bytes,
     );
   }
+
+  Future<List<SubjectFileRef>> files(String subjectId) =>
+      _source.files(subjectId);
+
+  Future<String> fileDownloadUrl(String fileId) =>
+      _source.fileDownloadUrl(fileId);
 }
 
 final subjectsRepositoryProvider = Provider<SubjectsRepository>((ref) {
@@ -128,6 +134,15 @@ final semestersProvider =
 final subjectsByIdProvider = FutureProvider<Map<String, Subject>>((ref) async {
   final subjects = await ref.watch(subjectsProvider.future);
   return {for (final s in subjects) s.id: s};
+});
+
+/// The stored materials for a subject, for the detail screen's Materials list.
+/// Re-fetches whenever the subjects store changes (e.g. after an upload).
+// ignore: specify_nonobvious_property_types
+final subjectFilesProvider =
+    FutureProvider.family<List<SubjectFileRef>, String>((ref, subjectId) {
+  ref.watch(subjectsProvider);
+  return ref.watch(subjectsRepositoryProvider).files(subjectId);
 });
 
 /// The currently selected semester id (header label + "switch" persistence).

@@ -7,28 +7,30 @@ import '../../../../core/theme/app_text.dart';
 /// Presents the "Notification sound" sheet (`settings-notif-sound`) — a bottom
 /// sheet over the dimmed Notifications screen. Lists five sound options as pill
 /// rows. Tapping an option pops with its label; returns `null` on dismiss.
-Future<String?> showNotifSoundSheet(BuildContext context) {
+Future<String?> showNotifSoundSheet(BuildContext context, {String current = 'Chime'}) {
   return showModalBottomSheet<String>(
     context: context,
     useRootNavigator: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x6B140F1C),
     isScrollControlled: true,
-    builder: (_) => const _NotifSoundSheet(),
+    builder: (_) => _NotifSoundSheet(current: current),
   );
 }
 
 const _sounds = <String>['Chime', 'Pulse', 'Glass', 'Drop', 'None'];
 
 class _NotifSoundSheet extends StatefulWidget {
-  const _NotifSoundSheet();
+  const _NotifSoundSheet({required this.current});
+
+  final String current;
 
   @override
   State<_NotifSoundSheet> createState() => _NotifSoundSheetState();
 }
 
 class _NotifSoundSheetState extends State<_NotifSoundSheet> {
-  String _selected = 'Chime';
+  late String _selected = widget.current;
 
   @override
   Widget build(BuildContext context) {

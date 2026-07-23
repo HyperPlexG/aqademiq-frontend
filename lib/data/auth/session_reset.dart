@@ -8,6 +8,7 @@ import '../repositories/ada_repository.dart';
 import '../repositories/mood_repository.dart';
 import '../repositories/profile_repository.dart';
 import '../repositories/referral_repository.dart';
+import '../repositories/settings_repository.dart';
 import '../repositories/subjects_repository.dart';
 import '../repositories/tags_repository.dart';
 import 'auth_repository.dart';
@@ -33,6 +34,8 @@ final sessionResetProvider = Provider<void>((ref) {
       ..invalidate(onboardingProvider)
       ..invalidate(adaConversationsProvider)
       ..invalidate(referralCodeProvider)
+      ..invalidate(notificationPrefsProvider)
+      ..invalidate(emailPrefsProvider)
       ..invalidate(dayTasksProvider)
       ..invalidate(weeklyCompletedProvider)
       ..invalidate(subjectsProvider)

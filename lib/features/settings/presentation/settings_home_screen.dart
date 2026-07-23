@@ -13,6 +13,7 @@ import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/tag.dart';
+import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../providers/prism_settings_provider.dart';
@@ -52,7 +53,7 @@ class SettingsHomeScreen extends ConsumerWidget {
             decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(18), boxShadow: colors.cardShadow),
             child: Row(
               children: [
-                _Avatar(size: 46, emojiSize: 22, colors: colors),
+                _Avatar(size: 46, emojiSize: 22, colors: colors, avatarIndex: profile.avatarIndex),
                 const SizedBox(width: 13),
                 Expanded(
                   child: Column(
@@ -160,13 +161,15 @@ void _comingSoon(BuildContext context, String feature) {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.size, required this.emojiSize, required this.colors});
+  const _Avatar({required this.size, required this.emojiSize, required this.colors, this.avatarIndex = 0});
   final double size;
   final double emojiSize;
   final AppColors colors;
+  final int avatarIndex;
 
   @override
   Widget build(BuildContext context) {
+    final emoji = kProfileAvatars[avatarIndex.clamp(0, kProfileAvatars.length - 1)];
     return Container(
       width: size,
       height: size,
@@ -175,7 +178,7 @@ class _Avatar extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(center: const Alignment(-0.24, -0.34), colors: [colors.accentSoft, colors.accent]),
       ),
-      child: Text('🎓', style: TextStyle(fontSize: emojiSize)),
+      child: Text(emoji, style: TextStyle(fontSize: emojiSize)),
     );
   }
 }
