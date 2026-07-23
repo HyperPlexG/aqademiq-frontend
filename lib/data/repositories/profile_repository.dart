@@ -16,6 +16,9 @@ class ProfileRepository {
 
   Future<UserProfile> getProfile() => _source.getProfile();
 
+  Future<void> updateProfile(UserProfile profile) =>
+      _source.updateProfile(profile);
+
   Future<bool> shouldSkipOnboarding() => _source.shouldSkipOnboarding();
 }
 

@@ -37,13 +37,34 @@ class ProfileController extends Notifier<UserProfile> {
     }
   }
 
-  void updateName(String value) => state = state.copyWith(name: value);
-  void updateEmail(String value) => state = state.copyWith(email: value);
-  void updateGender(String value) => state = state.copyWith(gender: value);
-  void updateDateOfBirth(DateTime value) => state = state.copyWith(dateOfBirth: value);
-  void updateHealth(String value) => state = state.copyWith(health: value);
-  void updateUniversity(String value) => state = state.copyWith(university: value);
-  void updateProgram(String value) => state = state.copyWith(program: value);
+  void updateName(String value) => _apply(state.copyWith(name: value));
+  void updateEmail(String value) => _apply(state.copyWith(email: value));
+  void updateGender(String value) => _apply(state.copyWith(gender: value));
+  void updateDateOfBirth(DateTime value) =>
+      _apply(state.copyWith(dateOfBirth: value));
+  void updateHealth(String value) => _apply(state.copyWith(health: value));
+  void updateUniversity(String value) =>
+      _apply(state.copyWith(university: value));
+  void updateProgram(String value) => _apply(state.copyWith(program: value));
+  void updateAvatarIndex(int value) =>
+      _apply(state.copyWith(avatarIndex: value));
+
+  /// Update local state immediately, then persist to the backend (best-effort;
+  /// live only). Email is sent as local-only — the server ignores it here.
+  void _apply(UserProfile next) {
+    state = next;
+    if (!Env.useMocks && Env.hasSupabase) {
+      unawaited(_persist(next));
+    }
+  }
+
+  Future<void> _persist(UserProfile profile) async {
+    try {
+      await ref.read(profileRepositoryProvider).updateProfile(profile);
+    } on Object {
+      // Best-effort — keep the local edit even if the write fails.
+    }
+  }
 }
 
 final profileControllerProvider =

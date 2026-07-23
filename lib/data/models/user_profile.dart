@@ -16,5 +16,7 @@ abstract class UserProfile with _$UserProfile {
     String? health,
     String? university,
     String? program,
+    // Preset avatar choice (0–7), persisted server-side as `avatar_index`.
+    @Default(0) int avatarIndex,
   }) = _UserProfile;
 }

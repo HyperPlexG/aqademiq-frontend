@@ -20,6 +20,10 @@ abstract interface class ProfileSource {
   /// The editable profile (name/email/university/…) from `GET /profile`.
   Future<UserProfile> getProfile();
 
+  /// Persist edited profile fields via `PATCH /profile`. Email is not editable
+  /// here (it's an auth flow); `health` has no server field.
+  Future<void> updateProfile(UserProfile profile);
+
   /// Whether the signed-in account can skip onboarding — true if it has already
   /// finished onboarding, or it's a guest ("jump right in"). Used to gate
   /// post-auth routing (app vs. the onboarding flow).
@@ -32,6 +36,9 @@ class MockProfileSource implements ProfileSource {
 
   @override
   Future<UserProfile> getProfile() => mockDelay(_demoProfile);
+
+  @override
+  Future<void> updateProfile(UserProfile profile) => mockDelay(null);
 
   @override
   Future<bool> shouldSkipOnboarding() => mockDelay(true);
@@ -64,8 +71,26 @@ class ApiProfileSource implements ProfileSource {
       dateOfBirth: (dob != null && dob.isNotEmpty) ? DateTime.tryParse(dob) : null,
       university: j['university'] as String?,
       program: j['program'] as String?,
+      avatarIndex: (j['avatar_index'] as num?)?.toInt() ?? 0,
     );
   }
+
+  @override
+  Future<void> updateProfile(UserProfile p) async {
+    await _dio.patch<dynamic>('/profile', data: <String, dynamic>{
+      'name': p.name,
+      if (p.gender != null) 'gender': p.gender,
+      if (p.dateOfBirth != null) 'date_of_birth': _fmtDate(p.dateOfBirth!),
+      if (p.university != null) 'university': p.university,
+      if (p.program != null) 'program': p.program,
+      'avatar_index': p.avatarIndex,
+    });
+  }
+
+  static String _fmtDate(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   @override
   Future<bool> shouldSkipOnboarding() async {

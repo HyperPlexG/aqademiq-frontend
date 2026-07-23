@@ -17,6 +17,82 @@ const _months = [
 
 String _formatDob(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
+/// The eight preset avatars (server stores the chosen index as `avatar_index`).
+const _avatars = ['🎓', '📚', '✏️', '🧠', '🚀', '⭐', '🔥', '🌙'];
+
+/// Bottom sheet to pick one of the eight preset avatars; persists via the
+/// controller (which PATCHes `avatar_index`).
+Future<void> _pickAvatar(
+  BuildContext context,
+  ProfileController controller,
+  int current,
+) {
+  final colors = context.colors;
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: colors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetContext) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose your avatar',
+                style: AppText.sans(
+                  size: 15,
+                  weight: FontWeight.w800,
+                  color: colors.text,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 14,
+                runSpacing: 14,
+                children: [
+                  for (var i = 0; i < _avatars.length; i++)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        controller.updateAvatarIndex(i);
+                        Navigator.of(sheetContext).pop();
+                      },
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            center: const Alignment(-0.24, -0.34),
+                            colors: [colors.accentSoft, colors.accent],
+                          ),
+                          border: Border.all(
+                            color: i == current ? colors.text : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                        child: Text(
+                          _avatars[i],
+                          style: const TextStyle(fontSize: 28),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 /// FRAMES `settings-profile` — edit personal info. Every row reads from and
 /// writes to [ProfileController], so edits persist and reflect everywhere.
 class SettingsProfileScreen extends ConsumerWidget {
@@ -32,21 +108,28 @@ class SettingsProfileScreen extends ConsumerWidget {
       title: 'Profile',
       children: [
         Center(
-          child: Column(
-            children: [
-              Container(
-                width: 72,
-                height: 72,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(center: const Alignment(-0.24, -0.34), colors: [colors.accentSoft, colors.accent]),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _pickAvatar(context, controller, profile.avatarIndex),
+            child: Column(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(center: const Alignment(-0.24, -0.34), colors: [colors.accentSoft, colors.accent]),
+                  ),
+                  child: Text(
+                    _avatars[profile.avatarIndex.clamp(0, _avatars.length - 1)],
+                    style: const TextStyle(fontSize: 34),
+                  ),
                 ),
-                child: const Text('🎓', style: TextStyle(fontSize: 34)),
-              ),
-              const SizedBox(height: 9),
-              Text('Change photo', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.accent)),
-            ],
+                const SizedBox(height: 9),
+                Text('Change photo', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.accent)),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 20),

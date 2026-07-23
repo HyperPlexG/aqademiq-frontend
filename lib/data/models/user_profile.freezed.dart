@@ -14,7 +14,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserProfile {
 
- String get name; String get email; String? get gender; DateTime? get dateOfBirth; String? get health; String? get university; String? get program;
+ String get name; String get email; String? get gender; DateTime? get dateOfBirth; String? get health; String? get university; String? get program;// Preset avatar choice (0–7), persisted server-side as `avatar_index`.
+ int get avatarIndex;
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +26,16 @@ $UserProfileCopyWith<UserProfile> get copyWith => _$UserProfileCopyWithImpl<User
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfile&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.health, health) || other.health == health)&&(identical(other.university, university) || other.university == university)&&(identical(other.program, program) || other.program == program));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfile&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.health, health) || other.health == health)&&(identical(other.university, university) || other.university == university)&&(identical(other.program, program) || other.program == program)&&(identical(other.avatarIndex, avatarIndex) || other.avatarIndex == avatarIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,name,email,gender,dateOfBirth,health,university,program);
+int get hashCode => Object.hash(runtimeType,name,email,gender,dateOfBirth,health,university,program,avatarIndex);
 
 @override
 String toString() {
-  return 'UserProfile(name: $name, email: $email, gender: $gender, dateOfBirth: $dateOfBirth, health: $health, university: $university, program: $program)';
+  return 'UserProfile(name: $name, email: $email, gender: $gender, dateOfBirth: $dateOfBirth, health: $health, university: $university, program: $program, avatarIndex: $avatarIndex)';
 }
 
 
@@ -45,7 +46,7 @@ abstract mixin class $UserProfileCopyWith<$Res>  {
   factory $UserProfileCopyWith(UserProfile value, $Res Function(UserProfile) _then) = _$UserProfileCopyWithImpl;
 @useResult
 $Res call({
- String name, String email, String? gender, DateTime? dateOfBirth, String? health, String? university, String? program
+ String name, String email, String? gender, DateTime? dateOfBirth, String? health, String? university, String? program, int avatarIndex
 });
 
 
@@ -62,7 +63,7 @@ class _$UserProfileCopyWithImpl<$Res>
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? email = null,Object? gender = freezed,Object? dateOfBirth = freezed,Object? health = freezed,Object? university = freezed,Object? program = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? email = null,Object? gender = freezed,Object? dateOfBirth = freezed,Object? health = freezed,Object? university = freezed,Object? program = freezed,Object? avatarIndex = null,}) {
   return _then(_self.copyWith(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
@@ -71,7 +72,8 @@ as String?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth
 as DateTime?,health: freezed == health ? _self.health : health // ignore: cast_nullable_to_non_nullable
 as String?,university: freezed == university ? _self.university : university // ignore: cast_nullable_to_non_nullable
 as String?,program: freezed == program ? _self.program : program // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,avatarIndex: null == avatarIndex ? _self.avatarIndex : avatarIndex // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
@@ -156,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program,  int avatarIndex)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserProfile() when $default != null:
-return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program);case _:
+return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program,_that.avatarIndex);case _:
   return orElse();
 
 }
@@ -177,10 +179,10 @@ return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.heal
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program,  int avatarIndex)  $default,) {final _that = this;
 switch (_that) {
 case _UserProfile():
-return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program);case _:
+return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program,_that.avatarIndex);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +199,10 @@ return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.heal
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String email,  String? gender,  DateTime? dateOfBirth,  String? health,  String? university,  String? program,  int avatarIndex)?  $default,) {final _that = this;
 switch (_that) {
 case _UserProfile() when $default != null:
-return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program);case _:
+return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.health,_that.university,_that.program,_that.avatarIndex);case _:
   return null;
 
 }
@@ -212,7 +214,7 @@ return $default(_that.name,_that.email,_that.gender,_that.dateOfBirth,_that.heal
 
 
 class _UserProfile implements UserProfile {
-  const _UserProfile({required this.name, required this.email, this.gender, this.dateOfBirth, this.health, this.university, this.program});
+  const _UserProfile({required this.name, required this.email, this.gender, this.dateOfBirth, this.health, this.university, this.program, this.avatarIndex = 0});
   
 
 @override final  String name;
@@ -222,6 +224,8 @@ class _UserProfile implements UserProfile {
 @override final  String? health;
 @override final  String? university;
 @override final  String? program;
+// Preset avatar choice (0–7), persisted server-side as `avatar_index`.
+@override@JsonKey() final  int avatarIndex;
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
@@ -233,16 +237,16 @@ _$UserProfileCopyWith<_UserProfile> get copyWith => __$UserProfileCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfile&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.health, health) || other.health == health)&&(identical(other.university, university) || other.university == university)&&(identical(other.program, program) || other.program == program));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfile&&(identical(other.name, name) || other.name == name)&&(identical(other.email, email) || other.email == email)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.health, health) || other.health == health)&&(identical(other.university, university) || other.university == university)&&(identical(other.program, program) || other.program == program)&&(identical(other.avatarIndex, avatarIndex) || other.avatarIndex == avatarIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,name,email,gender,dateOfBirth,health,university,program);
+int get hashCode => Object.hash(runtimeType,name,email,gender,dateOfBirth,health,university,program,avatarIndex);
 
 @override
 String toString() {
-  return 'UserProfile(name: $name, email: $email, gender: $gender, dateOfBirth: $dateOfBirth, health: $health, university: $university, program: $program)';
+  return 'UserProfile(name: $name, email: $email, gender: $gender, dateOfBirth: $dateOfBirth, health: $health, university: $university, program: $program, avatarIndex: $avatarIndex)';
 }
 
 
@@ -253,7 +257,7 @@ abstract mixin class _$UserProfileCopyWith<$Res> implements $UserProfileCopyWith
   factory _$UserProfileCopyWith(_UserProfile value, $Res Function(_UserProfile) _then) = __$UserProfileCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String email, String? gender, DateTime? dateOfBirth, String? health, String? university, String? program
+ String name, String email, String? gender, DateTime? dateOfBirth, String? health, String? university, String? program, int avatarIndex
 });
 
 
@@ -270,7 +274,7 @@ class __$UserProfileCopyWithImpl<$Res>
 
 /// Create a copy of UserProfile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? email = null,Object? gender = freezed,Object? dateOfBirth = freezed,Object? health = freezed,Object? university = freezed,Object? program = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? email = null,Object? gender = freezed,Object? dateOfBirth = freezed,Object? health = freezed,Object? university = freezed,Object? program = freezed,Object? avatarIndex = null,}) {
   return _then(_UserProfile(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
@@ -279,7 +283,8 @@ as String?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth
 as DateTime?,health: freezed == health ? _self.health : health // ignore: cast_nullable_to_non_nullable
 as String?,university: freezed == university ? _self.university : university // ignore: cast_nullable_to_non_nullable
 as String?,program: freezed == program ? _self.program : program // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,avatarIndex: null == avatarIndex ? _self.avatarIndex : avatarIndex // ignore: cast_nullable_to_non_nullable
+as int,
   ));
 }
 
