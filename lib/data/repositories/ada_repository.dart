@@ -16,6 +16,19 @@ class AdaRepository {
     final dto = await _source.reply(userText, const []);
     return dto.toModel();
   }
+
+  /// Past conversations for the chat-history panel (most-recent first).
+  Future<List<AdaConversationDto>> conversations() => _source.conversations();
+
+  /// Load a past conversation's messages and make it the active one.
+  Future<List<AdaMessage>> openConversation(String id) async {
+    _source.conversationId = id;
+    final dtos = await _source.messages(id);
+    return dtos.map((d) => d.toModel()).toList(growable: false);
+  }
+
+  /// Drop the active conversation so the next reply starts a fresh one.
+  void startNewConversation() => _source.conversationId = null;
 }
 
 final adaRepositoryProvider = Provider<AdaRepository>((ref) {
@@ -69,4 +82,26 @@ class AdaChatController extends Notifier<AdaChatState> {
   }
 
   void clear() => state = const AdaChatState();
+
+  /// Load a past conversation into the chat view.
+  Future<void> openConversation(String id) async {
+    state = const AdaChatState(typing: true);
+    try {
+      final messages = await ref.read(adaRepositoryProvider).openConversation(id);
+      state = AdaChatState(messages: messages);
+    } on Object {
+      state = const AdaChatState();
+    }
+  }
+
+  /// Start a fresh conversation (clears the view + drops the active id).
+  void newConversation() {
+    ref.read(adaRepositoryProvider).startNewConversation();
+    state = const AdaChatState();
+  }
 }
+
+/// Past Ada conversations for the history panel.
+final adaConversationsProvider = FutureProvider<List<AdaConversationDto>>(
+  (ref) => ref.watch(adaRepositoryProvider).conversations(),
+);

@@ -4,8 +4,21 @@ import '../dtos/ada_message_dto.dart';
 import 'api_helpers.dart';
 import 'mock_latency.dart';
 
+/// A past Ada conversation, for the chat-history panel.
+typedef AdaConversationDto = ({String id, String title, DateTime updatedAt});
+
 abstract interface class AdaSource {
   Future<AdaMessageDto> reply(String userText, List<AdaMessageDto> history);
+
+  /// The signed-in user's past conversations, most-recent first.
+  Future<List<AdaConversationDto>> conversations();
+
+  /// The messages of a conversation, oldest-first.
+  Future<List<AdaMessageDto>> messages(String conversationId);
+
+  /// Switch the active conversation. `null` starts a fresh one on the next reply.
+  set conversationId(String? id);
+  String? get conversationId;
 }
 
 class MockAdaSource implements AdaSource {
@@ -19,7 +32,11 @@ class MockAdaSource implements AdaSource {
   int _i = 0;
 
   @override
+  String? conversationId;
+
+  @override
   Future<AdaMessageDto> reply(String userText, List<AdaMessageDto> history) {
+    conversationId ??= 'mock-convo';
     final text = _canned[_i++ % _canned.length];
     return mockDelay(
       AdaMessageDto(
@@ -31,6 +48,32 @@ class MockAdaSource implements AdaSource {
       ms: 700,
     );
   }
+
+  @override
+  Future<List<AdaConversationDto>> conversations() => mockDelay([
+        (id: 'mock-1', title: 'Exam-week schedule', updatedAt: DateTime.now()),
+        (
+          id: 'mock-2',
+          title: 'NLP assignment breakdown',
+          updatedAt: DateTime.now().subtract(const Duration(days: 3)),
+        ),
+      ]);
+
+  @override
+  Future<List<AdaMessageDto>> messages(String conversationId) => mockDelay([
+        AdaMessageDto(
+          id: 'm1',
+          role: 'user',
+          text: 'Can you help me plan exam week?',
+          createdAt: DateTime.now(),
+        ),
+        AdaMessageDto(
+          id: 'm2',
+          role: 'ada',
+          text: _canned.first,
+          createdAt: DateTime.now(),
+        ),
+      ]);
 }
 
 /// Live impl — `/v1/ada` (contract §12.P). Transport is plain JSON (non-
@@ -43,6 +86,12 @@ class ApiAdaSource implements AdaSource {
 
   String? _conversationId;
 
+  @override
+  String? get conversationId => _conversationId;
+
+  @override
+  set conversationId(String? id) => _conversationId = id;
+
   Future<String> _ensureConversation() async {
     final existing = _conversationId;
     if (existing != null) return existing;
@@ -50,6 +99,28 @@ class ApiAdaSource implements AdaSource {
     final id = body['id'] as String? ?? '';
     _conversationId = id;
     return id;
+  }
+
+  @override
+  Future<List<AdaConversationDto>> conversations() async {
+    final body = await _dio.getMap('/ada/conversations');
+    return listOf(body, 'conversations').map((j) {
+      return (
+        id: j['id'] as String? ?? '',
+        title: (j['title'] as String?)?.trim().isNotEmpty ?? false
+            ? j['title'] as String
+            : 'Conversation',
+        updatedAt: parseDateTime(j['last_message_at']) ??
+            parseDateTime(j['created_at']) ??
+            DateTime.now(),
+      );
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<List<AdaMessageDto>> messages(String conversationId) async {
+    final body = await _dio.getMap('/ada/conversations/$conversationId/messages');
+    return listOf(body, 'messages').map(_toDto).toList(growable: false);
   }
 
   @override
