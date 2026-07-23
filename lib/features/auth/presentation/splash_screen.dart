@@ -21,8 +21,13 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
+  late final AnimationController _dots = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  )..repeat();
 
   @override
   void initState() {
@@ -45,6 +50,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _dots.dispose();
     super.dispose();
   }
 
@@ -77,20 +83,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             bottom: 30,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 0; i < 3; i++)
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: i == 0 ? colors.accent : colors.textDim.withValues(alpha: 0.4),
-                    ),
-                  ),
-              ],
+            child: AnimatedBuilder(
+              animation: _dots,
+              builder: (context, _) {
+                // Cycle the accent highlight across the three dots as a loading
+                // indicator (0 → 1 → 2 → repeat).
+                final active = (_dots.value * 3).floor() % 3;
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i == active
+                              ? colors.accent
+                              : colors.textDim.withValues(alpha: 0.4),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ],
