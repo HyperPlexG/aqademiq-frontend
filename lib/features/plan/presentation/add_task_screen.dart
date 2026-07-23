@@ -29,7 +29,11 @@ import 'pickers/time_picker.dart';
 /// FRAMES `plan-addtask` — the full add-task form. Each detail row opens the
 /// matching picker (time / date / duration / repeat) and reflects the result.
 class AddTaskScreen extends ConsumerStatefulWidget {
-  const AddTaskScreen({super.key});
+  const AddTaskScreen({super.key, this.existing});
+
+  /// When non-null, the screen edits this task (prefilled fields, saves via
+  /// `update`) instead of creating a new one.
+  final Task? existing;
 
   @override
   ConsumerState<AddTaskScreen> createState() => _AddTaskScreenState();
@@ -55,6 +59,16 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   @override
   void initState() {
     super.initState();
+    // Editing an existing task: prefill from it and ignore any Quick-add draft.
+    final existing = widget.existing;
+    if (existing != null) {
+      _title.text = existing.title;
+      _tag = existing.tagId;
+      _timeOfDay = _dayPartLabel(existing.dayPart ?? DayPart.anytime);
+      _durationMin = existing.durationMin ?? 30;
+      _repeat = existing.repeat;
+      return;
+    }
     // Consume a Quick-add draft so the typed title / time / repeat carry over.
     // Read the value here (no mutation), then clear the one-shot draft *after*
     // this build lifecycle — mutating a provider inside initState throws
@@ -86,19 +100,33 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       };
 
   Future<void> _save() async {
-    final date = ref.read(selectedDateProvider);
     final repeat =
         (_repeat != null && _repeat!.frequency != RepeatFrequency.none) ? _repeat : null;
-    final task = Task(
-      id: '',
-      title: _title.text.trim().isEmpty ? 'New task' : _title.text.trim(),
-      tagId: _tag,
-      date: date,
-      dayPart: DayPartX.fromWire(_timeOfDay.toLowerCase()),
-      durationMin: _durationMin,
-      repeat: repeat,
-    );
-    await ref.read(tasksRepositoryProvider).create(task);
+    final title = _title.text.trim().isEmpty ? 'New task' : _title.text.trim();
+    final dayPart = DayPartX.fromWire(_timeOfDay.toLowerCase());
+    final existing = widget.existing;
+
+    final repo = ref.read(tasksRepositoryProvider);
+    if (existing != null) {
+      // Edit: keep the task's own id and date, apply the edited fields.
+      await repo.update(existing.copyWith(
+        title: title,
+        tagId: _tag,
+        dayPart: dayPart,
+        durationMin: _durationMin,
+        repeat: repeat,
+      ));
+    } else {
+      await repo.create(Task(
+        id: '',
+        title: title,
+        tagId: _tag,
+        date: ref.read(selectedDateProvider),
+        dayPart: dayPart,
+        durationMin: _durationMin,
+        repeat: repeat,
+      ));
+    }
     ref.invalidate(dayTasksProvider);
     if (mounted) context.pop();
   }

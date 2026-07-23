@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../data/models/task.dart';
 import '../../features/ada/presentation/ada_screen.dart';
 import '../../features/auth/presentation/guest_ada_prompt.dart';
 import '../../features/auth/presentation/guest_save_prompt.dart';
@@ -124,7 +125,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.obPeak, builder: (_, _) => const ObPeakScreen()),
       GoRoute(path: Routes.obPrism, builder: (_, _) => const ObPrismScreen()),
       GoRoute(path: Routes.obLoading, builder: (_, _) => const AdaLoadingScreen()),
-      GoRoute(path: Routes.addTask, builder: (_, _) => const AddTaskScreen()),
+      GoRoute(
+        path: Routes.addTask,
+        // `extra` carries the task to edit (null → create a new task).
+        builder: (_, state) => AddTaskScreen(existing: state.extra as Task?),
+      ),
       GoRoute(path: Routes.focusEnd, builder: (_, _) => const FocusEndScreen()),
       GoRoute(path: Routes.moodMorning, builder: (_, _) => const MoodMorningScreen()),
       GoRoute(path: Routes.moodEvening, builder: (_, _) => const MoodEveningScreen()),

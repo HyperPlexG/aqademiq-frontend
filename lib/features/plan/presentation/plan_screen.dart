@@ -231,6 +231,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     switch (action) {
       case TaskOverflowAction.markDone:
         _toggleDone(t);
+      case TaskOverflowAction.edit:
+        await context.push(Routes.addTask, extra: t);
       case TaskOverflowAction.startSession:
         _startSession(t);
       case TaskOverflowAction.reschedule:

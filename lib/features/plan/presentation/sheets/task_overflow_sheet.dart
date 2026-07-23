@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text.dart';
 /// (section-09). Each action row pops one of these from the sheet.
 enum TaskOverflowAction {
   markDone,
+  edit,
   startSession,
   reschedule,
   breakDown,
@@ -97,6 +98,11 @@ class _TaskOverflowSheet extends StatelessWidget {
               icon: Icons.check_circle_outline,
               label: 'Mark as done',
               action: TaskOverflowAction.markDone,
+            ),
+            const _ActionRow(
+              icon: Icons.edit_outlined,
+              label: 'Edit task',
+              action: TaskOverflowAction.edit,
             ),
             _ActionRow(
               icon: Icons.timer_outlined,
