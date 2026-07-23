@@ -14,6 +14,11 @@ abstract interface class TasksSource {
   Future<TaskDto> move(String id, DateTime newDate);
   Future<void> delete(String id);
 
+  /// `POST /tasks/{id}/breakdown` — generate micro-steps for the occurrence
+  /// (Ada, or a server-side fallback). The steps are attached server-side and
+  /// come back on the next `tasksForDay` as the task's subtasks.
+  Future<void> breakdown(String id, DateTime date);
+
   /// Count of completed tasks in the Mon–Sun week containing [around].
   Future<int> completedThisWeek(DateTime around);
 }
@@ -119,6 +124,25 @@ class MockTasksSource implements TasksSource {
   }
 
   @override
+  Future<void> breakdown(String id, DateTime date) async {
+    for (final list in _byDay.values) {
+      final i = list.indexWhere((t) => t.id == id);
+      if (i >= 0) {
+        final t = list[i];
+        if (t.subtasks.isEmpty) {
+          list[i] = t.copyWith(subtasks: [
+            SubtaskDto(id: '$id-s1', title: 'Get started on ${t.title}'),
+            SubtaskDto(id: '$id-s2', title: 'Work through the core'),
+            SubtaskDto(id: '$id-s3', title: 'Review and wrap up'),
+          ]);
+        }
+        break;
+      }
+    }
+    return mockDelayVoid();
+  }
+
+  @override
   Future<int> completedThisWeek(DateTime around) async {
     final monday = _dayOnly(around).subtract(Duration(days: _dayOnly(around).weekday - 1));
     var count = 0;
@@ -189,6 +213,11 @@ class ApiTasksSource implements TasksSource {
 
   @override
   Future<void> delete(String id) => _dio.deleteMap('/tasks/$id');
+
+  @override
+  Future<void> breakdown(String id, DateTime date) async {
+    await _dio.postMap('/tasks/$id/breakdown', {'date': ymd(date)});
+  }
 
   @override
   Future<int> completedThisWeek(DateTime around) async {

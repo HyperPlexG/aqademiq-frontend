@@ -191,6 +191,27 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   // silently jumping the task to tomorrow.
   void _later(Task t) => unawaited(_reschedule(t));
 
+  // "Break down": generate micro-tasks server-side (Ada, or a fallback) when the
+  // task has none yet, then expand to reveal them.
+  Future<void> _breakDown(Task t) async {
+    if (t.subtasks.isEmpty) {
+      try {
+        await ref
+            .read(tasksRepositoryProvider)
+            .breakdown(t.id, ref.read(selectedDateProvider));
+        ref.invalidate(dayTasksProvider);
+      } on Object {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Couldn't break this down. Try again.")),
+          );
+        }
+        return;
+      }
+    }
+    ref.read(expandedTaskProvider.notifier).toggle(t.id);
+  }
+
   void _moveToTomorrow(Task t) {
     final next = ref.read(selectedDateProvider).add(const Duration(days: 1));
     unawaited(ref.read(dayTasksProvider.notifier).move(t, next));
@@ -240,7 +261,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       case TaskOverflowAction.moveTomorrow:
         _moveToTomorrow(t);
       case TaskOverflowAction.breakDown:
-        ref.read(expandedTaskProvider.notifier).toggle(t.id);
+        await _breakDown(t);
       case TaskOverflowAction.delete:
         _delete(t);
     }

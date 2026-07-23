@@ -37,6 +37,10 @@ class TasksRepository {
 
   Future<void> delete(String id) => _source.delete(id);
 
+  /// Generate micro-steps for the task occurrence (server-side; Ada or fallback).
+  Future<void> breakdown(String id, DateTime date) =>
+      _source.breakdown(id, date);
+
   Future<int> completedThisWeek(DateTime around) =>
       _source.completedThisWeek(around);
 }
