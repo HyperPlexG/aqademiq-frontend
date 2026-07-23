@@ -21,10 +21,15 @@ Future<void> main() async {
       url: Env.supabaseUrl,
       anonKey: Env.supabaseAnonKey,
     );
-    // Firebase must be up before any messaging call; the background handler is
-    // registered here (it runs in its own isolate).
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    // Firebase (FCM push) is best-effort — a missing/misconfigured
+    // GoogleService-Info.plist must never blank the app. If init fails, push is
+    // simply unavailable and the rest of the app runs normally.
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } on Object catch (e) {
+      debugPrint('Firebase init failed — push disabled: $e');
+    }
   }
 
   runApp(const ProviderScope(child: AqademiqApp()));
