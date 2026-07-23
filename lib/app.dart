@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
 import 'services/push_service.dart';
@@ -26,6 +27,7 @@ class AqademiqApp extends ConsumerWidget {
     // and registers this device once signed in (no-op under mocks).
     ref
       ..watch(revisionSyncProvider)
+      ..watch(sessionResetProvider)
       ..watch(prismAudioControllerProvider)
       ..watch(pushServiceProvider);
 

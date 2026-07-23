@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
 import '../../data/repositories/referral_repository.dart';
+import '../../features/settings/providers/profile_controller.dart';
 
 /// Presents the referral / share sheet ([_ShareSheet]) over the dimmed real
 /// screen. Reused by both the Subjects section (`subj-share`) and the section 06
@@ -93,12 +94,13 @@ class _ShareSheet extends StatelessWidget {
   }
 }
 
-class _InviteHeroCard extends StatelessWidget {
+class _InviteHeroCard extends ConsumerWidget {
   const _InviteHeroCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final name = ref.watch(profileControllerProvider).name.trim();
     return Container(
       margin: const EdgeInsets.only(bottom: 13),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
@@ -135,7 +137,7 @@ class _InviteHeroCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Invite by Ridhwan Ahamed',
+            name.isEmpty ? 'Invite a friend' : 'Invite by $name',
             style: AppText.sans(
               size: 11,
               weight: FontWeight.w700,

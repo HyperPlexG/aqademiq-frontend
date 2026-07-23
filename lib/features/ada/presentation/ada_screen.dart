@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,6 +41,29 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     unawaited(ref.read(adaChatProvider.notifier).send(value));
   }
 
+  Future<void> _pickAndUpload() async {
+    const typeGroup = XTypeGroup(
+      label: 'Documents',
+      // iOS filters by UTIs; without them the picker greys out every file.
+      extensions: <String>['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'md'],
+      mimeTypes: <String>['application/pdf', 'text/plain'],
+      uniformTypeIdentifiers: <String>[
+        'com.adobe.pdf',
+        'public.plain-text',
+        'public.text',
+        'net.daringfireball.markdown',
+        'com.microsoft.word.doc',
+        'org.openxmlformats.wordprocessingml.document',
+        'com.microsoft.powerpoint.ppt',
+        'org.openxmlformats.presentationml.presentation',
+        'public.image',
+      ],
+    );
+    final file = await openFile(acceptedTypeGroups: const [typeGroup]);
+    if (file == null) return;
+    await ref.read(adaChatProvider.notifier).attachAndSend(file);
+  }
+
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(adaChatProvider);
@@ -50,7 +74,10 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     return DismissKeyboard(
       child: Column(
         children: [
-          _Header(onHistory: () => unawaited(showChatHistory(context))),
+          _Header(
+            onHistory: () => unawaited(showChatHistory(context)),
+            onUpload: () => unawaited(_pickAndUpload()),
+          ),
           Expanded(
             child: chat.isEmpty
                 ? _EmptyState(onSuggest: _send)
@@ -62,6 +89,9 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
               controller: _input,
               compact: !chat.isEmpty,
               onSend: _send,
+              onSpeak: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Voice input is coming soon.')),
+              ),
             ),
           ),
         ],
@@ -71,8 +101,9 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onHistory});
+  const _Header({required this.onHistory, required this.onUpload});
   final VoidCallback onHistory;
+  final VoidCallback onUpload;
 
   @override
   Widget build(BuildContext context) {
@@ -97,9 +128,7 @@ class _Header extends StatelessWidget {
           const Spacer(),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Document upload is coming soon.')),
-            ),
+            onTap: onUpload,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
               decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
@@ -260,10 +289,16 @@ class _TypingBubble extends StatelessWidget {
 }
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({required this.controller, required this.compact, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.compact,
+    required this.onSend,
+    required this.onSpeak,
+  });
   final TextEditingController controller;
   final bool compact;
   final VoidCallback onSend;
+  final VoidCallback onSpeak;
 
   static const _ink = Color(0xFF1A1320);
 
@@ -293,23 +328,17 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          if (compact)
+          // Voice capture isn't ready yet — the pill is honest about that. Text
+          // still sends via the arrow, which is always present.
+          if (!compact) ...[
             GestureDetector(
-              onTap: onSend,
-              child: Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
-                child: const Text('↑', style: TextStyle(fontSize: 14, color: Colors.white, height: 1)),
-              ),
-            )
-          else
-            GestureDetector(
-              onTap: onSend,
+              onTap: onSpeak,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                decoration: BoxDecoration(
+                  color: _ink.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -320,6 +349,18 @@ class _InputBar extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(width: 8),
+          ],
+          GestureDetector(
+            onTap: onSend,
+            child: Container(
+              width: 30,
+              height: 30,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
+              child: const Text('↑', style: TextStyle(fontSize: 14, color: Colors.white, height: 1)),
+            ),
+          ),
         ],
       ),
     );

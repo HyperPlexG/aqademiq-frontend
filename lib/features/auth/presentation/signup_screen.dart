@@ -21,7 +21,7 @@ class SignupScreen extends ConsumerStatefulWidget {
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
-  final _email = TextEditingController(text: 'ridhwan@bits.ac.in');
+  final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   bool _obscure1 = true;

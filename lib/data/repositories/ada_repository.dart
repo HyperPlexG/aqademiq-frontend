@@ -1,3 +1,4 @@
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/env/env.dart';
@@ -12,10 +13,22 @@ class AdaRepository {
 
   final AdaSource _source;
 
-  Future<AdaMessage> reply(String userText, List<AdaMessage> history) async {
-    final dto = await _source.reply(userText, const []);
+  Future<AdaMessage> reply(
+    String userText,
+    List<AdaMessage> history, {
+    List<AdaAttachmentRef> attachments = const [],
+  }) async {
+    final dto = await _source.reply(userText, const [], attachments: attachments);
     return dto.toModel();
   }
+
+  /// Presign + upload a file and return the ref to attach to the next message.
+  Future<AdaAttachmentRef> uploadAttachment({
+    required String name,
+    String? mimeType,
+    required List<int> bytes,
+  }) =>
+      _source.upload(name: name, mimeType: mimeType, bytes: bytes);
 
   /// Past conversations for the chat-history panel (most-recent first).
   Future<List<AdaConversationDto>> conversations() => _source.conversations();
@@ -82,6 +95,35 @@ class AdaChatController extends Notifier<AdaChatState> {
   }
 
   void clear() => state = const AdaChatState();
+
+  /// Upload [file], attach it to a message, and stream Ada's reply.
+  Future<void> attachAndSend(XFile file) async {
+    final text = "Here's ${file.name} — can you help me with it?";
+    final userMsg = AdaMessage(
+      id: 'u-${DateTime.now().microsecondsSinceEpoch}',
+      role: AdaRole.user,
+      text: text,
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [...state.messages, userMsg], typing: true);
+    try {
+      final bytes = await file.readAsBytes();
+      final repo = ref.read(adaRepositoryProvider);
+      final attachment = await repo.uploadAttachment(
+        name: file.name,
+        mimeType: file.mimeType,
+        bytes: bytes,
+      );
+      final reply = await repo.reply(
+        text,
+        state.messages,
+        attachments: [attachment],
+      );
+      state = state.copyWith(messages: [...state.messages, reply], typing: false);
+    } on Object catch (_) {
+      state = state.copyWith(typing: false);
+    }
+  }
 
   /// Load a past conversation into the chat view.
   Future<void> openConversation(String id) async {

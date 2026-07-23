@@ -7,8 +7,23 @@ import 'mock_latency.dart';
 /// A past Ada conversation, for the chat-history panel.
 typedef AdaConversationDto = ({String id, String title, DateTime updatedAt});
 
+/// A file the user uploaded to attach to an Ada message.
+typedef AdaAttachmentRef = ({String key, String name, String? mimeType});
+
 abstract interface class AdaSource {
-  Future<AdaMessageDto> reply(String userText, List<AdaMessageDto> history);
+  Future<AdaMessageDto> reply(
+    String userText,
+    List<AdaMessageDto> history, {
+    List<AdaAttachmentRef> attachments,
+  });
+
+  /// Presign + upload a file for the active conversation, returning the ref to
+  /// attach to the next message. Creates a conversation if none is active.
+  Future<AdaAttachmentRef> upload({
+    required String name,
+    String? mimeType,
+    required List<int> bytes,
+  });
 
   /// The signed-in user's past conversations, most-recent first.
   Future<List<AdaConversationDto>> conversations();
@@ -35,7 +50,11 @@ class MockAdaSource implements AdaSource {
   String? conversationId;
 
   @override
-  Future<AdaMessageDto> reply(String userText, List<AdaMessageDto> history) {
+  Future<AdaMessageDto> reply(
+    String userText,
+    List<AdaMessageDto> history, {
+    List<AdaAttachmentRef> attachments = const [],
+  }) {
     conversationId ??= 'mock-convo';
     final text = _canned[_i++ % _canned.length];
     return mockDelay(
@@ -47,6 +66,16 @@ class MockAdaSource implements AdaSource {
       ),
       ms: 700,
     );
+  }
+
+  @override
+  Future<AdaAttachmentRef> upload({
+    required String name,
+    String? mimeType,
+    required List<int> bytes,
+  }) {
+    conversationId ??= 'mock-convo';
+    return mockDelay((key: 'mock/$name', name: name, mimeType: mimeType), ms: 500);
   }
 
   @override
@@ -124,11 +153,57 @@ class ApiAdaSource implements AdaSource {
   }
 
   @override
-  Future<AdaMessageDto> reply(String userText, List<AdaMessageDto> history) async {
+  Future<AdaAttachmentRef> upload({
+    required String name,
+    String? mimeType,
+    required List<int> bytes,
+  }) async {
+    final cid = await _ensureConversation();
+    final contentType = mimeType ?? 'application/octet-stream';
+    // Presign against Ada's own upload endpoint, then PUT bytes straight to
+    // storage (bare Dio so the signed URL isn't sent our API base/auth headers).
+    final init = await _dio.postMap('/ada/uploads', {
+      'conversation_id': cid,
+      'name': name,
+      'mime_type': contentType,
+      'size_bytes': bytes.length,
+    });
+    final uploadUrl = init['upload_url'] as String;
+    final key = init['key'] as String;
+    await Dio().put<void>(
+      uploadUrl,
+      data: Stream<List<int>>.fromIterable([bytes]),
+      options: Options(
+        headers: <String, dynamic>{
+          Headers.contentTypeHeader: contentType,
+          Headers.contentLengthHeader: bytes.length,
+        },
+      ),
+    );
+    return (key: key, name: name, mimeType: mimeType);
+  }
+
+  @override
+  Future<AdaMessageDto> reply(
+    String userText,
+    List<AdaMessageDto> history, {
+    List<AdaAttachmentRef> attachments = const [],
+  }) async {
     final cid = await _ensureConversation();
     final body = await _dio.postMap(
       '/ada/conversations/$cid/messages',
-      {'text': userText},
+      <String, dynamic>{
+        'text': userText,
+        if (attachments.isNotEmpty)
+          'attachments': <Map<String, dynamic>>[
+            for (final a in attachments)
+              <String, dynamic>{
+                'key': a.key,
+                'name': a.name,
+                if (a.mimeType != null) 'mime_type': a.mimeType,
+              },
+          ],
+      },
     );
     final messages = listOf(body, 'messages');
     final assistant = messages.lastWhere(
