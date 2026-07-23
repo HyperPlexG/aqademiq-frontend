@@ -10,6 +10,7 @@ abstract class AdaMessageDto with _$AdaMessageDto {
     required String role, // user|ada
     required String text,
     DateTime? createdAt,
+    @Default(false) bool hasPlan,
   }) = _AdaMessageDto;
 
   factory AdaMessageDto.fromJson(Map<String, dynamic> json) =>

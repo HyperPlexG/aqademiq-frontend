@@ -16,20 +16,18 @@ const _presets = <_Preset>[
   _Preset('1.5 hr', 90),
 ];
 
-/// The minute value that renders in the active state by default.
-const _activeMinutes = 30;
-
-/// Presents the `plan-pick-duration` bottom sheet. Tapping a preset cell returns
+/// Presents the `plan-pick-duration` bottom sheet. [current] is the currently
+/// selected duration so its preset renders active. Tapping a preset cell returns
 /// its minute value; "Custom duration → Set" opens [_showCustomDuration] and
 /// returns the fine-tuned value from there. Returns `null` if dismissed.
-Future<int?> showDurationPicker(BuildContext context) {
+Future<int?> showDurationPicker(BuildContext context, {int current = 30}) {
   return showModalBottomSheet<int>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),
-    builder: (_) => const _DurationSheet(),
+    builder: (_) => _DurationSheet(current: current),
   );
 }
 
@@ -40,7 +38,9 @@ class _Preset {
 }
 
 class _DurationSheet extends StatelessWidget {
-  const _DurationSheet();
+  const _DurationSheet({required this.current});
+
+  final int current;
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +105,7 @@ class _DurationSheet extends StatelessWidget {
                   for (final preset in _presets)
                     _PresetCell(
                       preset: preset,
-                      active: preset.minutes == _activeMinutes,
+                      active: preset.minutes == current,
                       onTap: () => Navigator.of(context).pop(preset.minutes),
                     ),
                 ],

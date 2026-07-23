@@ -546,7 +546,7 @@ as List<int>,
 /// @nodoc
 mixin _$Task {
 
- String get id; String get title; String get tagId; DateTime get date; DayPart? get dayPart; DateTime? get startTime; int? get durationMin; RepeatRule? get repeat; List<Subtask> get subtasks; bool get done;
+ String get id; String get title; String get tagId; DateTime get date; String? get note; DayPart? get dayPart; DateTime? get startTime; int? get durationMin; RepeatRule? get repeat; List<Subtask> get subtasks; bool get done;
 /// Create a copy of Task
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -557,16 +557,16 @@ $TaskCopyWith<Task> get copyWith => _$TaskCopyWithImpl<Task>(this as Task, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.dayPart, dayPart) || other.dayPart == dayPart)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other.subtasks, subtasks)&&(identical(other.done, done) || other.done == done));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.dayPart, dayPart) || other.dayPart == dayPart)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other.subtasks, subtasks)&&(identical(other.done, done) || other.done == done));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,tagId,date,dayPart,startTime,durationMin,repeat,const DeepCollectionEquality().hash(subtasks),done);
+int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,dayPart,startTime,durationMin,repeat,const DeepCollectionEquality().hash(subtasks),done);
 
 @override
 String toString() {
-  return 'Task(id: $id, title: $title, tagId: $tagId, date: $date, dayPart: $dayPart, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
+  return 'Task(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, dayPart: $dayPart, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
 }
 
 
@@ -577,7 +577,7 @@ abstract mixin class $TaskCopyWith<$Res>  {
   factory $TaskCopyWith(Task value, $Res Function(Task) _then) = _$TaskCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String tagId, DateTime date, DayPart? dayPart, DateTime? startTime, int? durationMin, RepeatRule? repeat, List<Subtask> subtasks, bool done
+ String id, String title, String tagId, DateTime date, String? note, DayPart? dayPart, DateTime? startTime, int? durationMin, RepeatRule? repeat, List<Subtask> subtasks, bool done
 });
 
 
@@ -594,13 +594,14 @@ class _$TaskCopyWithImpl<$Res>
 
 /// Create a copy of Task
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? dayPart = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? dayPart = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,tagId: null == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
-as DateTime,dayPart: freezed == dayPart ? _self.dayPart : dayPart // ignore: cast_nullable_to_non_nullable
+as DateTime,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,dayPart: freezed == dayPart ? _self.dayPart : dayPart // ignore: cast_nullable_to_non_nullable
 as DayPart?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,durationMin: freezed == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable
 as int?,repeat: freezed == repeat ? _self.repeat : repeat // ignore: cast_nullable_to_non_nullable
@@ -703,10 +704,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Task() when $default != null:
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   return orElse();
 
 }
@@ -724,10 +725,10 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)  $default,) {final _that = this;
 switch (_that) {
 case _Task():
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -744,10 +745,10 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String tagId,  DateTime date,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String tagId,  DateTime date,  String? note,  DayPart? dayPart,  DateTime? startTime,  int? durationMin,  RepeatRule? repeat,  List<Subtask> subtasks,  bool done)?  $default,) {final _that = this;
 switch (_that) {
 case _Task() when $default != null:
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.dayPart,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   return null;
 
 }
@@ -759,13 +760,14 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.dayPart,_that.
 
 
 class _Task implements Task {
-  const _Task({required this.id, required this.title, required this.tagId, required this.date, this.dayPart, this.startTime, this.durationMin, this.repeat, final  List<Subtask> subtasks = const <Subtask>[], this.done = false}): _subtasks = subtasks;
+  const _Task({required this.id, required this.title, required this.tagId, required this.date, this.note, this.dayPart, this.startTime, this.durationMin, this.repeat, final  List<Subtask> subtasks = const <Subtask>[], this.done = false}): _subtasks = subtasks;
   
 
 @override final  String id;
 @override final  String title;
 @override final  String tagId;
 @override final  DateTime date;
+@override final  String? note;
 @override final  DayPart? dayPart;
 @override final  DateTime? startTime;
 @override final  int? durationMin;
@@ -789,16 +791,16 @@ _$TaskCopyWith<_Task> get copyWith => __$TaskCopyWithImpl<_Task>(this, _$identit
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.dayPart, dayPart) || other.dayPart == dayPart)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other._subtasks, _subtasks)&&(identical(other.done, done) || other.done == done));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Task&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.dayPart, dayPart) || other.dayPart == dayPart)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other._subtasks, _subtasks)&&(identical(other.done, done) || other.done == done));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,title,tagId,date,dayPart,startTime,durationMin,repeat,const DeepCollectionEquality().hash(_subtasks),done);
+int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,dayPart,startTime,durationMin,repeat,const DeepCollectionEquality().hash(_subtasks),done);
 
 @override
 String toString() {
-  return 'Task(id: $id, title: $title, tagId: $tagId, date: $date, dayPart: $dayPart, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
+  return 'Task(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, dayPart: $dayPart, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
 }
 
 
@@ -809,7 +811,7 @@ abstract mixin class _$TaskCopyWith<$Res> implements $TaskCopyWith<$Res> {
   factory _$TaskCopyWith(_Task value, $Res Function(_Task) _then) = __$TaskCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String tagId, DateTime date, DayPart? dayPart, DateTime? startTime, int? durationMin, RepeatRule? repeat, List<Subtask> subtasks, bool done
+ String id, String title, String tagId, DateTime date, String? note, DayPart? dayPart, DateTime? startTime, int? durationMin, RepeatRule? repeat, List<Subtask> subtasks, bool done
 });
 
 
@@ -826,13 +828,14 @@ class __$TaskCopyWithImpl<$Res>
 
 /// Create a copy of Task
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? dayPart = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? dayPart = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
   return _then(_Task(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,tagId: null == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
-as DateTime,dayPart: freezed == dayPart ? _self.dayPart : dayPart // ignore: cast_nullable_to_non_nullable
+as DateTime,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,dayPart: freezed == dayPart ? _self.dayPart : dayPart // ignore: cast_nullable_to_non_nullable
 as DayPart?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,durationMin: freezed == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable
 as int?,repeat: freezed == repeat ? _self.repeat : repeat // ignore: cast_nullable_to_non_nullable

@@ -16,7 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$AdaMessageDto {
 
  String get id; String get role;// user|ada
- String get text; DateTime? get createdAt;
+ String get text; DateTime? get createdAt; bool get hasPlan;
 /// Create a copy of AdaMessageDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +29,16 @@ $AdaMessageDtoCopyWith<AdaMessageDto> get copyWith => _$AdaMessageDtoCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AdaMessageDto&&(identical(other.id, id) || other.id == id)&&(identical(other.role, role) || other.role == role)&&(identical(other.text, text) || other.text == text)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AdaMessageDto&&(identical(other.id, id) || other.id == id)&&(identical(other.role, role) || other.role == role)&&(identical(other.text, text) || other.text == text)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.hasPlan, hasPlan) || other.hasPlan == hasPlan));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,role,text,createdAt);
+int get hashCode => Object.hash(runtimeType,id,role,text,createdAt,hasPlan);
 
 @override
 String toString() {
-  return 'AdaMessageDto(id: $id, role: $role, text: $text, createdAt: $createdAt)';
+  return 'AdaMessageDto(id: $id, role: $role, text: $text, createdAt: $createdAt, hasPlan: $hasPlan)';
 }
 
 
@@ -49,7 +49,7 @@ abstract mixin class $AdaMessageDtoCopyWith<$Res>  {
   factory $AdaMessageDtoCopyWith(AdaMessageDto value, $Res Function(AdaMessageDto) _then) = _$AdaMessageDtoCopyWithImpl;
 @useResult
 $Res call({
- String id, String role, String text, DateTime? createdAt
+ String id, String role, String text, DateTime? createdAt, bool hasPlan
 });
 
 
@@ -66,13 +66,14 @@ class _$AdaMessageDtoCopyWithImpl<$Res>
 
 /// Create a copy of AdaMessageDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? role = null,Object? text = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? role = null,Object? text = null,Object? createdAt = freezed,Object? hasPlan = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,hasPlan: null == hasPlan ? _self.hasPlan : hasPlan // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -157,10 +158,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String role,  String text,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String role,  String text,  DateTime? createdAt,  bool hasPlan)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AdaMessageDto() when $default != null:
-return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
+return $default(_that.id,_that.role,_that.text,_that.createdAt,_that.hasPlan);case _:
   return orElse();
 
 }
@@ -178,10 +179,10 @@ return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String role,  String text,  DateTime? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String role,  String text,  DateTime? createdAt,  bool hasPlan)  $default,) {final _that = this;
 switch (_that) {
 case _AdaMessageDto():
-return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
+return $default(_that.id,_that.role,_that.text,_that.createdAt,_that.hasPlan);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +199,10 @@ return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String role,  String text,  DateTime? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String role,  String text,  DateTime? createdAt,  bool hasPlan)?  $default,) {final _that = this;
 switch (_that) {
 case _AdaMessageDto() when $default != null:
-return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
+return $default(_that.id,_that.role,_that.text,_that.createdAt,_that.hasPlan);case _:
   return null;
 
 }
@@ -213,7 +214,7 @@ return $default(_that.id,_that.role,_that.text,_that.createdAt);case _:
 @JsonSerializable()
 
 class _AdaMessageDto implements AdaMessageDto {
-  const _AdaMessageDto({required this.id, required this.role, required this.text, this.createdAt});
+  const _AdaMessageDto({required this.id, required this.role, required this.text, this.createdAt, this.hasPlan = false});
   factory _AdaMessageDto.fromJson(Map<String, dynamic> json) => _$AdaMessageDtoFromJson(json);
 
 @override final  String id;
@@ -221,6 +222,7 @@ class _AdaMessageDto implements AdaMessageDto {
 // user|ada
 @override final  String text;
 @override final  DateTime? createdAt;
+@override@JsonKey() final  bool hasPlan;
 
 /// Create a copy of AdaMessageDto
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +237,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AdaMessageDto&&(identical(other.id, id) || other.id == id)&&(identical(other.role, role) || other.role == role)&&(identical(other.text, text) || other.text == text)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AdaMessageDto&&(identical(other.id, id) || other.id == id)&&(identical(other.role, role) || other.role == role)&&(identical(other.text, text) || other.text == text)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.hasPlan, hasPlan) || other.hasPlan == hasPlan));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,role,text,createdAt);
+int get hashCode => Object.hash(runtimeType,id,role,text,createdAt,hasPlan);
 
 @override
 String toString() {
-  return 'AdaMessageDto(id: $id, role: $role, text: $text, createdAt: $createdAt)';
+  return 'AdaMessageDto(id: $id, role: $role, text: $text, createdAt: $createdAt, hasPlan: $hasPlan)';
 }
 
 
@@ -255,7 +257,7 @@ abstract mixin class _$AdaMessageDtoCopyWith<$Res> implements $AdaMessageDtoCopy
   factory _$AdaMessageDtoCopyWith(_AdaMessageDto value, $Res Function(_AdaMessageDto) _then) = __$AdaMessageDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String role, String text, DateTime? createdAt
+ String id, String role, String text, DateTime? createdAt, bool hasPlan
 });
 
 
@@ -272,13 +274,14 @@ class __$AdaMessageDtoCopyWithImpl<$Res>
 
 /// Create a copy of AdaMessageDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? role = null,Object? text = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? role = null,Object? text = null,Object? createdAt = freezed,Object? hasPlan = null,}) {
   return _then(_AdaMessageDto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,hasPlan: null == hasPlan ? _self.hasPlan : hasPlan // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

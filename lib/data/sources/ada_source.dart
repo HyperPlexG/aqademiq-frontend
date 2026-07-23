@@ -31,6 +31,9 @@ abstract interface class AdaSource {
   /// The messages of a conversation, oldest-first.
   Future<List<AdaMessageDto>> messages(String conversationId);
 
+  /// Apply the schedule Ada proposed in [messageId] to the user's plan.
+  Future<void> applyPlan(String messageId);
+
   /// Switch the active conversation. `null` starts a fresh one on the next reply.
   set conversationId(String? id);
   String? get conversationId;
@@ -77,6 +80,9 @@ class MockAdaSource implements AdaSource {
     conversationId ??= 'mock-convo';
     return mockDelay((key: 'mock/$name', name: name, mimeType: mimeType), ms: 500);
   }
+
+  @override
+  Future<void> applyPlan(String messageId) => mockDelay(null);
 
   @override
   Future<List<AdaConversationDto>> conversations() => mockDelay([
@@ -213,10 +219,18 @@ class ApiAdaSource implements AdaSource {
     return _toDto(assistant);
   }
 
+  @override
+  Future<void> applyPlan(String messageId) async {
+    final cid = _conversationId;
+    if (cid == null) return;
+    await _dio.postMap('/ada/conversations/$cid/messages/$messageId/apply-plan');
+  }
+
   AdaMessageDto _toDto(Map<String, dynamic> j) => AdaMessageDto(
         id: j['id'] as String? ?? 'ada-${DateTime.now().microsecondsSinceEpoch}',
         role: (j['is_user'] as bool? ?? false) ? 'user' : 'ada',
         text: j['text'] as String? ?? '',
         createdAt: parseDateTime(j['created_at']) ?? DateTime.now(),
+        hasPlan: j['plan'] is List && (j['plan'] as List).isNotEmpty,
       );
 }

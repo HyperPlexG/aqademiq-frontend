@@ -12,5 +12,7 @@ abstract class AdaMessage with _$AdaMessage {
     required AdaRole role,
     required String text,
     DateTime? createdAt,
+    // True when Ada proposed a schedule that can be applied to the plan.
+    @Default(false) bool hasPlan,
   }) = _AdaMessage;
 }

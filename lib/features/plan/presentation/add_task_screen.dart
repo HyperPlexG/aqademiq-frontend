@@ -41,10 +41,11 @@ class AddTaskScreen extends ConsumerStatefulWidget {
 
 class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   final _title = TextEditingController();
-  String _tag = 'exam';
+  final _note = TextEditingController();
+  String _tag = '';
   String _subject = 'cc401';
   String _timeOfDay = 'Anytime';
-  String _date = '18 May 2026';
+  late DateTime _date;
   int _durationMin = 30;
   RepeatRule? _repeat;
   bool _adaBreakdown = true;
@@ -63,12 +64,15 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final existing = widget.existing;
     if (existing != null) {
       _title.text = existing.title;
+      _note.text = existing.note ?? '';
       _tag = existing.tagId;
       _timeOfDay = _dayPartLabel(existing.dayPart ?? DayPart.anytime);
+      _date = existing.date;
       _durationMin = existing.durationMin ?? 30;
       _repeat = existing.repeat;
       return;
     }
+    _date = ref.read(selectedDateProvider);
     // Consume a Quick-add draft so the typed title / time / repeat carry over.
     // Read the value here (no mutation), then clear the one-shot draft *after*
     // this build lifecycle — mutating a provider inside initState throws
@@ -89,6 +93,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   @override
   void dispose() {
     _title.dispose();
+    _note.dispose();
     super.dispose();
   }
 
@@ -122,9 +127,15 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final repeat =
         (_repeat != null && _repeat!.frequency != RepeatFrequency.none) ? _repeat : null;
     final title = _title.text.trim().isEmpty ? 'New task' : _title.text.trim();
+    final note = _note.text.trim().isEmpty ? null : _note.text.trim();
     final existing = widget.existing;
-    final date =
-        existing != null ? existing.date : ref.read(selectedDateProvider);
+    final date = _date;
+    // Resolve the tag: fall back to the first available study tag so a task is
+    // never saved with an empty/unknown tag (which would render as "Other").
+    final tags = ref.read(tagsProvider).value ?? const <Tag>[];
+    final tagId = _tag.isNotEmpty
+        ? _tag
+        : (tags.isNotEmpty ? tags.first.id : _tag);
     // A "Specific time" pick (e.g. "2:30 PM") becomes a real start time; a named
     // part ("Morning") has no clock time. Derive the day-part from the hour when
     // a time is set so the task still buckets correctly.
@@ -134,27 +145,39 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         : DayPartX.fromWire(_timeOfDay.toLowerCase());
 
     final repo = ref.read(tasksRepositoryProvider);
+    Task saved;
     if (existing != null) {
-      // Edit: keep the task's own id and date, apply the edited fields.
-      await repo.update(existing.copyWith(
+      // Edit: keep the task's own id, apply the edited fields.
+      saved = await repo.update(existing.copyWith(
         title: title,
-        tagId: _tag,
-        dayPart: dayPart,
-        startTime: startTime,
-        durationMin: _durationMin,
-        repeat: repeat,
-      ));
-    } else {
-      await repo.create(Task(
-        id: '',
-        title: title,
-        tagId: _tag,
+        note: note,
+        tagId: tagId,
         date: date,
         dayPart: dayPart,
         startTime: startTime,
         durationMin: _durationMin,
         repeat: repeat,
       ));
+    } else {
+      saved = await repo.create(Task(
+        id: '',
+        title: title,
+        note: note,
+        tagId: tagId,
+        date: date,
+        dayPart: dayPart,
+        startTime: startTime,
+        durationMin: _durationMin,
+        repeat: repeat,
+      ));
+    }
+    // Let Ada break the task into microtasks (best-effort — never blocks save).
+    if (_adaBreakdown && saved.id.isNotEmpty) {
+      try {
+        await repo.breakdown(saved.id, date);
+      } on Object {
+        // Non-fatal: the task is saved even if breakdown fails.
+      }
     }
     ref.invalidate(dayTasksProvider);
     if (mounted) context.pop();
@@ -176,6 +199,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
+    // Highlight the chosen tag; if none picked yet, pre-highlight the first so a
+    // task is never saved untagged (which would show as "Other").
+    final effectiveTag =
+        _tag.isNotEmpty ? _tag : (tags.isNotEmpty ? tags.first.id : '');
     return Scaffold(
       backgroundColor: colors.bg,
       body: DismissKeyboard(
@@ -192,7 +219,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   runSpacing: 6,
                   children: [
                     for (final t in tags)
-                      TagChip(label: t.label, color: hexColor(t.color), active: _tag == t.id, onTap: () => setState(() => _tag = t.id)),
+                      TagChip(label: t.label, color: hexColor(t.color), active: effectiveTag == t.id, onTap: () => setState(() => _tag = t.id)),
                     TagChip(label: '+ New', color: colors.accent, dashed: true, onTap: _addTag),
                   ],
                 ),
@@ -216,7 +243,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 child: Column(
                   children: [
                     _DetailRow(icon: Icons.schedule, label: 'Time of day', value: _timeOfDay, onTap: _pickTime),
-                    _DetailRow(icon: Icons.event, label: 'Date', value: _date, onTap: _pickDate),
+                    _DetailRow(icon: Icons.event, label: 'Date', value: taskDateLabel(_date), onTap: _pickDate),
                     _DetailRow(icon: Icons.hourglass_empty, label: 'Duration', value: '$_durationMin min', onTap: _pickDuration),
                     _DetailRow(icon: Icons.repeat, label: 'Repeat', value: repeatRuleLabel(_repeat), onTap: _pickRepeat, last: true),
                   ],
@@ -244,10 +271,27 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: AppCard(
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.notes, size: 16, color: colors.textMed),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(Icons.notes, size: 16, color: colors.textMed),
+                    ),
                     const SizedBox(width: 8),
-                    Text('Add a note…', style: AppText.sans(size: 12.5, color: colors.textDim)),
+                    Expanded(
+                      child: TextField(
+                        controller: _note,
+                        minLines: 1,
+                        maxLines: 4,
+                        style: AppText.sans(size: 12.5, color: colors.text),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          hintText: 'Add a note…',
+                          hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -265,12 +309,12 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Future<void> _pickDate() async {
-    final v = await showTaskDatePicker(context);
+    final v = await showTaskDatePicker(context, initial: _date);
     if (v != null) setState(() => _date = v);
   }
 
   Future<void> _pickDuration() async {
-    final v = await showDurationPicker(context);
+    final v = await showDurationPicker(context, current: _durationMin);
     if (v != null) setState(() => _durationMin = v);
   }
 

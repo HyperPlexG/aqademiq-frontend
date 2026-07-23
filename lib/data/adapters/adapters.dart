@@ -36,6 +36,7 @@ extension TaskDtoX on TaskDto {
         title: title,
         tagId: tagId,
         date: date,
+        note: note,
         dayPart: DayPartX.fromWire(timeOfDay),
         startTime: startTime,
         durationMin: durationMin,
@@ -56,6 +57,7 @@ extension TaskX on Task {
         title: title,
         tagId: tagId,
         date: date,
+        note: note,
         timeOfDay: dayPart?.wire,
         startTime: startTime,
         durationMin: durationMin,
@@ -179,6 +181,7 @@ extension AdaMessageDtoX on AdaMessageDto {
         role: _enumByName(AdaRole.values, role, AdaRole.ada),
         text: text,
         createdAt: createdAt,
+        hasPlan: hasPlan,
       );
 }
 

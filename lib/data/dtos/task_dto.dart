@@ -36,6 +36,7 @@ abstract class TaskDto with _$TaskDto {
     required String title,
     required String tagId,
     required DateTime date,
+    String? note,
     String? timeOfDay, // morning|afternoon|evening|anytime
     DateTime? startTime,
     int? durationMin,

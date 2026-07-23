@@ -29,6 +29,9 @@ abstract interface class SettingsSource {
   Future<void> patchEmailPrefs(EmailPrefs prefs);
 
   Future<void> submitRating({required int rating, String? comment});
+
+  /// Ask the backend to push a test notification to this device.
+  Future<void> sendTestNotification();
 }
 
 class MockSettingsSource implements SettingsSource {
@@ -75,6 +78,9 @@ class MockSettingsSource implements SettingsSource {
   @override
   Future<void> submitRating({required int rating, String? comment}) =>
       mockDelay(null);
+
+  @override
+  Future<void> sendTestNotification() => mockDelay(null);
 }
 
 class ApiSettingsSource implements SettingsSource {
@@ -151,6 +157,11 @@ class ApiSettingsSource implements SettingsSource {
       'rating': rating,
       if (comment != null && comment.isNotEmpty) 'comment': comment,
     });
+  }
+
+  @override
+  Future<void> sendTestNotification() async {
+    await _dio.postMap('/me/notifications/test');
   }
 
   NotificationPrefs _notifFrom(Map<String, dynamic> body) {

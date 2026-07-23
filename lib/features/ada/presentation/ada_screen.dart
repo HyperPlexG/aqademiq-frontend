@@ -14,6 +14,7 @@ import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
 import '../../../shared/widgets/markdown_text.dart';
+import '../../plan/providers/plan_providers.dart';
 import 'widgets/chat_history_sheet.dart';
 
 /// FRAMES `ada-empty` / `ada-chat` — the Ada tab (intro when empty, conversation
@@ -39,6 +40,21 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     if (value.isEmpty) return;
     _input.clear();
     unawaited(ref.read(adaChatProvider.notifier).send(value));
+  }
+
+  Future<void> _applyPlan(String messageId) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(adaChatProvider.notifier).applyPlan(messageId);
+      ref.invalidate(dayTasksProvider);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Added to your plan ✓')),
+      );
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't apply this plan.")),
+      );
+    }
   }
 
   Future<void> _pickAndUpload() async {
@@ -81,7 +97,11 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
           Expanded(
             child: chat.isEmpty
                 ? _EmptyState(onSuggest: _send)
-                : _MessageList(messages: chat.messages, typing: chat.typing),
+                : _MessageList(
+                    messages: chat.messages,
+                    typing: chat.typing,
+                    onApplyPlan: _applyPlan,
+                  ),
           ),
           Padding(
             padding: EdgeInsets.fromLTRB(10, 8, 10, inputBottom),
@@ -189,16 +209,21 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _MessageList extends StatelessWidget {
-  const _MessageList({required this.messages, required this.typing});
+  const _MessageList({
+    required this.messages,
+    required this.typing,
+    required this.onApplyPlan,
+  });
   final List<AdaMessage> messages;
   final bool typing;
+  final ValueChanged<String> onApplyPlan;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       children: [
-        for (final m in messages) _Bubble(message: m),
+        for (final m in messages) _Bubble(message: m, onApplyPlan: onApplyPlan),
         if (typing) const _TypingBubble(),
       ],
     );
@@ -206,8 +231,9 @@ class _MessageList extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message});
+  const _Bubble({required this.message, required this.onApplyPlan});
   final AdaMessage message;
+  final ValueChanged<String> onApplyPlan;
 
   @override
   Widget build(BuildContext context) {
@@ -249,8 +275,52 @@ class _Bubble extends StatelessWidget {
             const Padding(padding: EdgeInsets.only(top: 2), child: AdaMascot(size: 22)),
             const SizedBox(width: 7),
           ],
-          Flexible(child: bubble),
+          Flexible(
+            child: Column(
+              crossAxisAlignment:
+                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                bubble,
+                if (!isUser && message.hasPlan) ...[
+                  const SizedBox(height: 6),
+                  _ApplyPlanButton(onTap: () => onApplyPlan(message.id)),
+                ],
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Add to my plan" CTA shown under an Ada message that proposed a schedule.
+class _ApplyPlanButton extends StatelessWidget {
+  const _ApplyPlanButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: colors.accent,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.playlist_add_check, size: 15, color: Colors.white),
+            const SizedBox(width: 6),
+            Text(
+              'Add to my plan',
+              style: AppText.sans(size: 11, weight: FontWeight.w800, color: Colors.white),
+            ),
+          ],
+        ),
       ),
     );
   }

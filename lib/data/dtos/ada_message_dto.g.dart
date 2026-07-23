@@ -14,6 +14,7 @@ _AdaMessageDto _$AdaMessageDtoFromJson(Map<String, dynamic> json) =>
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
+      hasPlan: json['hasPlan'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$AdaMessageDtoToJson(_AdaMessageDto instance) =>
@@ -22,4 +23,5 @@ Map<String, dynamic> _$AdaMessageDtoToJson(_AdaMessageDto instance) =>
       'role': instance.role,
       'text': instance.text,
       'createdAt': instance.createdAt?.toIso8601String(),
+      'hasPlan': instance.hasPlan,
     };

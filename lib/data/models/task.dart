@@ -33,6 +33,7 @@ abstract class Task with _$Task {
     required String title,
     required String tagId,
     required DateTime date,
+    String? note,
     DayPart? dayPart,
     DateTime? startTime,
     int? durationMin,

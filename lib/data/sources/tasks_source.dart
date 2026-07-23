@@ -175,6 +175,7 @@ class ApiTasksSource implements TasksSource {
       'title': input.title,
       'date': ymd(input.date),
       if (input.tagId.isNotEmpty) 'category': input.tagId,
+      if (input.note != null) 'note': input.note,
       if (input.durationMin != null) 'duration_seconds': input.durationMin! * 60,
       if (input.startTime != null) 'scheduled_at': naiveIso(input.startTime!),
       if (input.repeat != null)
@@ -188,7 +189,11 @@ class ApiTasksSource implements TasksSource {
   @override
   Future<TaskDto> update(TaskDto task) async {
     final body = <String, dynamic>{
+      'title': task.title,
       'status': task.done ? 'COMPLETE' : 'PENDING',
+      if (task.tagId.isNotEmpty) 'category': task.tagId,
+      'note': task.note ?? '',
+      if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
       if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),
     };
     return _occToDto(await _dio.patchMap('/tasks/${task.id}', body));
@@ -249,6 +254,7 @@ class ApiTasksSource implements TasksSource {
       title: j['title'] as String? ?? '',
       tagId: j['category'] as String? ?? '',
       date: date,
+      note: (j['note'] as String?)?.isNotEmpty ?? false ? j['note'] as String : null,
       startTime: scheduledAt,
       durationMin: durSec == null ? null : (durSec / 60).round(),
       repeat: repeat,

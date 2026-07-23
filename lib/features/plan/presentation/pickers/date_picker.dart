@@ -7,27 +7,72 @@ import '../../../../shared/widgets/calendar_grid.dart';
 
 /// plan-pick-date — bottom sheet date picker (spec section-02b).
 ///
-/// Presents the "Pick a date" sheet over the dimmed real screen and resolves to
-/// the chosen date string (e.g. `'Mon, 18 May'`), or `null` if dismissed.
-Future<String?> showTaskDatePicker(BuildContext context) {
-  return showModalBottomSheet<String>(
+/// Presents an interactive "Pick a date" sheet over the dimmed real screen and
+/// resolves to the chosen [DateTime] (date-only), or `null` if dismissed.
+Future<DateTime?> showTaskDatePicker(
+  BuildContext context, {
+  DateTime? initial,
+}) {
+  return showModalBottomSheet<DateTime>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),
-    builder: (_) => const _DatePickerSheet(),
+    builder: (_) => _DatePickerSheet(initial: initial ?? DateTime.now()),
   );
 }
 
-class _DatePickerSheet extends StatelessWidget {
-  const _DatePickerSheet();
+const _months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const _monthsShort = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+const _weekdaysShort = [
+  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+];
 
-  static const _selectedDate = 'Mon, 18 May';
+DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
+String _chipLabel(DateTime d) =>
+    '${d.day} ${_monthsShort[d.month - 1]}';
+
+/// The label shown back on the add-task row for a chosen date.
+String taskDateLabel(DateTime d) =>
+    '${_weekdaysShort[d.weekday - 1]}, ${d.day} ${_monthsShort[d.month - 1]}';
+
+class _DatePickerSheet extends StatefulWidget {
+  const _DatePickerSheet({required this.initial});
+
+  final DateTime initial;
+
+  @override
+  State<_DatePickerSheet> createState() => _DatePickerSheetState();
+}
+
+class _DatePickerSheetState extends State<_DatePickerSheet> {
+  late DateTime _selected = _dateOnly(widget.initial);
+  late DateTime _month = DateTime(widget.initial.year, widget.initial.month);
+
+  void _select(DateTime d) => setState(() => _selected = _dateOnly(d));
+
+  void _shiftMonth(int delta) =>
+      setState(() => _month = DateTime(_month.year, _month.month + delta));
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final today = _dateOnly(DateTime.now());
+    final firstCol = DateTime(_month.year, _month.month).weekday - 1;
+    final total = DateTime(_month.year, _month.month + 1, 0).day;
+    final accentDay =
+        (_selected.year == _month.year && _selected.month == _month.month)
+            ? _selected.day
+            : null;
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -70,15 +115,27 @@ class _DatePickerSheet extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              const _QuickChipsRow(),
+              _QuickChipsRow(selected: _selected, onPick: _select),
               const SizedBox(height: 14),
-              _MonthHeader(),
+              _MonthHeader(
+                label: '${_months[_month.month - 1]} ${_month.year}',
+                onPrev: () => _shiftMonth(-1),
+                onNext: () => _shiftMonth(1),
+              ),
               const SizedBox(height: 10),
-              const CalendarGrid(firstCol: 4, total: 31, accentDay: 18),
+              CalendarGrid(
+                firstCol: firstCol,
+                total: total,
+                accentDay: accentDay,
+                onDayTap: (day) =>
+                    _select(DateTime(_month.year, _month.month, day)),
+              ),
               const SizedBox(height: 14),
               _SetDateButton(
-                label: 'Set date · $_selectedDate',
-                onTap: () => Navigator.of(context).pop(_selectedDate),
+                label: _selected == today
+                    ? 'Set date · Today'
+                    : 'Set date · ${_chipLabel(_selected)}',
+                onTap: () => Navigator.of(context).pop(_selected),
               ),
             ],
           ),
@@ -89,48 +146,72 @@ class _DatePickerSheet extends StatelessWidget {
 }
 
 class _QuickChipsRow extends StatelessWidget {
-  const _QuickChipsRow();
+  const _QuickChipsRow({required this.selected, required this.onPick});
+
+  final DateTime selected;
+  final ValueChanged<DateTime> onPick;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final today = _dateOnly(DateTime.now());
+    final tomorrow = today.add(const Duration(days: 1));
+    final nextWeek = today.add(const Duration(days: 7));
+    return Row(
       children: [
-        _QuickChip(label: 'Today'),
-        SizedBox(width: 6),
-        _QuickChip(label: 'Tomorrow'),
-        SizedBox(width: 6),
-        _QuickChip(label: '18 May', active: true),
-        SizedBox(width: 6),
-        _QuickChip(label: 'Next week'),
+        _QuickChip(
+          label: 'Today',
+          active: selected == today,
+          onTap: () => onPick(today),
+        ),
+        const SizedBox(width: 6),
+        _QuickChip(
+          label: 'Tomorrow',
+          active: selected == tomorrow,
+          onTap: () => onPick(tomorrow),
+        ),
+        const SizedBox(width: 6),
+        _QuickChip(
+          label: 'Next week',
+          active: selected == nextWeek,
+          onTap: () => onPick(nextWeek),
+        ),
       ],
     );
   }
 }
 
 class _QuickChip extends StatelessWidget {
-  const _QuickChip({required this.label, this.active = false});
+  const _QuickChip({
+    required this.label,
+    required this.onTap,
+    this.active = false,
+  });
 
   final String label;
+  final VoidCallback onTap;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: active ? colors.accent : colors.bg,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        softWrap: false,
-        overflow: TextOverflow.clip,
-        style: AppText.sans(
-          size: 10.5,
-          weight: FontWeight.w700,
-          color: active ? Colors.white : colors.textMed,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? colors.accent : colors.bg,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.clip,
+          style: AppText.sans(
+            size: 10.5,
+            weight: FontWeight.w700,
+            color: active ? Colors.white : colors.textMed,
+          ),
         ),
       ),
     );
@@ -138,6 +219,16 @@ class _QuickChip extends StatelessWidget {
 }
 
 class _MonthHeader extends StatelessWidget {
+  const _MonthHeader({
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final String label;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -145,17 +236,28 @@ class _MonthHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'May 2026',
-          style: AppText.sans(
-            size: 15,
-            weight: FontWeight.w800,
-            color: colors.text,
-          ),
+          label,
+          style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
         ),
         Row(
           children: [
-            Icon(Icons.chevron_left, size: 18, color: colors.textDim),
-            Icon(Icons.chevron_right, size: 18, color: colors.text),
+            GestureDetector(
+              onTap: onPrev,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.chevron_left, size: 20, color: colors.text),
+              ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: onNext,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.chevron_right, size: 20, color: colors.text),
+              ),
+            ),
           ],
         ),
       ],
@@ -185,11 +287,7 @@ class _SetDateButton extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: AppText.sans(
-              size: 13,
-              weight: FontWeight.w800,
-              color: Colors.white,
-            ),
+            style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white),
           ),
         ),
       ),
@@ -212,10 +310,7 @@ class _CloseButton extends StatelessWidget {
         height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: Text(
-          '✕',
-          style: TextStyle(fontSize: 12, color: colors.textMed, height: 1),
-        ),
+        child: Text('✕', style: TextStyle(fontSize: 12, color: colors.textMed, height: 1)),
       ),
     );
   }

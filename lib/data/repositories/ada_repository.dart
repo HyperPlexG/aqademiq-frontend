@@ -42,6 +42,9 @@ class AdaRepository {
 
   /// Drop the active conversation so the next reply starts a fresh one.
   void startNewConversation() => _source.conversationId = null;
+
+  /// Apply the schedule Ada proposed in [messageId] to the user's plan.
+  Future<void> applyPlan(String messageId) => _source.applyPlan(messageId);
 }
 
 final adaRepositoryProvider = Provider<AdaRepository>((ref) {
@@ -141,6 +144,10 @@ class AdaChatController extends Notifier<AdaChatState> {
     ref.read(adaRepositoryProvider).startNewConversation();
     state = const AdaChatState();
   }
+
+  /// Apply Ada's proposed schedule (from [messageId]) to the plan.
+  Future<void> applyPlan(String messageId) =>
+      ref.read(adaRepositoryProvider).applyPlan(messageId);
 }
 
 /// Past Ada conversations for the history panel.

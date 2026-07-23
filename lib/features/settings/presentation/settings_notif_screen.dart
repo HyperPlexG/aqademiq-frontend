@@ -62,6 +62,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         .catchError((_) {});
   }
 
+  Future<void> _sendTest() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _repo.sendTestNotification();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Test notification sent — check your device.')),
+      );
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't send a test notification.")),
+      );
+    }
+  }
+
   Future<void> _pickTime(String current, ValueChanged<String> apply) async {
     final picked =
         await showTimePicker(context: context, initialTime: _parse(current));
@@ -106,11 +120,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               label: 'Notification sound',
               value: prefs.sound,
               showChevron: true,
-              last: true,
               onTap: () async {
                 final picked = await showNotifSoundSheet(context, current: prefs.sound);
                 if (picked != null) await _setSound(picked);
               },
+            ),
+            SettingsRow(
+              label: 'Send a test notification',
+              icon: Icons.notifications_active_outlined,
+              showChevron: true,
+              last: true,
+              onTap: _sendTest,
             ),
           ],
         ),
