@@ -30,14 +30,12 @@ class ObMoodScreen extends ConsumerWidget {
     Color(0xFF5A44F1),
   ];
 
-  static const List<String> _subjects = ['Engineering', 'Computer Science'];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final moods = ref.watch(onboardingProvider).subjects.isEmpty
-        ? const <String, int>{}
-        : ref.watch(onboardingProvider).subjectMoods;
+    // Use the subjects the user actually selected, not a hardcoded pair.
+    final subjects = ref.watch(onboardingProvider).subjects;
+    final moods = ref.watch(onboardingProvider).subjectMoods;
 
     return OnboardingScaffold(
       activeStep: 5,
@@ -49,16 +47,16 @@ class ObMoodScreen extends ConsumerWidget {
             style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 14),
-          for (var s = 0; s < _subjects.length; s++) ...[
+          for (var s = 0; s < subjects.length; s++) ...[
             _SubjectMoodCard(
-              subject: _subjects[s],
-              active: moods[_subjects[s]] ?? 2,
+              subject: subjects[s],
+              active: moods[subjects[s]] ?? 2,
               moodColors: _moodColors,
               onSelect: (i) => ref
                   .read(onboardingProvider.notifier)
-                  .setSubjectMood(_subjects[s], i),
+                  .setSubjectMood(subjects[s], i),
             ),
-            if (s < _subjects.length - 1) const SizedBox(height: 8),
+            if (s < subjects.length - 1) const SizedBox(height: 8),
           ],
           const SizedBox(height: 10),
           Container(

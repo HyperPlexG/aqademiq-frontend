@@ -99,12 +99,39 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         DayPart.anytime => 'Anytime',
       };
 
+  /// Parse a "Specific time" label like "2:30 PM" into a concrete [DateTime] on
+  /// [date]. Returns null for the named parts (Anytime/Morning/…).
+  static DateTime? _startTimeFromLabel(String label, DateTime date) {
+    final m = RegExp(r'^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$').firstMatch(label.trim());
+    if (m == null) return null;
+    var hour = int.parse(m.group(1)!);
+    final minute = int.parse(m.group(2)!);
+    final isPm = m.group(3)!.toUpperCase() == 'PM';
+    if (hour == 12) hour = 0;
+    if (isPm) hour += 12;
+    return DateTime(date.year, date.month, date.day, hour, minute);
+  }
+
+  static DayPart _dayPartForHour(int hour) {
+    if (hour < 12) return DayPart.morning;
+    if (hour < 17) return DayPart.afternoon;
+    return DayPart.evening;
+  }
+
   Future<void> _save() async {
     final repeat =
         (_repeat != null && _repeat!.frequency != RepeatFrequency.none) ? _repeat : null;
     final title = _title.text.trim().isEmpty ? 'New task' : _title.text.trim();
-    final dayPart = DayPartX.fromWire(_timeOfDay.toLowerCase());
     final existing = widget.existing;
+    final date =
+        existing != null ? existing.date : ref.read(selectedDateProvider);
+    // A "Specific time" pick (e.g. "2:30 PM") becomes a real start time; a named
+    // part ("Morning") has no clock time. Derive the day-part from the hour when
+    // a time is set so the task still buckets correctly.
+    final startTime = _startTimeFromLabel(_timeOfDay, date);
+    final dayPart = startTime != null
+        ? _dayPartForHour(startTime.hour)
+        : DayPartX.fromWire(_timeOfDay.toLowerCase());
 
     final repo = ref.read(tasksRepositoryProvider);
     if (existing != null) {
@@ -113,6 +140,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         title: title,
         tagId: _tag,
         dayPart: dayPart,
+        startTime: startTime,
         durationMin: _durationMin,
         repeat: repeat,
       ));
@@ -121,8 +149,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         id: '',
         title: title,
         tagId: _tag,
-        date: ref.read(selectedDateProvider),
+        date: date,
         dayPart: dayPart,
+        startTime: startTime,
         durationMin: _durationMin,
         repeat: repeat,
       ));
