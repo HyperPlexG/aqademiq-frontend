@@ -4,26 +4,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 
-/// One month the calendar popup can show. The prototype only ships June (the
-/// selected month, `plan-month`) and its July advance (`plan-month-next`).
-class _MonthView {
-  const _MonthView({
-    required this.year,
-    required this.month,
-    required this.firstCol,
-    required this.total,
-    this.accentDay,
-  });
-
-  final int year;
-  final int month;
-  final int firstCol;
-  final int total;
-  final int? accentDay;
-
-  String get label => '${_monthNames[month - 1]} $year';
-}
-
 const _monthNames = <String>[
   'January',
   'February',
@@ -39,22 +19,27 @@ const _monthNames = <String>[
   'December',
 ];
 
-// June 2026 — day 1 lands on Monday (firstCol 0), 30 days, day 3 selected.
-const _june = _MonthView(
-  year: 2026,
-  month: 6,
-  firstCol: 0,
-  total: 30,
-  accentDay: 3,
-);
+/// One month the calendar popup renders, computed for any year/month (0=Mon
+/// column for day 1, real day count), with the selected day accented when the
+/// view is on the selected month.
+class _MonthView {
+  _MonthView(this.year, this.month, {this.accentDay})
+      : firstCol = DateTime(year, month).weekday - 1, // Mon=0 … Sun=6
+        total = DateTime(year, month + 1, 0).day;
 
-// July 2026 — day 1 lands on Wednesday (firstCol 2), 31 days, no selection.
-const _july = _MonthView(year: 2026, month: 7, firstCol: 2, total: 31);
+  final int year;
+  final int month;
+  final int firstCol;
+  final int total;
+  final int? accentDay;
 
-/// Presents the month picker popup (`plan-month` / `plan-month-next` /
-/// `plan-monthyear`): a white card that drops from beneath the dimmed planner
-/// header. Tapping a day returns that [DateTime]; the title chevron flips the
-/// card to a month/year wheel that also returns a [DateTime]. Returns `null` on
+  String get label => '${_monthNames[month - 1]} $year';
+}
+
+/// Presents the month picker popup (`plan-month` / `plan-monthyear`): a card that
+/// drops from beneath the dimmed planner header. Opens on [selected]'s month with
+/// that day accented. Tapping a day returns that [DateTime]; the title chevron
+/// flips to a month/year wheel that also returns a [DateTime]. Returns `null` on
 /// dismiss.
 Future<DateTime?> showMonthPicker(
   BuildContext context, {
@@ -63,12 +48,14 @@ Future<DateTime?> showMonthPicker(
   return showDialog<DateTime>(
     context: context,
     barrierColor: const Color(0x47140F1C),
-    builder: (_) => const _MonthPickerPopup(),
+    builder: (_) => _MonthPickerPopup(selected: selected),
   );
 }
 
 class _MonthPickerPopup extends StatelessWidget {
-  const _MonthPickerPopup();
+  const _MonthPickerPopup({this.selected});
+
+  final DateTime? selected;
 
   @override
   Widget build(BuildContext context) {
@@ -77,14 +64,16 @@ class _MonthPickerPopup extends StatelessWidget {
       alignment: Alignment.topCenter,
       child: Padding(
         padding: EdgeInsets.only(top: topInset, left: 12, right: 12),
-        child: const _MonthCard(),
+        child: _MonthCard(selected: selected),
       ),
     );
   }
 }
 
 class _MonthCard extends StatefulWidget {
-  const _MonthCard();
+  const _MonthCard({this.selected});
+
+  final DateTime? selected;
 
   @override
   State<_MonthCard> createState() => _MonthCardState();
@@ -92,21 +81,45 @@ class _MonthCard extends StatefulWidget {
 
 class _MonthCardState extends State<_MonthCard> {
   bool _wheelOpen = false;
-  late _MonthView _view = _june;
+  late final DateTime _selected = widget.selected ?? DateTime.now();
+  late int _year = _selected.year;
+  late int _month = _selected.month;
 
-  void _prevMonth() {
-    if (_view.month == _july.month) setState(() => _view = _june);
-  }
+  _MonthView get _view => _MonthView(
+        _year,
+        _month,
+        // Accent the selected day only while viewing its month.
+        accentDay: (_year == _selected.year && _month == _selected.month)
+            ? _selected.day
+            : null,
+      );
 
-  void _nextMonth() {
-    if (_view.month == _june.month) setState(() => _view = _july);
-  }
+  void _prevMonth() => setState(() {
+        if (_month == 1) {
+          _month = 12;
+          _year--;
+        } else {
+          _month--;
+        }
+      });
+
+  void _nextMonth() => setState(() {
+        if (_month == 12) {
+          _month = 1;
+          _year++;
+        } else {
+          _month++;
+        }
+      });
 
   void _pickDay(int day) =>
-      Navigator.of(context).pop(DateTime(_view.year, _view.month, day));
+      Navigator.of(context).pop(DateTime(_year, _month, day));
 
-  void _pickFromWheel(int month, int year) =>
-      Navigator.of(context).pop(DateTime(year, month));
+  void _applyWheel(int month, int year) => setState(() {
+        _month = month;
+        _year = year;
+        _wheelOpen = false;
+      });
 
   @override
   Widget build(BuildContext context) {
@@ -132,7 +145,7 @@ class _MonthCardState extends State<_MonthCard> {
             ? _WheelBody(
                 view: _view,
                 onClose: () => setState(() => _wheelOpen = false),
-                onPick: _pickFromWheel,
+                onPick: _applyWheel,
               )
             : _CalendarBody(
                 view: _view,
@@ -194,21 +207,13 @@ class _CalendarBody extends StatelessWidget {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onPrev,
-                  child: Icon(
-                    Icons.chevron_left,
-                    size: 20,
-                    color: colors.text,
-                  ),
+                  child: Icon(Icons.chevron_left, size: 20, color: colors.text),
                 ),
                 const SizedBox(width: 16),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onNext,
-                  child: Icon(
-                    Icons.chevron_right,
-                    size: 20,
-                    color: colors.text,
-                  ),
+                  child: Icon(Icons.chevron_right, size: 20, color: colors.text),
                 ),
               ],
             ),
@@ -226,7 +231,9 @@ class _CalendarBody extends StatelessWidget {
   }
 }
 
-class _WheelBody extends StatelessWidget {
+/// Month + year wheels — scroll to a month/year and tap "Done" (the highlighted
+/// centre) to apply. Both wheels drive the calendar behind them.
+class _WheelBody extends StatefulWidget {
   const _WheelBody({
     required this.view,
     required this.onClose,
@@ -237,16 +244,17 @@ class _WheelBody extends StatelessWidget {
   final VoidCallback onClose;
   final void Function(int month, int year) onPick;
 
-  static const _months = <String>[
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
+  @override
+  State<_WheelBody> createState() => _WheelBodyState();
+}
+
+class _WheelBodyState extends State<_WheelBody> {
+  late int _month = widget.view.month;
+  late int _year = widget.view.year;
+  // A generous, fixed range centred on the current decade.
+  late final List<int> _years = [
+    for (var y = widget.view.year - 6; y <= widget.view.year + 6; y++) y,
   ];
-  static const _monthNums = <int>[4, 5, 6, 7, 8];
-  static const _years = <int>[2024, 2025, 2026, 2027, 2028];
-  static const _opacities = <double>[0.28, 0.5, 1, 0.5, 0.28];
 
   @override
   Widget build(BuildContext context) {
@@ -257,11 +265,11 @@ class _WheelBody extends StatelessWidget {
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onClose,
+          onTap: widget.onClose,
           child: Row(
             children: [
               Text(
-                view.label,
+                '${_monthNames[_month - 1]} $_year',
                 style: AppText.sans(
                   size: 17,
                   weight: FontWeight.w800,
@@ -269,7 +277,7 @@ class _WheelBody extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 3),
-              Icon(Icons.expand_more, size: 16, color: colors.accent),
+              Icon(Icons.expand_less, size: 16, color: colors.accent),
             ],
           ),
         ),
@@ -288,23 +296,24 @@ class _WheelBody extends StatelessWidget {
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
+            SizedBox(
+              height: 168,
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: _WheelColumn(
-                      labels: _months,
-                      alignEnd: false,
-                      onTapCenter: () => onPick(_monthNums[2], view.year),
+                    child: _Wheel(
+                      count: 12,
+                      initialIndex: _month - 1,
+                      label: (i) => _monthNames[i],
+                      onChanged: (i) => setState(() => _month = i + 1),
                     ),
                   ),
                   Expanded(
-                    child: _WheelColumn(
-                      labels: [for (final y in _years) '$y'],
-                      alignEnd: true,
-                      onTapCenter: () => onPick(view.month, _years[2]),
+                    child: _Wheel(
+                      count: _years.length,
+                      initialIndex: _years.indexOf(_year),
+                      label: (i) => '${_years[i]}',
+                      onChanged: (i) => setState(() => _year = _years[i]),
                     ),
                   ),
                 ],
@@ -312,52 +321,83 @@ class _WheelBody extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => widget.onPick(_month, _year),
+          child: Center(
+            child: Text(
+              'Done',
+              style: AppText.sans(
+                size: 13,
+                weight: FontWeight.w800,
+                color: colors.accent,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _WheelColumn extends StatelessWidget {
-  const _WheelColumn({
-    required this.labels,
-    required this.alignEnd,
-    required this.onTapCenter,
+/// A scrollable wheel column: centred value large, neighbours dimmed.
+class _Wheel extends StatefulWidget {
+  const _Wheel({
+    required this.count,
+    required this.initialIndex,
+    required this.label,
+    required this.onChanged,
   });
 
-  final List<String> labels;
-  final bool alignEnd;
-  final VoidCallback onTapCenter;
+  final int count;
+  final int initialIndex;
+  final String Function(int) label;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<_Wheel> createState() => _WheelState();
+}
+
+class _WheelState extends State<_Wheel> {
+  late final FixedExtentScrollController _controller =
+      FixedExtentScrollController(initialItem: widget.initialIndex.clamp(0, widget.count - 1));
+  late int _selected = widget.initialIndex.clamp(0, widget.count - 1);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Column(
-      crossAxisAlignment:
-          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-      children: [
-        for (var i = 0; i < labels.length; i++)
-          SizedBox(
-            height: 42,
-            child: Align(
-              alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
-              child: Opacity(
-                opacity: _WheelBody._opacities[i],
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: i == 2 ? onTapCenter : null,
-                  child: Text(
-                    labels[i],
-                    style: AppText.sans(
-                      size: i == 2 ? 22 : 19,
-                      weight: i == 2 ? FontWeight.w800 : FontWeight.w600,
-                      color: colors.text,
-                    ),
-                  ),
-                ),
+    return ListWheelScrollView.useDelegate(
+      controller: _controller,
+      itemExtent: 42,
+      perspective: 0.004,
+      physics: const FixedExtentScrollPhysics(),
+      onSelectedItemChanged: (i) {
+        setState(() => _selected = i);
+        widget.onChanged(i);
+      },
+      childDelegate: ListWheelChildBuilderDelegate(
+        childCount: widget.count,
+        builder: (context, i) {
+          final selected = i == _selected;
+          return Center(
+            child: Text(
+              widget.label(i),
+              style: AppText.sans(
+                size: selected ? 22 : 18,
+                weight: selected ? FontWeight.w800 : FontWeight.w600,
+                color: selected ? colors.text : const Color(0xFFC8C4BE),
               ),
             ),
-          ),
-      ],
+          );
+        },
+      ),
     );
   }
 }
