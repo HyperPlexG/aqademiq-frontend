@@ -1,5 +1,6 @@
-# Uncomment this line to define a global platform for your project
-# platform :ios, '13.0'
+# Firebase (FCM) iOS SDK requires a deployment target >= 13.0, matching the Xcode
+# project. Must be set explicitly so CocoaPods doesn't fall back to an older default.
+platform :ios, '13.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'

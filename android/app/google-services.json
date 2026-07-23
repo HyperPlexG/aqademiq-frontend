@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "472347282081",
+    "project_id": "aqademiq-app",
+    "storage_bucket": "aqademiq-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:472347282081:android:af91210960ecdad469fee0",
+        "android_client_info": {
+          "package_name": "com.r13.aqademiq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_2QbMRDIw8O8XWsZ3qY5f4qYVbu-4T7s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

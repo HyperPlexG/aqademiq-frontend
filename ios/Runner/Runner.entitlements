@@ -6,5 +6,9 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<!-- Push Notifications (APNs). Xcode promotes this to `production` for
+	     distribution/TestFlight archives; `development` is correct for the file. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>
