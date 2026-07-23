@@ -12,6 +12,7 @@ import '../../../data/repositories/ada_repository.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
+import '../../../shared/widgets/markdown_text.dart';
 import 'widgets/chat_history_sheet.dart';
 
 /// FRAMES `ada-empty` / `ada-chat` — the Ada tab (intro when empty, conversation
@@ -195,7 +196,19 @@ class _Bubble extends StatelessWidget {
           bottomRight: Radius.circular(isUser ? 3 : 12),
         ),
       ),
-      child: Text(message.text, style: AppText.sans(size: 12, height: 1.55, color: isUser ? Colors.white : colors.text)),
+      child: isUser
+          // The user's own text is never Markdown — render it verbatim so a
+          // literal asterisk stays an asterisk.
+          ? Text(
+              message.text,
+              style: AppText.sans(size: 12, height: 1.55, color: Colors.white),
+            )
+          : MarkdownText(
+              message.text,
+              style: AppText.sans(size: 12, height: 1.55, color: colors.text),
+              muted: colors.textMed,
+              accent: colors.accent,
+            ),
     );
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),

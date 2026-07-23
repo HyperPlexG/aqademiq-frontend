@@ -332,7 +332,9 @@ class _LinksCard extends ConsumerWidget {
     final colors = context.colors;
     final links = <(String, VoidCallback)>[
       ('Rate the app', () => unawaited(showRateSheet(context))),
-      ('Share feedback', () => unawaited(openExternal(context, Uri(scheme: 'mailto', path: 'support@aqademiq.com', queryParameters: {'subject': 'Aqademiq feedback'})))),
+      // Opens the in-app feedback board (backed by /feedback), not a mailto —
+      // the old mail link silently did nothing on web and never reached the board.
+      ('Share feedback', () => context.push(Routes.settingsFeedback)),
       ('FAQ', () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/faq')))),
       ('Follow us on Instagram', () => unawaited(openExternal(context, Uri.parse('https://www.instagram.com/tryaqademiq/')))),
     ];

@@ -139,17 +139,16 @@ class _SetupView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Column(
+    return _FocusFrame(
+      pills: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(child: FocusPill(glyph: '◈', label: 'Prism', onTap: onPrism)),
+          const SizedBox(width: 8),
+          Flexible(child: FocusPill(icon: Icons.timer, label: 'Set time', onTap: onSetTime)),
+        ],
+      ),
       children: [
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            FocusPill(glyph: '◈', label: 'Prism', onTap: onPrism),
-            FocusPill(icon: Icons.timer, label: 'Set time', onTap: onSetTime),
-          ],
-        ),
-        const SizedBox(height: 14),
         Text('Focus', style: AppText.sans(size: 32, weight: FontWeight.w800, color: colors.text)),
         const SizedBox(height: 8),
         _TaskChip(title: taskTitle, subject: taskSubject, onTap: onLink),
@@ -159,6 +158,43 @@ class _SetupView extends StatelessWidget {
         Text(durationLabel, style: AppText.sans(size: 36, weight: FontWeight.w800, letterSpacing: 0.5, color: colors.text)),
         const SizedBox(height: 18),
         _PrimaryAction(icon: Icons.play_arrow, label: 'Start focus', onTap: onStart),
+      ],
+    );
+  }
+}
+
+/// Focus layout: the pills stay pinned at the top, and the timer cluster centres
+/// in everything below.
+///
+/// Both views used to be plain top-packed Columns, so the cluster bunched under
+/// the header and left the rest of the screen empty — the design frame balances
+/// it in the middle instead. Falls back to scrolling when the cluster is taller
+/// than the frame (small devices, large text scale) rather than overflowing.
+class _FocusFrame extends StatelessWidget {
+  const _FocusFrame({required this.pills, required this.children});
+
+  final Widget pills;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: 4),
+        pills,
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: children,
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -192,17 +228,16 @@ class _RunningView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Column(
+    return _FocusFrame(
+      pills: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(child: FocusPill(glyph: '◈', label: prismMode, onTap: onPrism)),
+          const SizedBox(width: 8),
+          const Flexible(child: FocusPill(icon: Icons.timer, label: 'Set time')),
+        ],
+      ),
       children: [
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            FocusPill(glyph: '◈', label: prismMode, onTap: onPrism),
-            const FocusPill(icon: Icons.timer, label: 'Set time'),
-          ],
-        ),
-        const SizedBox(height: 14),
         Text(paused ? 'Frozen' : 'Focus', style: AppText.sans(size: 32, weight: FontWeight.w800, color: colors.text)),
         const SizedBox(height: 3),
         Text('$taskSubject · $taskTitle', style: AppText.sans(size: 10.5, color: colors.textMed)),
@@ -211,16 +246,29 @@ class _RunningView extends StatelessWidget {
         const SizedBox(height: 14),
         Text(remaining, style: AppText.sans(size: 36, weight: FontWeight.w800, letterSpacing: 0.5, color: paused ? colors.textMed : colors.text)),
         SizedBox(height: paused ? 22 : 18),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (paused)
-              _PrimaryAction(icon: Icons.play_arrow, label: 'Resume', onTap: onResume, horizontal: 30)
-            else
-              _PrimaryAction(icon: Icons.ac_unit, label: 'Freeze', onTap: onFreeze, horizontal: 30),
-            const SizedBox(width: 10),
-            _EndButton(onTap: onEnd),
-          ],
+        // Wrap, not Row: at large text scales the two buttons no longer fit side
+        // by side and used to overflow the screen edge. They stack instead, and
+        // each is capped at the frame width — Wrap hands its children unbounded
+        // main-axis constraints, so a button would otherwise still outgrow it.
+        LayoutBuilder(
+          builder: (context, constraints) => Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              for (final action in [
+                if (paused)
+                  _PrimaryAction(icon: Icons.play_arrow, label: 'Resume', onTap: onResume, horizontal: 30)
+                else
+                  _PrimaryAction(icon: Icons.ac_unit, label: 'Freeze', onTap: onFreeze, horizontal: 30),
+                _EndButton(onTap: onEnd),
+              ])
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                  child: action,
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -246,14 +294,31 @@ class _TaskChip extends StatelessWidget {
           boxShadow: colors.cardShadow,
           border: Border.all(color: colors.border),
         ),
+        // Flexible + ellipsis: a long task title or subject used to push this
+        // Row past the screen edge (a horizontal RenderFlex overflow) because
+        // both Texts sized to their natural width.
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(width: 7, height: 7, decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle)),
             const SizedBox(width: 7),
-            Text(title, style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text)),
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text),
+              ),
+            ),
             const SizedBox(width: 7),
-            Text(subject, style: AppText.sans(size: 10.5, color: colors.textDim)),
+            Flexible(
+              child: Text(
+                subject,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 10.5, color: colors.textDim),
+              ),
+            ),
             Icon(Icons.expand_more, size: 16, color: colors.textDim),
           ],
         ),
@@ -282,7 +347,14 @@ class _PrimaryAction extends StatelessWidget {
           children: [
             Icon(icon, size: 17, color: Colors.white),
             const SizedBox(width: 8),
-            Text(label, style: AppText.sans(size: 14, weight: FontWeight.w800, color: Colors.white)),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 14, weight: FontWeight.w800, color: Colors.white),
+              ),
+            ),
           ],
         ),
       ),
@@ -311,7 +383,14 @@ class _EndButton extends StatelessWidget {
           children: [
             Icon(Icons.stop_circle, size: 17, color: colors.danger),
             const SizedBox(width: 7),
-            Text('End', style: AppText.sans(size: 14, weight: FontWeight.w800, color: colors.danger)),
+            Flexible(
+              child: Text(
+                'End',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 14, weight: FontWeight.w800, color: colors.danger),
+              ),
+            ),
           ],
         ),
       ),

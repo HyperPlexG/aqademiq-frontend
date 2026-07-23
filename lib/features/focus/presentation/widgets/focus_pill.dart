@@ -36,7 +36,16 @@ class FocusPill extends StatelessWidget {
             else if (icon != null)
               Icon(icon, size: 13, color: fg),
             const SizedBox(width: 5),
-            Text(label, style: AppText.sans(size: 11, weight: FontWeight.w700, color: fg)),
+            // Ellipsise rather than overflow: at large accessibility text scales
+            // the two pills together exceeded the screen width.
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 11, weight: FontWeight.w700, color: fg),
+              ),
+            ),
           ],
         ),
       ),
