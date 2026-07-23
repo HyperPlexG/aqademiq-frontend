@@ -187,7 +187,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
 
   void _delete(Task t) => unawaited(ref.read(dayTasksProvider.notifier).delete(t));
 
-  void _later(Task t) => _moveToTomorrow(t);
+  // "Later" opens the reschedule picker so the user chooses a day, rather than
+  // silently jumping the task to tomorrow.
+  void _later(Task t) => unawaited(_reschedule(t));
 
   void _moveToTomorrow(Task t) {
     final next = ref.read(selectedDateProvider).add(const Duration(days: 1));
