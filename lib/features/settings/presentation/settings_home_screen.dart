@@ -117,7 +117,19 @@ class SettingsHomeScreen extends ConsumerWidget {
                 if (context.mounted) context.go(Routes.welcome);
               },
             ),
-            SettingsRow(label: 'Delete account', icon: Icons.delete_outline, danger: true, showChevron: true, last: true, onTap: () => unawaited(showDeleteAccountDialog(context))),
+            SettingsRow(
+              label: 'Delete account',
+              icon: Icons.delete_outline,
+              danger: true,
+              showChevron: true,
+              last: true,
+              onTap: () async {
+                final confirmed = await showDeleteAccountDialog(context);
+                if (confirmed != true) return;
+                await ref.read(authRepositoryProvider).deleteAccount();
+                if (context.mounted) context.go(Routes.welcome);
+              },
+            ),
           ],
         ),
         const SizedBox(height: 20),

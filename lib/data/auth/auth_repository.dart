@@ -80,6 +80,9 @@ abstract interface class AuthRepository {
 
   Future<void> signOut();
 
+  /// Permanently delete the account (`DELETE /profile/account`), then sign out.
+  Future<void> deleteAccount();
+
   void dispose();
 }
 
@@ -201,6 +204,12 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    await _delayed(null);
+    _emit(null);
+  }
+
+  @override
+  Future<void> deleteAccount() async {
     await _delayed(null);
     _emit(null);
   }
@@ -392,6 +401,16 @@ class ApiAuthRepository implements AuthRepository {
       // Ignore — the state stream emits null on SIGNED_OUT regardless.
     }
     _emit(null);
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    try {
+      await _dio.delete<void>('/profile/account');
+    } on Object {
+      // Even if the server call fails, still sign out locally below.
+    }
+    await signOut();
   }
 
   @override
