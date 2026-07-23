@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../../data/repositories/referral_repository.dart';
 
 /// Presents the referral / share sheet ([_ShareSheet]) over the dimmed real
 /// screen. Reused by both the Subjects section (`subj-share`) and the section 06
@@ -146,18 +148,21 @@ class _InviteHeroCard extends StatelessWidget {
   }
 }
 
-class _CodeBoxes extends StatelessWidget {
+class _CodeBoxes extends ConsumerWidget {
   const _CodeBoxes();
 
   @override
-  Widget build(BuildContext context) {
-    const code = ['A', 'D', 'A', '4', '2'];
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The user's real, unique code (falls back to a dashed placeholder while it
+    // loads). Rendered dynamically so any code length fits.
+    final code = ref.watch(referralCodeProvider).value ?? '';
+    final chars = code.isEmpty ? List.filled(5, '·') : code.split('');
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        for (var i = 0; i < code.length; i++) ...[
+        for (var i = 0; i < chars.length; i++) ...[
           if (i > 0) const SizedBox(width: 7),
-          _CodeCell(char: code[i]),
+          _CodeCell(char: chars[i]),
         ],
       ],
     );
@@ -189,17 +194,20 @@ class _CodeCell extends StatelessWidget {
   }
 }
 
-class _ShareInviteButton extends StatelessWidget {
+class _ShareInviteButton extends ConsumerWidget {
   const _ShareInviteButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     return GestureDetector(
       onTap: () async {
+        final code = ref.read(referralCodeProvider).value ?? '';
+        final codePart = code.isEmpty ? '' : ' Use my referral code $code.';
         await SharePlus.instance.share(
           ShareParams(
-            text: 'Join me on Aqademiq — my focus sanctuary. Use my referral code ADA42 → https://www.aqademiq.com',
+            text: 'Join me on Aqademiq — my focus sanctuary.$codePart '
+                'https://www.aqademiq.com',
             subject: 'Join me on Aqademiq',
           ),
         );
