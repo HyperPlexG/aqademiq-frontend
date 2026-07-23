@@ -200,12 +200,11 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _reschedule(Task t) async {
-    final selected = ref.read(selectedDateProvider);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selected.add(const Duration(days: 1)),
-      firstDate: DateTime(selected.year - 1),
-      lastDate: DateTime(selected.year + 2),
+    // Use the app's own calendar popup (not the Material date picker) so the
+    // reschedule UI matches the rest of the app.
+    final picked = await showMonthPicker(
+      context,
+      selected: ref.read(selectedDateProvider),
     );
     if (picked != null && mounted) {
       await ref.read(dayTasksProvider.notifier).move(t, picked);
