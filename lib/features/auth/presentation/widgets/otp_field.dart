@@ -5,8 +5,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 
-/// A 6-cell OTP input (prototype `auth-otp`). Filled cells show the digit on an
-/// `accentSoft` fill; the active cell shows an accent border + blinking cursor.
+/// A boxed code input (prototype `auth-otp`). Filled cells show the character on
+/// an `accentSoft` fill; the active cell shows an accent border + blinking
+/// cursor.
+///
+/// Defaults to a numeric OTP (digits-only, number keyboard) for the phone and
+/// password-reset flows. Callers that need another alphabet — e.g. the
+/// alphanumeric referral code — override [keyboardType], [inputFormatters] and
+/// [textCapitalization].
 class OtpField extends StatefulWidget {
   const OtpField({
     super.key,
@@ -15,6 +21,9 @@ class OtpField extends StatefulWidget {
     this.onChanged,
     this.onCompleted,
     this.autofocus = false,
+    this.keyboardType = TextInputType.number,
+    this.inputFormatters,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   final int length;
@@ -23,11 +32,21 @@ class OtpField extends StatefulWidget {
   /// Fires on every edit with the current value.
   final ValueChanged<String>? onChanged;
 
-  /// Fires once the field reaches [length] digits.
+  /// Fires once the field reaches [length] characters.
   final ValueChanged<String>? onCompleted;
 
   /// Request focus (and pop the keyboard) as soon as the field mounts.
   final bool autofocus;
+
+  /// Soft-keyboard type. Defaults to [TextInputType.number] for OTP codes.
+  final TextInputType keyboardType;
+
+  /// Character filter applied before the length limit. When null the field
+  /// stays digits-only (the OTP default). A length limiter is always appended.
+  final List<TextInputFormatter>? inputFormatters;
+
+  /// Auto-capitalisation hint for the soft keyboard.
+  final TextCapitalization textCapitalization;
 
   @override
   State<OtpField> createState() => _OtpFieldState();
@@ -71,10 +90,12 @@ class _OtpFieldState extends State<OtpField> {
                 autofocus: widget.autofocus,
                 showCursor: false,
                 enableInteractiveSelection: false,
-                keyboardType: TextInputType.number,
+                keyboardType: widget.keyboardType,
+                textCapitalization: widget.textCapitalization,
                 textInputAction: TextInputAction.done,
                 inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
+                  ...(widget.inputFormatters ??
+                      [FilteringTextInputFormatter.digitsOnly]),
                   LengthLimitingTextInputFormatter(widget.length),
                 ],
                 onChanged: (v) {

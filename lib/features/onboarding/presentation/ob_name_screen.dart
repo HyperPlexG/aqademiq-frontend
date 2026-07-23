@@ -30,7 +30,9 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
   void initState() {
     super.initState();
     final existing = ref.read(onboardingProvider).name;
-    _controller = TextEditingController(text: existing.isEmpty ? 'Ridhwan' : existing);
+    // Start empty so the user enters their own name (don't seed a placeholder
+    // that silently gets submitted as their name).
+    _controller = TextEditingController(text: existing);
   }
 
   @override

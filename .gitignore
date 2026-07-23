@@ -49,3 +49,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Local tooling / build junk
+.claude/
+devtools_options.yaml
+/ios/build/
+ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
