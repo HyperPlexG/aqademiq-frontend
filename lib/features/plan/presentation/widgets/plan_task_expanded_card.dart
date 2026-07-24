@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/tag.dart';
+import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 
 /// FRAMES `plan-breakdown` — a planned task expanded into Ada microtasks, with a
@@ -74,7 +75,7 @@ class PlanTaskExpandedCard extends StatelessWidget {
                               ],
                               Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                               const SizedBox(width: 4),
-                              Text(tag?.label ?? task.tagId, style: AppText.sans(size: 9.5, weight: FontWeight.w800, color: color)),
+                              Text(studyTagLabel(tag, task.tagId), style: AppText.sans(size: 9.5, weight: FontWeight.w800, color: color)),
                               if (task.durationMin != null) ...[
                                 const SizedBox(width: 8),
                                 Text('${task.durationMin}m', style: AppText.sans(size: 10.5, color: colors.textDim)),

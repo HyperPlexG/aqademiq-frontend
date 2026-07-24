@@ -22,6 +22,14 @@ class MockMoodSource implements MoodSource {
     final created = entry.id.isEmpty
         ? entry.copyWith(id: 'mood-${DateTime.now().microsecondsSinceEpoch}')
         : entry;
+    // Upsert by calendar day + phase so edits replace rather than duplicate.
+    _logs.removeWhere(
+      (l) =>
+          l.phase == created.phase &&
+          l.date.year == created.date.year &&
+          l.date.month == created.date.month &&
+          l.date.day == created.date.day,
+    );
     _logs.add(created);
     return mockDelay(created);
   }

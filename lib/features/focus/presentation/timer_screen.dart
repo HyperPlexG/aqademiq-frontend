@@ -9,7 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/enums.dart';
-import '../../../data/models/tag.dart';
+import '../../../data/models/tag_resolve.dart';
 import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
@@ -45,10 +45,12 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
     final session = ref.watch(focusControllerProvider);
     final ctrl = ref.read(focusControllerProvider.notifier);
     final linked = ref.watch(linkedTaskProvider);
-    final tagsById = ref.watch(tagsByIdProvider).value ?? const <String, Tag>{};
+    final tagsById = ref.watch(tagsByIdProvider);
     final taskTitle = linked?.title ?? 'Focus session';
-    final tag = linked != null ? tagsById[linked.tagId] : null;
-    final taskSubject = tag?.label ?? (linked != null ? linked.tagId : 'No task linked');
+    final tag = linked != null ? resolveStudyTag(tagsById.values, linked.tagId) : null;
+    final taskSubject = linked != null
+        ? studyTagLabel(tag, linked.tagId)
+        : 'No task linked';
     final defaultPrismMode = ref.watch(prismDefaultModeProvider);
     final prismMode = session.prismMode ?? defaultPrismMode;
 

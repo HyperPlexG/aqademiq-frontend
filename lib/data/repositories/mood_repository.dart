@@ -30,6 +30,28 @@ class MoodRepository {
     );
     return dto.toModel();
   }
+
+  /// Shared upsert used by Planner + Stats: always write the day's mood index
+  /// (`POST /mood-entries`), and optionally the evening reflection.
+  ///
+  /// Reflection is never required — pass [writeReflection] with an empty [note]
+  /// to clear a previous reflection.
+  Future<void> upsertDay({
+    required DateTime date,
+    required int mood,
+    String? note,
+    bool writeReflection = false,
+  }) async {
+    await log(date: date, phase: MoodPhase.adhoc, mood: mood);
+    if (writeReflection) {
+      await log(
+        date: date,
+        phase: MoodPhase.evening,
+        mood: mood,
+        note: note ?? '',
+      );
+    }
+  }
 }
 
 final moodRepositoryProvider = Provider<MoodRepository>((ref) {

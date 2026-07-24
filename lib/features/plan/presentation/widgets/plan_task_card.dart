@@ -5,6 +5,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/tag.dart';
+import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 
 /// A single task row (prototype `PlanTask`): optional left color bar, title,
@@ -30,7 +31,7 @@ class PlanTaskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final tagColor = tag != null ? hexColor(tag!.color) : colors.accent;
-    final tagLabel = tag?.label ?? task.tagId;
+    final tagLabel = studyTagLabel(tag, task.tagId);
 
     return GestureDetector(
       onTap: onTap,

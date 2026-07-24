@@ -60,7 +60,9 @@ class TagsController extends AsyncNotifier<List<Tag>> {
 
 final tagsProvider = AsyncNotifierProvider<TagsController, List<Tag>>(TagsController.new);
 
-final tagsByIdProvider = FutureProvider<Map<String, Tag>>((ref) async {
-  final tags = await ref.watch(tagsProvider.future);
+/// Study tags keyed by id for O(1) Plan chip lookup. Derived synchronously from
+/// [tagsProvider] so a loading FutureProvider cannot blank the map mid-frame.
+final tagsByIdProvider = Provider<Map<String, Tag>>((ref) {
+  final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
   return {for (final t in tags) t.id: t};
 });

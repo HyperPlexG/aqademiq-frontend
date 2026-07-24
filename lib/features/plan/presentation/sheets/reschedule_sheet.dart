@@ -7,11 +7,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
-import '../../../../data/models/tag.dart';
+import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 import '../../../../data/repositories/tags_repository.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../providers/plan_providers.dart';
+import '../pickers/date_picker.dart';
 
 const _weekdaysFull = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const _monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -38,7 +39,7 @@ class _RescheduleReview extends ConsumerWidget {
     final selected = ref.watch(selectedDateProvider);
     final tasks = ref.watch(dayTasksProvider).value ?? const <Task>[];
     final remaining = tasks.where((t) => !t.done).toList();
-    final tagsById = ref.watch(tagsByIdProvider).value ?? const <String, Tag>{};
+    final tagsById = ref.watch(tagsByIdProvider);
     final tomorrow = selected.add(const Duration(days: 1));
 
     Future<void> moveAll(DateTime to) async {
@@ -84,7 +85,9 @@ class _RescheduleReview extends ConsumerWidget {
                           padding: EdgeInsets.only(bottom: i == remaining.length - 1 ? 0 : 8),
                           child: _ReviewRow(
                             task: remaining[i],
-                            color: hexColor(tagsById[remaining[i].tagId]?.color ?? '#6b5cf0'),
+                            color: hexColor(
+                              resolveStudyTag(tagsById.values, remaining[i].tagId)?.color ?? '#6b5cf0',
+                            ),
                             colors: colors,
                           ),
                         ),
@@ -106,11 +109,11 @@ class _RescheduleReview extends ConsumerWidget {
                     if (context.mounted) Navigator.of(context).pop();
                   },
                   onMoreOptions: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: tomorrow,
-                      firstDate: DateTime(selected.year - 1),
-                      lastDate: DateTime(selected.year + 2),
+                    // Same "Pick a date" sheet used by Add Task — not Material
+                    // showDatePicker, which breaks visual consistency.
+                    final picked = await showTaskDatePicker(
+                      context,
+                      initial: tomorrow,
                     );
                     if (picked == null) return;
                     await moveAll(picked);

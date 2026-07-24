@@ -13,6 +13,7 @@ import '../../../core/utils/hex_color.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/tag.dart';
+import '../../../data/models/tag_resolve.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/mood_repository.dart';
@@ -24,6 +25,7 @@ import '../../focus/providers/linked_task_provider.dart';
 import '../plan_time.dart';
 import '../providers/plan_providers.dart';
 import '../providers/plan_ui_providers.dart';
+import 'pickers/date_picker.dart';
 import 'sheets/log_mood_sheet.dart';
 import 'sheets/month_picker_sheet.dart';
 import 'sheets/plan_menu.dart';
@@ -106,14 +108,14 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       case PlanMenuResult.reschedule:
         await showRescheduleSheet(context);
       case PlanMenuResult.logMood:
-        final mood = await showLogMoodSheet(context);
-        if (mood != null) {
-          await ref.read(moodRepositoryProvider).log(
+        final result = await showLogMoodSheet(context);
+        if (result != null) {
+          await ref.read(moodRepositoryProvider).upsertDay(
                 date: ref.read(selectedDateProvider),
-                phase: MoodPhase.adhoc,
-                mood: mood,
+                mood: result.mood,
               );
           ref.invalidate(moodWeekProvider);
+          ref.invalidate(streakProvider);
         }
       case PlanMenuResult.groupingList:
         ref.read(planViewModeProvider.notifier).set(PlanViewMode.list);
@@ -131,7 +133,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   Widget build(BuildContext context) {
     final selected = ref.watch(selectedDateProvider);
     final tasksAsync = ref.watch(dayTasksProvider);
-    final tagsById = ref.watch(tagsByIdProvider).value ?? const <String, Tag>{};
+    final tagsById = ref.watch(tagsByIdProvider);
     final guest = ref.watch(isGuestProvider);
     final viewMode = ref.watch(planViewModeProvider);
     final expandedId = ref.watch(expandedTaskProvider);
@@ -241,11 +243,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _reschedule(Task t) async {
-    // Use the app's own calendar popup (not the Material date picker) so the
-    // reschedule UI matches the rest of the app.
-    final picked = await showMonthPicker(
+    // Same shared date sheet as Add Task / bulk reschedule "More options".
+    final picked = await showTaskDatePicker(
       context,
-      selected: ref.read(selectedDateProvider),
+      initial: ref.read(selectedDateProvider),
     );
     if (picked != null && mounted) {
       await ref.read(dayTasksProvider.notifier).move(t, picked);
@@ -260,12 +261,12 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _overflow(Task t) async {
-    final tag = ref.read(tagsByIdProvider).value?[t.tagId];
+    final tag = resolveStudyTag(ref.read(tagsByIdProvider).values, t.tagId);
     final color = tag != null ? hexColor(tag.color) : context.colors.accent;
     final action = await showTaskOverflowSheet(
       context,
       title: t.title,
-      subjectCode: tag?.label ?? t.tagId,
+      subjectCode: studyTagLabelFromTags(ref.read(tagsByIdProvider).values, t.tagId),
       subjectColor: color,
     );
     if (!mounted || action == null) return;
@@ -336,7 +337,11 @@ class _PlanTimeline extends StatelessWidget {
                 onLater: () => onLater(t),
                 onDelete: () => onDelete(t),
                 onOverflow: () => onOverflow(t),
-                child: PlanTaskCard(task: t, tag: tagsById[t.tagId], onToggleDone: () => onToggleDone(t)),
+                child: PlanTaskCard(
+                  task: t,
+                  tag: resolveStudyTag(tagsById.values, t.tagId),
+                  onToggleDone: () => onToggleDone(t),
+                ),
               ),
             ),
         const SizedBox(height: 8),
@@ -351,7 +356,11 @@ class _PlanTimeline extends StatelessWidget {
               ),
             ),
             if (expandedId == t.id && t.subtasks.isNotEmpty)
-              PlanTaskExpandedCard(task: t, tag: tagsById[t.tagId], onCollapse: () => onExpand(t))
+              PlanTaskExpandedCard(
+                task: t,
+                tag: resolveStudyTag(tagsById.values, t.tagId),
+                onCollapse: () => onExpand(t),
+              )
             else
               _SwipeableTask(
                 task: t,
@@ -360,7 +369,7 @@ class _PlanTimeline extends StatelessWidget {
                 onOverflow: () => onOverflow(t),
                 child: PlanTaskCard(
                   task: t,
-                  tag: tagsById[t.tagId],
+                  tag: resolveStudyTag(tagsById.values, t.tagId),
                   showBar: true,
                   onToggleDone: () => onToggleDone(t),
                   onTap: t.subtasks.isNotEmpty ? () => onExpand(t) : null,
@@ -467,7 +476,12 @@ class _PlanListGrouped extends ConsumerWidget {
               for (final t in groups[part]!)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: PlanTaskCard(task: t, tag: tagsById[t.tagId], showBar: part != DayPart.anytime, onToggleDone: () => onToggleDone(t)),
+                  child: PlanTaskCard(
+                    task: t,
+                    tag: resolveStudyTag(tagsById.values, t.tagId),
+                    showBar: part != DayPart.anytime,
+                    onToggleDone: () => onToggleDone(t),
+                  ),
                 ),
             const SizedBox(height: 12),
           ],

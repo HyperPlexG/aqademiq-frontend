@@ -45,6 +45,7 @@ class AddTaskScreen extends ConsumerStatefulWidget {
 class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   final _title = TextEditingController();
   final _note = TextEditingController();
+  final _noteFocus = FocusNode();
   String _tag = '';
   /// Empty = None. Populated from the user's real subjects, never demo codes.
   String _subject = '';
@@ -63,7 +64,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     if (existing != null) {
       _title.text = existing.title;
       _note.text = existing.note ?? '';
-      _tag = existing.tagId;
+      // Legacy coerced wire values are not real study tags — leave unset so the
+      // chip row / save path can pick a real tag instead of re-saving "other".
+      final stored = existing.tagId.trim().toLowerCase();
+      _tag = (stored == 'other' || stored == 'general') ? '' : existing.tagId;
       // Prefer a concrete clock label when startTime is set — never wipe a
       // planned time back to the coarse Anytime/Morning chip.
       _timeOfDay = existing.startTime != null
@@ -100,6 +104,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   void dispose() {
     _title.dispose();
     _note.dispose();
+    _noteFocus.dispose();
     super.dispose();
   }
 
@@ -323,31 +328,42 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                     const SizedBox(height: 8),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: AppCard(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: Icon(Icons.notes, size: 16, color: colors.textMed),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: TextField(
-                                controller: _note,
-                                enabled: !_saving,
-                                minLines: 1,
-                                maxLines: 4,
-                                style: AppText.sans(size: 12.5, color: colors.text),
-                                decoration: InputDecoration(
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  hintText: 'Add a note…',
-                                  hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                      // The whole note card is the tap target. The TextField's
+                      // intrinsic height is only one dense line; without this,
+                      // taps on card padding / the icon were swallowed by
+                      // DismissKeyboard and never focused the field.
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _saving ? null : _noteFocus.requestFocus,
+                        child: AppCard(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Icon(Icons.notes, size: 16, color: colors.textMed),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _note,
+                                  focusNode: _noteFocus,
+                                  enabled: !_saving,
+                                  minLines: 1,
+                                  maxLines: 6,
+                                  keyboardType: TextInputType.multiline,
+                                  textInputAction: TextInputAction.newline,
+                                  style: AppText.sans(size: 12.5, color: colors.text),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    hintText: 'Add a note…',
+                                    hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
