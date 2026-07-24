@@ -97,7 +97,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _menu() async {
-    final result = await showPlanMenu(context);
+    final result = await showPlanMenu(
+      context,
+      currentGrouping: ref.read(planViewModeProvider),
+    );
     if (!mounted || result == null) return;
     switch (result) {
       case PlanMenuResult.reschedule:
@@ -165,11 +168,18 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
               loading: () => const _PlanLoading(),
               error: (e, _) => _PlanError(onRetry: () => ref.invalidate(dayTasksProvider)),
               data: (tasks) {
+                // List mode owns its empty buckets; don't swallow the switch
+                // behind the shared "other day" empty state.
+                if (viewMode == PlanViewMode.list) {
+                  return _PlanListGrouped(
+                    tasks: tasks,
+                    tagsById: tagsById,
+                    onToggleDone: _toggleDone,
+                    onAddBucket: _addToBucket,
+                  );
+                }
                 if (tasks.isEmpty) {
                   return _OtherDayEmpty(onAdd: _add);
-                }
-                if (viewMode == PlanViewMode.list) {
-                  return _PlanListGrouped(tasks: tasks, tagsById: tagsById, onToggleDone: _toggleDone, onAddBucket: _addToBucket);
                 }
                 return _PlanTimeline(
                   tasks: tasks,

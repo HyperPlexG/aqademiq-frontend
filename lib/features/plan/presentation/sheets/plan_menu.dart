@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../providers/plan_ui_providers.dart';
 
 /// The action the user picked from the Plan overflow (`···`) popover.
 enum PlanMenuResult {
@@ -22,17 +23,25 @@ enum PlanMenuResult {
 /// 220-wide white popover anchored to the top-right, dropped from the `···`
 /// button. The "Grouping options" header expands to reveal List / Timeline.
 ///
+/// [currentGrouping] drives which option shows the checkmark (must match the
+/// live [planViewModeProvider] value — previously Timeline was hardcoded).
+///
 /// Returns the chosen [PlanMenuResult], or `null` when dismissed.
-Future<PlanMenuResult?> showPlanMenu(BuildContext context) {
+Future<PlanMenuResult?> showPlanMenu(
+  BuildContext context, {
+  PlanViewMode currentGrouping = PlanViewMode.timeline,
+}) {
   return showDialog<PlanMenuResult>(
     context: context,
     barrierColor: const Color(0x2E140F1C),
-    builder: (_) => const _PlanMenuPopover(),
+    builder: (_) => _PlanMenuPopover(currentGrouping: currentGrouping),
   );
 }
 
 class _PlanMenuPopover extends StatefulWidget {
-  const _PlanMenuPopover();
+  const _PlanMenuPopover({required this.currentGrouping});
+
+  final PlanViewMode currentGrouping;
 
   @override
   State<_PlanMenuPopover> createState() => _PlanMenuPopoverState();
@@ -94,14 +103,14 @@ class _PlanMenuPopoverState extends State<_PlanMenuPopover> {
                   _GroupingOption(
                     icon: Icons.format_list_bulleted,
                     label: 'List',
-                    selected: false,
+                    selected: widget.currentGrouping == PlanViewMode.list,
                     onTap: () => Navigator.of(context)
                         .pop(PlanMenuResult.groupingList),
                   ),
                   _GroupingOption(
                     icon: Icons.view_agenda,
                     label: 'Timeline',
-                    selected: true,
+                    selected: widget.currentGrouping == PlanViewMode.timeline,
                     onTap: () => Navigator.of(context)
                         .pop(PlanMenuResult.groupingTimeline),
                   ),
@@ -209,10 +218,12 @@ class _GroupingOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
         child: Row(
           children: [
-            if (selected) ...[
-              Icon(Icons.check, size: 18, color: colors.accent),
-              const SizedBox(width: 12),
-            ],
+            SizedBox(
+              width: 30,
+              child: selected
+                  ? Icon(Icons.check, size: 18, color: colors.accent)
+                  : null,
+            ),
             Icon(icon, size: 19, color: colors.text),
             const SizedBox(width: 12),
             Text(

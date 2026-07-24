@@ -5,10 +5,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../data/repositories/referral_repository.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -17,14 +19,67 @@ import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 0 (prototype `ob-referral`): optional referral code entry.
-/// The field starts empty; the CTA and the "I don't have one" link both advance
-/// to the name step. Typed codes are captured into the onboarding draft so they
-/// are submitted on completion.
-class ObReferralScreen extends ConsumerWidget {
+///
+/// Continue with a non-empty code validates immediately via
+/// `POST /referrals/validate`. Invalid codes stay on this screen with an inline
+/// error — they must not reach final setup. Empty Continue / "I don't have one"
+/// skips attribution and advances.
+class ObReferralScreen extends ConsumerStatefulWidget {
   const ObReferralScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ObReferralScreen> createState() => _ObReferralScreenState();
+}
+
+class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
+  bool _validating = false;
+  String? _error;
+
+  Future<void> _continueWithCode() async {
+    if (_validating) return;
+    final code = ref.read(onboardingProvider).referral.trim();
+
+    // No code typed → same as skip (attribution optional).
+    if (code.isEmpty) {
+      setState(() => _error = null);
+      if (mounted) unawaited(context.push(Routes.obName));
+      return;
+    }
+
+    if (code.length < 4) {
+      setState(() => _error = 'Enter the full referral code, or skip.');
+      return;
+    }
+
+    setState(() {
+      _validating = true;
+      _error = null;
+    });
+
+    try {
+      await ref.read(referralRepositoryProvider).validateCode(code);
+      if (!mounted) return;
+      unawaited(context.push(Routes.obName));
+    } on Failure catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.message);
+    } on Object {
+      if (!mounted) return;
+      setState(() => _error = "Couldn't check that code. Try again.");
+    } finally {
+      if (mounted) setState(() => _validating = false);
+    }
+  }
+
+  void _skip() {
+    // No code: discard any partial entry so it isn't submitted at finish.
+    ref.read(onboardingProvider.notifier).setReferral('');
+    setState(() => _error = null);
+    unawaited(context.push(Routes.obName));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
 
     return OnboardingScaffold(
@@ -46,9 +101,18 @@ class ObReferralScreen extends ConsumerWidget {
               FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
               const _UpperCaseTextFormatter(),
             ],
-            onChanged: (v) =>
-                ref.read(onboardingProvider.notifier).setReferral(v),
+            onChanged: (v) {
+              ref.read(onboardingProvider.notifier).setReferral(v);
+              if (_error != null) setState(() => _error = null);
+            },
           ),
+          if (_error != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _error!,
+              style: AppText.sans(size: 12, color: colors.danger),
+            ),
+          ],
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -81,17 +145,14 @@ class ObReferralScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PrimaryButton(
-            label: 'Continue →',
-            onPressed: () => unawaited(context.push(Routes.obName)),
+            label: _validating ? 'Checking…' : 'Continue →',
+            enabled: !_validating,
+            onPressed: _validating ? null : () => unawaited(_continueWithCode()),
           ),
           const SizedBox(height: 12),
           Center(
             child: GestureDetector(
-              onTap: () {
-                // No code: discard any partial entry so it isn't submitted.
-                ref.read(onboardingProvider.notifier).setReferral('');
-                unawaited(context.push(Routes.obName));
-              },
+              onTap: _validating ? null : _skip,
               child: Text(
                 "I don't have one",
                 style: AppText.sans(
