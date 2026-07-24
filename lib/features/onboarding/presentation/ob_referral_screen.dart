@@ -46,7 +46,9 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
       return;
     }
 
-    if (code.length < 4) {
+    // All codes are exactly 8 chars; a partial entry can only be a typo, so
+    // catch it here instead of a round-trip that returns "invalid".
+    if (code.length < 8) {
       setState(() => _error = 'Enter the full referral code, or skip.');
       return;
     }
@@ -94,7 +96,10 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
           const SizedBox(height: 20),
           const FieldLabel('Referral code'),
           OtpField(
-            length: 5,
+            // Codes are 8 chars — the backend generates them as
+            // randomBytes(4).hex (see referrals.service.ts). The field was
+            // capped at 5, so the full code could never be entered.
+            length: 8,
             keyboardType: TextInputType.text,
             textCapitalization: TextCapitalization.characters,
             inputFormatters: [
