@@ -49,6 +49,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   int _durationMin = 30;
   RepeatRule? _repeat;
   bool _adaBreakdown = true;
+  bool _saving = false;
 
   static const _subjects = [
     ('cc401', 'CC 401', Color(0xFF6B5CF0)),
@@ -124,6 +125,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Future<void> _save() async {
+    // Ignore repeat taps while create/update (+ optional Ada breakdown) is in flight.
+    if (_saving) return;
+    setState(() => _saving = true);
+
     final repeat =
         (_repeat != null && _repeat!.frequency != RepeatFrequency.none) ? _repeat : null;
     final title = _title.text.trim().isEmpty ? 'New task' : _title.text.trim();
@@ -144,43 +149,51 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         ? _dayPartForHour(startTime.hour)
         : DayPartX.fromWire(_timeOfDay.toLowerCase());
 
-    final repo = ref.read(tasksRepositoryProvider);
-    Task saved;
-    if (existing != null) {
-      // Edit: keep the task's own id, apply the edited fields.
-      saved = await repo.update(existing.copyWith(
-        title: title,
-        note: note,
-        tagId: tagId,
-        date: date,
-        dayPart: dayPart,
-        startTime: startTime,
-        durationMin: _durationMin,
-        repeat: repeat,
-      ));
-    } else {
-      saved = await repo.create(Task(
-        id: '',
-        title: title,
-        note: note,
-        tagId: tagId,
-        date: date,
-        dayPart: dayPart,
-        startTime: startTime,
-        durationMin: _durationMin,
-        repeat: repeat,
-      ));
-    }
-    // Let Ada break the task into microtasks (best-effort — never blocks save).
-    if (_adaBreakdown && saved.id.isNotEmpty) {
-      try {
-        await repo.breakdown(saved.id, date);
-      } on Object {
-        // Non-fatal: the task is saved even if breakdown fails.
+    try {
+      final repo = ref.read(tasksRepositoryProvider);
+      Task saved;
+      if (existing != null) {
+        // Edit: keep the task's own id, apply the edited fields.
+        saved = await repo.update(existing.copyWith(
+          title: title,
+          note: note,
+          tagId: tagId,
+          date: date,
+          dayPart: dayPart,
+          startTime: startTime,
+          durationMin: _durationMin,
+          repeat: repeat,
+        ));
+      } else {
+        saved = await repo.create(Task(
+          id: '',
+          title: title,
+          note: note,
+          tagId: tagId,
+          date: date,
+          dayPart: dayPart,
+          startTime: startTime,
+          durationMin: _durationMin,
+          repeat: repeat,
+        ));
       }
+      // Let Ada break the task into microtasks (best-effort — never blocks save).
+      if (_adaBreakdown && saved.id.isNotEmpty) {
+        try {
+          await repo.breakdown(saved.id, date);
+        } on Object {
+          // Non-fatal: the task is saved even if breakdown fails.
+        }
+      }
+      ref.invalidate(dayTasksProvider);
+      if (mounted) context.pop();
+    } on Object {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't save task. Try again.")),
+      );
     }
-    ref.invalidate(dayTasksProvider);
-    if (mounted) context.pop();
   }
 
   Future<void> _addTag() async {
@@ -203,92 +216,158 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     // task is never saved untagged (which would show as "Other").
     final effectiveTag =
         _tag.isNotEmpty ? _tag : (tags.isNotEmpty ? tags.first.id : '');
-    return Scaffold(
-      backgroundColor: colors.bg,
-      body: DismissKeyboard(
-        child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(10, 4, 10, 24),
-            children: [
-              _HeaderCard(controller: _title, onClose: () => context.pop(), onSave: _save),
-              const SizedBox(height: 6),
-              _Section(
-                label: "Tag · what's this for?",
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+    return PopScope(
+      canPop: !_saving,
+      child: Scaffold(
+        backgroundColor: colors.bg,
+        body: Stack(
+          children: [
+            DismissKeyboard(
+              child: SafeArea(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(10, 4, 10, 24),
                   children: [
-                    for (final t in tags)
-                      TagChip(label: t.label, color: hexColor(t.color), active: effectiveTag == t.id, onTap: () => setState(() => _tag = t.id)),
-                    TagChip(label: '+ New', color: colors.accent, dashed: true, onTap: _addTag),
-                  ],
-                ),
-              ),
-              _Section(
-                label: 'Subject · link it (optional)',
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final s in _subjects)
-                      TagChip(label: s.$2, color: s.$3, active: _subject == s.$1, onTap: () => setState(() => _subject = s.$1)),
-                    TagChip(label: 'None', active: _subject.isEmpty, onTap: () => setState(() => _subject = '')),
-                  ],
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: AppCard(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                child: Column(
-                  children: [
-                    _DetailRow(icon: Icons.schedule, label: 'Time of day', value: _timeOfDay, onTap: _pickTime),
-                    _DetailRow(icon: Icons.event, label: 'Date', value: taskDateLabel(_date), onTap: _pickDate),
-                    _DetailRow(icon: Icons.hourglass_empty, label: 'Duration', value: '$_durationMin min', onTap: _pickDuration),
-                    _DetailRow(icon: Icons.repeat, label: 'Repeat', value: repeatRuleLabel(_repeat), onTap: _pickRepeat, last: true),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: AppCard(
-                child: Row(
-                  children: [
-                    const AdaMascot(size: 28, expr: AdaExpr.focused),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text('Let Ada break this down', style: AppText.sans(size: 12.5, weight: FontWeight.w700, color: colors.text)),
+                    _HeaderCard(
+                      controller: _title,
+                      saving: _saving,
+                      onClose: _saving ? null : () => context.pop(),
+                      onSave: _save,
                     ),
-                    AppToggle(value: _adaBreakdown, onChanged: (v) => setState(() => _adaBreakdown = v)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: AppCard(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                    const SizedBox(height: 6),
+                    _Section(
+                      label: "Tag · what's this for?",
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final t in tags)
+                            TagChip(
+                              label: t.label,
+                              color: hexColor(t.color),
+                              active: effectiveTag == t.id,
+                              onTap: _saving ? null : () => setState(() => _tag = t.id),
+                            ),
+                          TagChip(
+                            label: '+ New',
+                            color: colors.accent,
+                            dashed: true,
+                            onTap: _saving ? null : _addTag,
+                          ),
+                        ],
+                      ),
+                    ),
+                    _Section(
+                      label: 'Subject · link it (optional)',
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final s in _subjects)
+                            TagChip(
+                              label: s.$2,
+                              color: s.$3,
+                              active: _subject == s.$1,
+                              onTap: _saving ? null : () => setState(() => _subject = s.$1),
+                            ),
+                          TagChip(
+                            label: 'None',
+                            active: _subject.isEmpty,
+                            onTap: _saving ? null : () => setState(() => _subject = ''),
+                          ),
+                        ],
+                      ),
+                    ),
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(Icons.notes, size: 16, color: colors.textMed),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: AppCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                        child: Column(
+                          children: [
+                            _DetailRow(
+                              icon: Icons.schedule,
+                              label: 'Time of day',
+                              value: _timeOfDay,
+                              onTap: _saving ? null : _pickTime,
+                            ),
+                            _DetailRow(
+                              icon: Icons.event,
+                              label: 'Date',
+                              value: taskDateLabel(_date),
+                              onTap: _saving ? null : _pickDate,
+                            ),
+                            _DetailRow(
+                              icon: Icons.hourglass_empty,
+                              label: 'Duration',
+                              value: '$_durationMin min',
+                              onTap: _saving ? null : _pickDuration,
+                            ),
+                            _DetailRow(
+                              icon: Icons.repeat,
+                              label: 'Repeat',
+                              value: repeatRuleLabel(_repeat),
+                              onTap: _saving ? null : _pickRepeat,
+                              last: true,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _note,
-                        minLines: 1,
-                        maxLines: 4,
-                        style: AppText.sans(size: 12.5, color: colors.text),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintText: 'Add a note…',
-                          hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: AppCard(
+                        child: Row(
+                          children: [
+                            const AdaMascot(size: 28, expr: AdaExpr.focused),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Let Ada break this down',
+                                style: AppText.sans(
+                                  size: 12.5,
+                                  weight: FontWeight.w700,
+                                  color: colors.text,
+                                ),
+                              ),
+                            ),
+                            AppToggle(
+                              value: _adaBreakdown,
+                              onChanged: _saving
+                                  ? null
+                                  : (v) => setState(() => _adaBreakdown = v),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: AppCard(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Icon(Icons.notes, size: 16, color: colors.textMed),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _note,
+                                enabled: !_saving,
+                                minLines: 1,
+                                maxLines: 4,
+                                style: AppText.sans(size: 12.5, color: colors.text),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  border: InputBorder.none,
+                                  hintText: 'Add a note…',
+                                  hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -296,8 +375,21 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 ),
               ),
             ),
-            ],
-          ),
+            if (_saving)
+              Positioned.fill(
+                child: AbsorbPointer(
+                  child: ColoredBox(
+                    color: colors.bg.withValues(alpha: 0.55),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: colors.accent,
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -325,10 +417,16 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 }
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.controller, required this.onClose, required this.onSave});
+  const _HeaderCard({
+    required this.controller,
+    required this.onSave,
+    this.onClose,
+    this.saving = false,
+  });
   final TextEditingController controller;
-  final VoidCallback onClose;
+  final VoidCallback? onClose;
   final VoidCallback onSave;
+  final bool saving;
 
   @override
   Widget build(BuildContext context) {
@@ -358,11 +456,22 @@ class _HeaderCard extends StatelessWidget {
                 child: Text('Add task', textAlign: TextAlign.center, style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text)),
               ),
               GestureDetector(
-                onTap: onSave,
+                onTap: saving ? null : onSave,
+                behavior: HitTestBehavior.opaque,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(color: colors.ink, borderRadius: BorderRadius.circular(AppRadius.pill)),
-                  child: Text('Save', style: AppText.sans(size: 12, weight: FontWeight.w700, color: Colors.white)),
+                  decoration: BoxDecoration(
+                    color: saving ? colors.hilite : colors.ink,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Text(
+                    'Save',
+                    style: AppText.sans(
+                      size: 12,
+                      weight: FontWeight.w700,
+                      color: saving ? colors.textDim : Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -373,6 +482,7 @@ class _HeaderCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: TextField(
               controller: controller,
+              enabled: !saving,
               style: AppText.sans(size: 14, color: colors.text),
               decoration: InputDecoration(
                 isDense: true,
@@ -416,11 +526,17 @@ class _Section extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.icon, required this.label, required this.value, required this.onTap, this.last = false});
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.onTap,
+    this.last = false,
+  });
   final IconData icon;
   final String label;
   final String value;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool last;
 
   @override
