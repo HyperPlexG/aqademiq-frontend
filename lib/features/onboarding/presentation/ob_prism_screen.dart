@@ -28,6 +28,22 @@ class ObPrismScreen extends ConsumerStatefulWidget {
 
 class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
   @override
+  void initState() {
+    super.initState();
+    // Default selection is already "Deep Work" in the draft, but preview only
+    // started on tap — kick it off as soon as this step is on screen so the
+    // mode is audible without an extra press.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final mode = ref.read(onboardingProvider).prismMode;
+      ref.read(prismDefaultModeProvider.notifier).set(mode);
+      unawaited(
+        ref.read(prismAudioControllerProvider.notifier).previewMode(mode),
+      );
+    });
+  }
+
+  @override
   void dispose() {
     // Fires on back-pop and stack replacement; the forward push to obLoading
     // keeps this state alive, so that path is covered by the CTA below.
