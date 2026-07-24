@@ -21,9 +21,14 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
   static const _inkSub = Color.fromRGBO(36, 24, 52, 0.58);
   int _mood = 3;
 
+  /// Time actually focused, not the planned duration. Ending a 30-minute
+  /// session after 20 seconds must read 00:20, not 30:00 — `elapsedSec` is the
+  /// real count the controller preserves through `complete()`.
   String get _duration {
-    final mins = ref.read(focusControllerProvider).durationMin;
-    return '${mins.toString().padLeft(2, '0')}:00';
+    final elapsed = ref.read(focusControllerProvider).elapsedSec;
+    final m = elapsed ~/ 60;
+    final s = elapsed % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _backToPlan() {
