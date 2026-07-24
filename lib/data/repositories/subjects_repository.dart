@@ -79,8 +79,19 @@ final subjectsRepositoryProvider = Provider<SubjectsRepository>((ref) {
 class SubjectsController extends AsyncNotifier<List<Subject>> {
   @override
   Future<List<Subject>> build() {
-    // A fresh guest has no subjects yet — they're created during onboarding.
-    if (ref.watch(isGuestProvider)) return Future.value(const <Subject>[]);
+    // Mock demo only: a fresh guest has no subjects until onboarding links them
+    // to an account, so short-circuit to keep the demo's empty start.
+    //
+    // Live builds must NOT short-circuit on guest. An anonymous user completes
+    // onboarding — which creates their subjects server-side under that same
+    // anonymous id — yet stays a guest afterwards (no email linked). Returning
+    // an empty list for a live guest hid those just-created subjects entirely:
+    // the reported "subject created in onboarding doesn't show on the frontend"
+    // bug. The API returns the real course list (empty if not yet onboarded),
+    // so always fetch it.
+    if (Env.useMocks && ref.watch(isGuestProvider)) {
+      return Future.value(const <Subject>[]);
+    }
     return ref.watch(subjectsRepositoryProvider).all();
   }
 
