@@ -76,9 +76,23 @@ String naiveIso(DateTime d) =>
     '${ymd(d)}T${_p2(d.hour)}:${_p2(d.minute)}:${_p2(d.second)}';
 
 /// Parse a naive ISO / date string into a local [DateTime]; null-safe.
-DateTime? parseDateTime(Object? v) {
+///
+/// Also accepts API `HH:mm` wall-clock values (tasks `formatTime`). When those
+/// are returned, pass [onDate] so the clock can be anchored to the occurrence
+/// day — otherwise Planned tasks round-trip as Anytime (`startTime == null`).
+DateTime? parseDateTime(Object? v, {DateTime? onDate}) {
   if (v is! String || v.isEmpty) return null;
-  return DateTime.tryParse(v);
+  final full = DateTime.tryParse(v);
+  if (full != null) return full;
+  final m = RegExp(r'^(\d{1,2}):(\d{2})$').firstMatch(v.trim());
+  if (m == null || onDate == null) return null;
+  return DateTime(
+    onDate.year,
+    onDate.month,
+    onDate.day,
+    int.parse(m.group(1)!),
+    int.parse(m.group(2)!),
+  );
 }
 
 /// Extract the `yyyy-MM-dd` from an occurrence id `"{series}@{date}"`.

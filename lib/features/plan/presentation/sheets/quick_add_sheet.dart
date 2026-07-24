@@ -5,6 +5,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
+import '../../plan_time.dart';
 import '../../providers/plan_ui_providers.dart';
 import '../pickers/repeat_picker.dart';
 import '../pickers/time_picker.dart';
@@ -36,6 +37,9 @@ class _QuickAddSheet extends StatefulWidget {
 
 class _QuickAddSheetState extends State<_QuickAddSheet> {
   final _controller = TextEditingController();
+  /// Raw picker label — keep the clock string ("2:30 PM"), do not collapse it
+  /// through [DayPartX.fromWire] (that maps unknown values to Anytime).
+  String? _timeLabel;
   DayPart? _dayPart;
   RepeatRule? _repeat;
 
@@ -45,23 +49,28 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
     super.dispose();
   }
 
-  static String _dayPartLabel(DayPart p) => switch (p) {
-        DayPart.morning => 'Morning',
-        DayPart.afternoon => 'Afternoon',
-        DayPart.evening => 'Evening',
-        DayPart.anytime => 'Anytime',
-      };
-
   void _submit({required bool details}) {
     Navigator.of(context).pop((
-      draft: TaskDraft(title: _controller.text.trim(), dayPart: _dayPart, repeat: _repeat),
+      draft: TaskDraft(
+        title: _controller.text.trim(),
+        dayPart: _dayPart,
+        timeLabel: _timeLabel,
+        repeat: _repeat,
+      ),
       details: details,
     ));
   }
 
   Future<void> _pickTime() async {
     final v = await showTimeOfDayPicker(context);
-    if (v != null) setState(() => _dayPart = DayPartX.fromWire(v.toLowerCase()));
+    if (v == null) return;
+    // Anchor to an arbitrary date — only the clock / day-part matters here; the
+    // real calendar day is applied in create / Add-task.
+    final resolved = PlanTime.resolve(v, DateTime(2000));
+    setState(() {
+      _timeLabel = v;
+      _dayPart = resolved.dayPart;
+    });
   }
 
   Future<void> _pickRepeat() async {
@@ -108,7 +117,12 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _ContextChip(icon: Icons.schedule, label: _dayPart == null ? 'Anytime' : _dayPartLabel(_dayPart!), colors: colors, onTap: _pickTime),
+                          _ContextChip(
+                            icon: Icons.schedule,
+                            label: _timeLabel ?? 'Anytime',
+                            colors: colors,
+                            onTap: _pickTime,
+                          ),
                           const SizedBox(width: 6),
                           _ContextChip(icon: Icons.repeat, label: repeatRuleLabel(_repeat), colors: colors, onTap: _pickRepeat),
                         ],

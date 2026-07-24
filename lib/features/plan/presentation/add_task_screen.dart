@@ -7,10 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../core/utils/date_format.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/tag.dart';
 import '../../../data/models/task.dart';
+import '../../../data/repositories/subjects_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../shared/mascot/ada_mascot.dart';
@@ -19,6 +21,7 @@ import '../../../shared/widgets/app_toggle.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
 import '../../../shared/widgets/tag_chip.dart';
 import '../../settings/presentation/sheets/add_tag_sheet.dart';
+import '../plan_time.dart';
 import '../providers/plan_providers.dart';
 import '../providers/plan_ui_providers.dart';
 import 'pickers/date_picker.dart';
@@ -43,20 +46,14 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   final _title = TextEditingController();
   final _note = TextEditingController();
   String _tag = '';
-  String _subject = 'cc401';
+  /// Empty = None. Populated from the user's real subjects, never demo codes.
+  String _subject = '';
   String _timeOfDay = 'Anytime';
   late DateTime _date;
   int _durationMin = 30;
   RepeatRule? _repeat;
   bool _adaBreakdown = true;
   bool _saving = false;
-
-  static const _subjects = [
-    ('cc401', 'CC 401', Color(0xFF6B5CF0)),
-    ('nlp302', 'NLP 302', Color(0xFF5CBBFF)),
-    ('net305', 'NET 305', Color(0xFF2A9D6B)),
-    ('dbs310', 'DBS 310', Color(0xFFE8A430)),
-  ];
 
   @override
   void initState() {
@@ -67,7 +64,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _title.text = existing.title;
       _note.text = existing.note ?? '';
       _tag = existing.tagId;
-      _timeOfDay = _dayPartLabel(existing.dayPart ?? DayPart.anytime);
+      // Prefer a concrete clock label when startTime is set — never wipe a
+      // planned time back to the coarse Anytime/Morning chip.
+      _timeOfDay = existing.startTime != null
+          ? AppDate.time12h(existing.startTime!)
+          : PlanTime.dayPartLabel(existing.dayPart ?? DayPart.anytime);
       _date = existing.date;
       _durationMin = existing.durationMin ?? 30;
       _repeat = existing.repeat;
@@ -83,7 +84,11 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final draft = ref.read(taskDraftProvider);
     if (draft != null) {
       _title.text = draft.title;
-      if (draft.dayPart != null) _timeOfDay = _dayPartLabel(draft.dayPart!);
+      if (draft.timeLabel != null && draft.timeLabel!.isNotEmpty) {
+        _timeOfDay = draft.timeLabel!;
+      } else if (draft.dayPart != null) {
+        _timeOfDay = PlanTime.dayPartLabel(draft.dayPart!);
+      }
       _repeat = draft.repeat;
     }
     unawaited(Future(() {
@@ -96,32 +101,6 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     _title.dispose();
     _note.dispose();
     super.dispose();
-  }
-
-  static String _dayPartLabel(DayPart p) => switch (p) {
-        DayPart.morning => 'Morning',
-        DayPart.afternoon => 'Afternoon',
-        DayPart.evening => 'Evening',
-        DayPart.anytime => 'Anytime',
-      };
-
-  /// Parse a "Specific time" label like "2:30 PM" into a concrete [DateTime] on
-  /// [date]. Returns null for the named parts (Anytime/Morning/…).
-  static DateTime? _startTimeFromLabel(String label, DateTime date) {
-    final m = RegExp(r'^(\d{1,2}):(\d{2})\s*([AaPp][Mm])$').firstMatch(label.trim());
-    if (m == null) return null;
-    var hour = int.parse(m.group(1)!);
-    final minute = int.parse(m.group(2)!);
-    final isPm = m.group(3)!.toUpperCase() == 'PM';
-    if (hour == 12) hour = 0;
-    if (isPm) hour += 12;
-    return DateTime(date.year, date.month, date.day, hour, minute);
-  }
-
-  static DayPart _dayPartForHour(int hour) {
-    if (hour < 12) return DayPart.morning;
-    if (hour < 17) return DayPart.afternoon;
-    return DayPart.evening;
   }
 
   Future<void> _save() async {
@@ -141,13 +120,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final tagId = _tag.isNotEmpty
         ? _tag
         : (tags.isNotEmpty ? tags.first.id : _tag);
-    // A "Specific time" pick (e.g. "2:30 PM") becomes a real start time; a named
-    // part ("Morning") has no clock time. Derive the day-part from the hour when
-    // a time is set so the task still buckets correctly.
-    final startTime = _startTimeFromLabel(_timeOfDay, date);
-    final dayPart = startTime != null
-        ? _dayPartForHour(startTime.hour)
-        : DayPartX.fromWire(_timeOfDay.toLowerCase());
+    final resolved = PlanTime.resolve(_timeOfDay, date);
+    final startTime = resolved.startTime;
+    final dayPart = resolved.dayPart;
 
     try {
       final repo = ref.read(tasksRepositoryProvider);
@@ -212,6 +187,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
+    final subjects = ref.watch(subjectsProvider).value ?? const [];
     // Highlight the chosen tag; if none picked yet, pre-highlight the first so a
     // task is never saved untagged (which would show as "Other").
     final effectiveTag =
@@ -262,12 +238,16 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                         spacing: 6,
                         runSpacing: 6,
                         children: [
-                          for (final s in _subjects)
+                          for (final s in subjects)
                             TagChip(
-                              label: s.$2,
-                              color: s.$3,
-                              active: _subject == s.$1,
-                              onTap: _saving ? null : () => setState(() => _subject = s.$1),
+                              label: (s.code != null && s.code!.trim().isNotEmpty)
+                                  ? s.code!
+                                  : s.name,
+                              color: hexColor(s.color),
+                              active: _subject == s.id,
+                              onTap: _saving
+                                  ? null
+                                  : () => setState(() => _subject = s.id),
                             ),
                           TagChip(
                             label: 'None',

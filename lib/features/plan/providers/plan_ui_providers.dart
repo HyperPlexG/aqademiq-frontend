@@ -9,10 +9,21 @@ enum PlanViewMode { timeline, list }
 /// A pending task draft handed from Quick-add to the full Add-task form so the
 /// typed title / time-of-day / repeat survive the "More" hop (PLAN-8).
 class TaskDraft {
-  const TaskDraft({this.title = '', this.dayPart, this.repeat});
+  const TaskDraft({
+    this.title = '',
+    this.dayPart,
+    this.timeLabel,
+    this.repeat,
+  });
 
   final String title;
   final DayPart? dayPart;
+
+  /// Raw time-picker label (`"Anytime"` / `"Morning"` / `"2:30 PM"`). When set,
+  /// Add-task / quick-create must prefer this over [dayPart] alone so a specific
+  /// clock time is not collapsed back to Anytime.
+  final String? timeLabel;
+
   final RepeatRule? repeat;
 }
 

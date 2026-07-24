@@ -21,6 +21,7 @@ import '../../../data/repositories/tasks_repository.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
+import '../plan_time.dart';
 import '../providers/plan_providers.dart';
 import '../providers/plan_ui_providers.dart';
 import 'sheets/log_mood_sheet.dart';
@@ -67,12 +68,21 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final repeat = (draft.repeat != null && draft.repeat!.frequency != RepeatFrequency.none)
         ? draft.repeat
         : null;
+    // Prefer the raw picker label so "2:30 PM" becomes a real startTime (Planned).
+    // Falling back to dayPart alone keeps Morning/Afternoon/Evening + Anytime.
+    final resolved = draft.timeLabel != null
+        ? PlanTime.resolve(draft.timeLabel!, date)
+        : (
+            dayPart: draft.dayPart ?? DayPart.anytime,
+            startTime: null,
+          );
     final task = Task(
       id: '',
       title: draft.title,
-      tagId: tags.isNotEmpty ? tags.first.id : 'cc401',
+      tagId: tags.isNotEmpty ? tags.first.id : '',
       date: date,
-      dayPart: draft.dayPart ?? DayPart.anytime,
+      dayPart: resolved.dayPart,
+      startTime: resolved.startTime,
       durationMin: 30,
       repeat: repeat,
     );

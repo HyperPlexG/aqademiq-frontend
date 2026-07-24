@@ -166,7 +166,9 @@ class ApiTasksSource implements TasksSource {
   @override
   Future<List<TaskDto>> tasksForDay(DateTime date) async {
     final body = await _dio.getMap('/tasks', query: {'date': ymd(date)});
-    return listOf(body, 'tasks').map(_occToDto).toList(growable: false);
+    return listOf(body, 'tasks')
+        .map((j) => _occToDto(j, fallbackDate: date))
+        .toList(growable: false);
   }
 
   @override
@@ -183,7 +185,7 @@ class ApiTasksSource implements TasksSource {
       else
         'repeat': {'kind': 'none'},
     };
-    return _occToDto(await _dio.postMap('/tasks', body));
+    return _occToDto(await _dio.postMap('/tasks', body), fallbackDate: input.date);
   }
 
   @override
@@ -196,7 +198,7 @@ class ApiTasksSource implements TasksSource {
       if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
       if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),
     };
-    return _occToDto(await _dio.patchMap('/tasks/${task.id}', body));
+    return _occToDto(await _dio.patchMap('/tasks/${task.id}', body), fallbackDate: task.date);
   }
 
   @override
@@ -239,13 +241,13 @@ class ApiTasksSource implements TasksSource {
 
   // --- wire mapping ---------------------------------------------------------
 
-  TaskDto _occToDto(Map<String, dynamic> j) {
+  TaskDto _occToDto(Map<String, dynamic> j, {DateTime? fallbackDate}) {
     final id = j['id'] as String? ?? '';
-    final scheduledAt = parseDateTime(j['scheduled_at']);
-    final date = dateFromOccurrenceId(id) ??
-        (scheduledAt != null
-            ? DateTime(scheduledAt.year, scheduledAt.month, scheduledAt.day)
-            : DateTime.now());
+    // Prefer the occurrence-id date, then the caller's day (list/create), so
+    // API `scheduled_at: "HH:mm"` can be anchored to a real calendar day.
+    final rawDate = dateFromOccurrenceId(id) ?? fallbackDate ?? DateTime.now();
+    final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
+    final scheduledAt = parseDateTime(j['scheduled_at'], onDate: date);
     final durSec = (j['duration_seconds'] as num?)?.toInt();
     final steps = (j['steps'] as List?) ?? const [];
     final repeat = _repeatFromWire(j['repeat']);
