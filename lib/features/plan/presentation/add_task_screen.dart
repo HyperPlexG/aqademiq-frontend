@@ -452,6 +452,11 @@ class _HeaderCard extends StatelessWidget {
                 child: Text('Add task', textAlign: TextAlign.center, style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text)),
               ),
               GestureDetector(
+                // Disabled while a save is in flight — the parent's `_saving`
+                // guard already blocks re-entry, but nulling onTap + the inline
+                // spinner make it obvious the tap registered, so the user isn't
+                // tempted to keep tapping (which previously created one task per
+                // tap on builds without the guard).
                 onTap: saving ? null : onSave,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
@@ -460,14 +465,23 @@ class _HeaderCard extends StatelessWidget {
                     color: saving ? colors.hilite : colors.ink,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
-                  child: Text(
-                    'Save',
-                    style: AppText.sans(
-                      size: 12,
-                      weight: FontWeight.w700,
-                      color: saving ? colors.textDim : Colors.white,
-                    ),
-                  ),
+                  child: saving
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colors.textDim,
+                          ),
+                        )
+                      : Text(
+                          'Save',
+                          style: AppText.sans(
+                            size: 12,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ],
