@@ -108,8 +108,30 @@ class _PushService {
 
   Future<void> _register({bool force = false}) async {
     if (_registered && !force) return;
-    final token = await FirebaseMessaging.instance.getToken();
-    if (token == null || token.isEmpty) return;
+    final messaging = FirebaseMessaging.instance;
+
+    // iOS only mints its FCM token after the APNs device token is available.
+    // Calling getToken() too early returns null and the device never registers,
+    // so the backend has no target and every push (incl. the test) silently
+    // drops. Wait briefly for APNs; if it never arrives, onTokenRefresh will
+    // re-register once FCM issues the token.
+    if (Platform.isIOS) {
+      var apns = await messaging.getAPNSToken();
+      for (var i = 0; i < 5 && apns == null; i++) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        apns = await messaging.getAPNSToken();
+      }
+      if (apns == null) {
+        debugPrint('PushService: APNs token unavailable — deferring register.');
+        return;
+      }
+    }
+
+    final token = await messaging.getToken();
+    if (token == null || token.isEmpty) {
+      debugPrint('PushService: FCM token null — device not registered.');
+      return;
+    }
 
     await _dio.post<void>(
       '/devices',
@@ -125,6 +147,10 @@ class _PushService {
   }
 
   void _showForeground(RemoteMessage message) {
+    // iOS already presents a foreground banner via
+    // setForegroundNotificationPresentationOptions; showing a local
+    // notification too would double-display. Only Android needs the manual show.
+    if (Platform.isIOS) return;
     final notification = message.notification;
     if (notification == null) return;
     unawaited(_local.show(
