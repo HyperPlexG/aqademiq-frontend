@@ -53,19 +53,38 @@ final adaRepositoryProvider = Provider<AdaRepository>((ref) {
   return AdaRepository(source);
 });
 
-/// Immutable Ada chat state: the message log + a typing indicator.
+/// Immutable Ada chat state: the message log + a typing indicator + staged
+/// attachments waiting to be sent with the next message.
 class AdaChatState {
-  const AdaChatState({this.messages = const [], this.typing = false});
+  const AdaChatState({
+    this.messages = const [],
+    this.typing = false,
+    this.uploading = false,
+    this.pendingAttachments = const [],
+  });
 
   final List<AdaMessage> messages;
   final bool typing;
 
+  /// True while a picked file is being uploaded to staging (not yet sent).
+  final bool uploading;
+
+  /// Files uploaded and ready to attach on the next explicit Send.
+  final List<AdaAttachmentRef> pendingAttachments;
+
   bool get isEmpty => messages.isEmpty;
 
-  AdaChatState copyWith({List<AdaMessage>? messages, bool? typing}) =>
+  AdaChatState copyWith({
+    List<AdaMessage>? messages,
+    bool? typing,
+    bool? uploading,
+    List<AdaAttachmentRef>? pendingAttachments,
+  }) =>
       AdaChatState(
         messages: messages ?? this.messages,
         typing: typing ?? this.typing,
+        uploading: uploading ?? this.uploading,
+        pendingAttachments: pendingAttachments ?? this.pendingAttachments,
       );
 }
 
@@ -78,54 +97,74 @@ class AdaChatController extends Notifier<AdaChatState> {
 
   Future<void> send(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    final attachments = state.pendingAttachments;
+    if (trimmed.isEmpty && attachments.isEmpty) return;
+
+    // API requires non-empty text; synthesize a short prompt when the user
+    // sends attachments alone.
+    final payload = trimmed.isNotEmpty
+        ? trimmed
+        : attachments.length == 1
+            ? "Here's ${attachments.first.name} — can you help me with it?"
+            : "Here's ${attachments.map((a) => a.name).join(', ')} — can you help me with them?";
+
     final userMsg = AdaMessage(
       id: 'u-${DateTime.now().microsecondsSinceEpoch}',
       role: AdaRole.user,
-      text: trimmed,
+      text: payload,
       createdAt: DateTime.now(),
     );
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       typing: true,
+      pendingAttachments: const [],
     );
     try {
-      final reply = await ref.read(adaRepositoryProvider).reply(trimmed, state.messages);
+      final reply = await ref.read(adaRepositoryProvider).reply(
+            payload,
+            state.messages,
+            attachments: attachments,
+          );
       state = state.copyWith(messages: [...state.messages, reply], typing: false);
     } on Object catch (_) {
-      state = state.copyWith(typing: false);
+      // Restore staged files so the user can retry without re-uploading.
+      state = state.copyWith(
+        typing: false,
+        pendingAttachments: attachments,
+      );
     }
   }
 
   void clear() => state = const AdaChatState();
 
-  /// Upload [file], attach it to a message, and stream Ada's reply.
-  Future<void> attachAndSend(XFile file) async {
-    final text = "Here's ${file.name} — can you help me with it?";
-    final userMsg = AdaMessage(
-      id: 'u-${DateTime.now().microsecondsSinceEpoch}',
-      role: AdaRole.user,
-      text: text,
-      createdAt: DateTime.now(),
-    );
-    state = state.copyWith(messages: [...state.messages, userMsg], typing: true);
+  /// Upload [file] into staging only — does **not** send a chat message.
+  Future<void> stageAttachment(XFile file) async {
+    state = state.copyWith(uploading: true);
     try {
       final bytes = await file.readAsBytes();
-      final repo = ref.read(adaRepositoryProvider);
-      final attachment = await repo.uploadAttachment(
-        name: file.name,
-        mimeType: file.mimeType,
-        bytes: bytes,
+      final attachment = await ref.read(adaRepositoryProvider).uploadAttachment(
+            name: file.name,
+            mimeType: file.mimeType,
+            bytes: bytes,
+          );
+      state = state.copyWith(
+        uploading: false,
+        pendingAttachments: [...state.pendingAttachments, attachment],
       );
-      final reply = await repo.reply(
-        text,
-        state.messages,
-        attachments: [attachment],
-      );
-      state = state.copyWith(messages: [...state.messages, reply], typing: false);
     } on Object catch (_) {
-      state = state.copyWith(typing: false);
+      state = state.copyWith(uploading: false);
+      rethrow;
     }
+  }
+
+  /// Drop a staged attachment so it won't be included on the next Send.
+  void removePendingAttachment(String key) {
+    state = state.copyWith(
+      pendingAttachments: [
+        for (final a in state.pendingAttachments)
+          if (a.key != key) a,
+      ],
+    );
   }
 
   /// Load a past conversation into the chat view.
