@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -144,11 +145,14 @@ class SubjectDetailScreen extends ConsumerWidget {
                             builder: (_) {
                               final (icon, fileColor) = _fileVisual(f.name);
                               return _FileRow(
+                                key: ValueKey(f.id),
                                 icon: icon,
                                 name: f.name,
                                 size: f.sizeLabel,
                                 color: fileColor,
                                 onTap: () => _openFile(context, ref, f.id),
+                                onDelete: () =>
+                                    _deleteFile(context, ref, subject.id, f.id, f.name),
                               );
                             },
                           ),
@@ -213,6 +217,49 @@ class SubjectDetailScreen extends ConsumerWidget {
     } on Object {
       messenger.showSnackBar(
         const SnackBar(content: Text("Couldn't open this file.")),
+      );
+    }
+  }
+
+  /// Confirm, then delete the material and refresh the list + subject file count.
+  Future<void> _deleteFile(
+    BuildContext context,
+    WidgetRef ref,
+    String subjectId,
+    String fileId,
+    String name,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete file?'),
+        content: Text('"$name" will be permanently removed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE85476)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(subjectsRepositoryProvider).deleteFile(fileId);
+      // Refresh the materials list and the subject's file-count badge.
+      ref
+        ..invalidate(subjectFilesProvider(subjectId))
+        ..invalidate(subjectsProvider);
+      messenger.showSnackBar(SnackBar(content: Text('Deleted "$name".')));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't delete this file. Try again.")),
       );
     }
   }
@@ -322,24 +369,46 @@ class _FileRow extends StatelessWidget {
     required this.size,
     required this.color,
     required this.onTap,
+    required this.onDelete,
+    super.key,
   });
   final IconData icon;
   final String name;
   final String size;
   final Color color;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(12), boxShadow: colors.cardShadow),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-        child: Row(
-          children: [
+    // Swipe left to reveal Delete (matches the Plan task rows), with the ⋮ as a
+    // tap-to-delete affordance for discoverability — there was no way to remove
+    // a material before.
+    return Slidable(
+      key: ValueKey('file-$name'),
+      endActionPane: ActionPane(
+        motion: const DrawerMotion(),
+        extentRatio: 0.28,
+        children: [
+          SlidableAction(
+            onPressed: (_) => onDelete(),
+            backgroundColor: const Color(0xFFE85476),
+            foregroundColor: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            icon: Icons.delete_outline,
+            label: 'Delete',
+          ),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(12), boxShadow: colors.cardShadow),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+          child: Row(
+            children: [
             Container(
               width: 30,
               height: 30,
@@ -357,8 +426,18 @@ class _FileRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.more_vert, size: 18, color: colors.textDim),
-          ],
+              // Explicit delete affordance next to swipe-to-delete, so the
+              // action is discoverable without knowing to swipe.
+              GestureDetector(
+                onTap: onDelete,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  child: Icon(Icons.delete_outline, size: 18, color: colors.textDim),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

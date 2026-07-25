@@ -36,6 +36,9 @@ abstract interface class SubjectsSource {
 
   /// A short-lived signed URL to open/download the material [fileId].
   Future<String> fileDownloadUrl(String fileId);
+
+  /// Permanently removes the material [fileId] (`DELETE /files/{id}`).
+  Future<void> deleteFile(String fileId);
 }
 
 class MockSubjectsSource implements SubjectsSource {
@@ -124,6 +127,11 @@ class MockSubjectsSource implements SubjectsSource {
   @override
   Future<String> fileDownloadUrl(String fileId) =>
       mockDelay('https://example.com/$fileId.pdf');
+
+  @override
+  // Mock has no real storage; the fixture list is regenerated per fetch, so a
+  // deletion doesn't persist here. Live mode does the real DELETE.
+  Future<void> deleteFile(String fileId) => mockDelay(null);
 }
 
 /// Live impl — `/v1/subjects` + `/v1/semesters` (contract §12.D, §12.E).
@@ -248,6 +256,9 @@ class ApiSubjectsSource implements SubjectsSource {
     final body = await _dio.getMap('/files/$fileId/download');
     return body['url'] as String? ?? '';
   }
+
+  @override
+  Future<void> deleteFile(String fileId) => _dio.deleteMap('/files/$fileId');
 
   SubjectDto _subjToDto(Map<String, dynamic> j) => SubjectDto(
         id: j['id'] as String? ?? '',
