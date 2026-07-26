@@ -66,7 +66,15 @@ class ObStudyScreen extends ConsumerWidget {
             spacing: 6,
             runSpacing: 6,
             children: [
-              for (final subject in _subjects)
+              // Presets first, then any custom subject the user added via
+              // "+ More". Without appending the customs, an added subject went
+              // into the draft but had no chip, so it looked like nothing
+              // happened.
+              for (final subject in [
+                ..._subjects,
+                for (final s in draft.subjects)
+                  if (!_subjects.contains(s)) s,
+              ])
                 _Chip(
                   label: subject,
                   active: draft.subjects.contains(subject),
