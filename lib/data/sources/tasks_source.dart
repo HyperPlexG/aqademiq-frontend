@@ -154,6 +154,25 @@ class MockTasksSource implements TasksSource {
   }
 }
 
+/// A representative clock time for a day-part bucket, or null for Anytime / a
+/// value that isn't a bucket.
+///
+/// The backend has no day-part column — it only persists `scheduled_at`. A
+/// bucket task (Morning/Afternoon/Evening, no specific time) therefore sent no
+/// time and came back as Anytime. Anchoring the bucket to an in-range hour makes
+/// it survive the round trip: `taskBucket` re-derives the bucket from the hour
+/// (<12 morning, <17 afternoon, else evening). Anytime and specific-time tasks
+/// pass through unchanged.
+DateTime? bucketAnchor(String? timeOfDay, DateTime date) {
+  final hour = switch (timeOfDay) {
+    'morning' => 9,
+    'afternoon' => 14,
+    'evening' => 19,
+    _ => null,
+  };
+  return hour == null ? null : DateTime(date.year, date.month, date.day, hour);
+}
+
 /// Live impl — NestJS `/v1/tasks` occurrence model (contract §12.C).
 ///
 /// The backend has no day-part enum and stores time in `scheduled_at`; a task's
@@ -173,13 +192,14 @@ class ApiTasksSource implements TasksSource {
 
   @override
   Future<TaskDto> create(TaskDto input) async {
+    final start = input.startTime ?? bucketAnchor(input.timeOfDay, input.date);
     final body = <String, dynamic>{
       'title': input.title,
       'date': ymd(input.date),
       if (input.tagId.isNotEmpty) 'category': input.tagId,
       if (input.note != null) 'note': input.note,
       if (input.durationMin != null) 'duration_seconds': input.durationMin! * 60,
-      if (input.startTime != null) 'scheduled_at': naiveIso(input.startTime!),
+      if (start != null) 'scheduled_at': naiveIso(start),
       if (input.repeat != null)
         'repeat': _repeatToWire(input.repeat!)
       else
@@ -190,13 +210,14 @@ class ApiTasksSource implements TasksSource {
 
   @override
   Future<TaskDto> update(TaskDto task) async {
+    final start = task.startTime ?? bucketAnchor(task.timeOfDay, task.date);
     final body = <String, dynamic>{
       'title': task.title,
       'status': task.done ? 'COMPLETE' : 'PENDING',
       if (task.tagId.isNotEmpty) 'category': task.tagId,
       'note': task.note ?? '',
       if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
-      if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),
+      if (start != null) 'scheduled_at': naiveIso(start),
     };
     return _occToDto(await _dio.patchMap('/tasks/${task.id}', body), fallbackDate: task.date);
   }
