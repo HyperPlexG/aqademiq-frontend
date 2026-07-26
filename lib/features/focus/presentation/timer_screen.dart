@@ -100,8 +100,15 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   Future<void> _link() async {
     final result = await showLinkTaskSheet(context);
     if (result == null) return;
-    ref.read(linkedTaskProvider.notifier).set(result.task);
-    ref.read(focusControllerProvider.notifier).configure(taskId: result.task?.id);
+    final task = result.task;
+    ref.read(linkedTaskProvider.notifier).set(task);
+    // Adopt the task's own duration so a 5-minute task starts a 5-minute
+    // session instead of the default 25. A task without a duration leaves the
+    // current session length untouched (configure ignores a null).
+    ref.read(focusControllerProvider.notifier).configure(
+          taskId: task?.id,
+          durationMin: task?.durationMin,
+        );
   }
 
   Future<void> _setTime() async {
