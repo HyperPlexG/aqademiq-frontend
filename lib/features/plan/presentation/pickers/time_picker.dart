@@ -10,23 +10,32 @@ import '../../../../shared/widgets/primary_button.dart';
 /// Returns the chosen bucket label ("Anytime"/"Morning"/"Afternoon"/"Evening"),
 /// or the formatted time ("2:30 PM") if the user sets a specific time via the
 /// custom dialog. Returns `null` on dismiss.
-Future<String?> showTimeOfDayPicker(BuildContext context) {
+Future<String?> showTimeOfDayPicker(BuildContext context, {String? current}) {
   return showModalBottomSheet<String>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x4C140F1C),
-    builder: (_) => const _TimeOfDaySheet(),
+    builder: (_) => _TimeOfDaySheet(current: current),
   );
 }
 
+const _buckets = ['Anytime', 'Morning', 'Afternoon', 'Evening'];
+
 class _TimeOfDaySheet extends StatelessWidget {
-  const _TimeOfDaySheet();
+  const _TimeOfDaySheet({this.current});
+
+  /// The currently-selected label ("Anytime"/"Morning"/…) or a specific-time
+  /// string ("2:30 PM"). Null defaults to Anytime.
+  final String? current;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final selected = current ?? 'Anytime';
+    // A non-bucket value is a specific time, so highlight "Specific time".
+    final isSpecific = !_buckets.contains(selected);
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -79,7 +88,7 @@ class _TimeOfDaySheet extends StatelessWidget {
                 icon: Icons.all_inclusive,
                 label: 'Anytime',
                 sub: 'Ada slots it into a free moment',
-                active: true,
+                active: selected == 'Anytime',
                 onTap: () => Navigator.of(context).pop('Anytime'),
               ),
               const SizedBox(height: 1),
@@ -87,6 +96,7 @@ class _TimeOfDaySheet extends StatelessWidget {
                 icon: Icons.wb_twilight,
                 label: 'Morning',
                 sub: 'Before 12 PM',
+                active: selected == 'Morning',
                 onTap: () => Navigator.of(context).pop('Morning'),
               ),
               const SizedBox(height: 1),
@@ -94,6 +104,7 @@ class _TimeOfDaySheet extends StatelessWidget {
                 icon: Icons.light_mode,
                 label: 'Afternoon',
                 sub: '12 – 5 PM',
+                active: selected == 'Afternoon',
                 onTap: () => Navigator.of(context).pop('Afternoon'),
               ),
               const SizedBox(height: 1),
@@ -101,13 +112,16 @@ class _TimeOfDaySheet extends StatelessWidget {
                 icon: Icons.nights_stay,
                 label: 'Evening',
                 sub: 'After 5 PM',
+                active: selected == 'Evening',
                 onTap: () => Navigator.of(context).pop('Evening'),
               ),
               const SizedBox(height: 1),
               _OptRow(
                 icon: Icons.schedule,
                 label: 'Specific time',
-                trailing: const _SetPill(),
+                active: isSpecific,
+                // When a specific time is already set, show it instead of "Set".
+                trailing: isSpecific ? _SetPill(label: selected) : const _SetPill(),
                 onTap: () async {
                   final picked = await _showSpecificTimeDialog(context);
                   if (picked != null && context.mounted) {
@@ -197,23 +211,27 @@ class _OptRow extends StatelessWidget {
 
 /// Trailing "Set →" pill (prototype `SetPill`).
 class _SetPill extends StatelessWidget {
-  const _SetPill();
+  const _SetPill({this.label});
+
+  /// Shown when a specific time is already chosen; otherwise the "Set →" prompt.
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final active = label != null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: colors.bg,
+        color: active ? colors.accentSoft : colors.bg,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
-        'Set →',
+        label ?? 'Set →',
         style: AppText.sans(
           size: 11,
           weight: FontWeight.w700,
-          color: colors.textMed,
+          color: active ? colors.accent : colors.textMed,
         ),
       ),
     );

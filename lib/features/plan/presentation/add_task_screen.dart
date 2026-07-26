@@ -392,7 +392,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Future<void> _pickTime() async {
-    final v = await showTimeOfDayPicker(context);
+    // Pass the current selection so reopening the sheet highlights it (it used
+    // to always show "Anytime").
+    final v = await showTimeOfDayPicker(context, current: _timeOfDay);
     if (v != null) setState(() => _timeOfDay = v);
   }
 
