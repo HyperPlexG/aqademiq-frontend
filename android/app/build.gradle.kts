@@ -65,6 +65,16 @@ android {
             signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
+                // Warn loudly: the build still succeeds, but the resulting bundle
+                // is DEBUG-signed and Play will reject it on upload. Easy to miss
+                // on a machine (or CI runner) that has no key.properties.
+                logger.warn(
+                    "\n**********************************************************\n" +
+                        "WARNING: android/key.properties not found.\n" +
+                        "Release build will be DEBUG-SIGNED and Google Play WILL\n" +
+                        "REJECT it. Fine for `flutter run --release`; NOT for upload.\n" +
+                        "**********************************************************\n",
+                )
                 signingConfigs.getByName("debug")
             }
         }
