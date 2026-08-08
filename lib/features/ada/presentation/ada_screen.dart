@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../data/models/ada_action.dart';
 import '../../../data/models/ada_message.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/repositories/ada_repository.dart';
@@ -59,6 +60,50 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text("Couldn't apply this plan.")),
       );
+    }
+  }
+
+  /// Approve one of Ada's proposed changes. Nothing was written until now — the
+  /// server executes it here, then lets the agent carry on from the result.
+  Future<void> _approve(AdaAction action) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final applied = await ref.read(adaChatProvider.notifier).approveAction(action.id);
+    if (!mounted) return;
+    if (applied) {
+      _refreshAffected(action.resource);
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text("Couldn't apply “${action.title}”.")),
+      );
+    }
+  }
+
+  Future<void> _reject(AdaAction action) =>
+      ref.read(adaChatProvider.notifier).rejectAction(action.id);
+
+  Future<void> _decideAll({required bool approve}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final applied = await ref.read(adaChatProvider.notifier).decideAll(approve: approve);
+    if (!mounted) return;
+    if (approve) {
+      _refreshAffected('task');
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            applied == 0
+                ? "Couldn't apply those changes."
+                : '$applied change${applied == 1 ? '' : 's'} applied ✓',
+          ),
+        ),
+      );
+    }
+  }
+
+  /// Ada writes through the same services the rest of the app reads from, so an
+  /// applied change has to invalidate those caches or the plan looks unchanged.
+  void _refreshAffected(String resource) {
+    if (resource == 'task' || resource == 'subject' || resource == 'semester') {
+      ref.invalidate(dayTasksProvider);
     }
   }
 
@@ -122,6 +167,10 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                     messages: chat.messages,
                     typing: chat.typing,
                     onApplyPlan: _applyPlan,
+                    actionsByMessage: chat.actionsByMessage,
+                    decidingIds: chat.decidingActionIds,
+                    onApprove: _approve,
+                    onReject: _reject,
                   ),
           ),
           Padding(
@@ -130,6 +179,13 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (chat.outstandingActions.length > 1)
+                  _DecideAllBar(
+                    count: chat.outstandingActions.length,
+                    busy: chat.decidingActionIds.isNotEmpty,
+                    onApproveAll: () => unawaited(_decideAll(approve: true)),
+                    onRejectAll: () => unawaited(_decideAll(approve: false)),
+                  ),
                 if (chat.uploading || chat.pendingAttachments.isNotEmpty)
                   _AttachmentPreview(
                     uploading: chat.uploading,
@@ -286,17 +342,33 @@ class _MessageList extends StatelessWidget {
     required this.messages,
     required this.typing,
     required this.onApplyPlan,
+    required this.actionsByMessage,
+    required this.decidingIds,
+    required this.onApprove,
+    required this.onReject,
   });
   final List<AdaMessage> messages;
   final bool typing;
   final ValueChanged<String> onApplyPlan;
+  final Map<String, List<AdaAction>> actionsByMessage;
+  final Set<String> decidingIds;
+  final ValueChanged<AdaAction> onApprove;
+  final ValueChanged<AdaAction> onReject;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       children: [
-        for (final m in messages) _Bubble(message: m, onApplyPlan: onApplyPlan),
+        for (final m in messages)
+          _Bubble(
+            message: m,
+            onApplyPlan: onApplyPlan,
+            actions: actionsByMessage[m.id] ?? const [],
+            decidingIds: decidingIds,
+            onApprove: onApprove,
+            onReject: onReject,
+          ),
         if (typing) const _TypingBubble(),
       ],
     );
@@ -304,9 +376,20 @@ class _MessageList extends StatelessWidget {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.message, required this.onApplyPlan});
+  const _Bubble({
+    required this.message,
+    required this.onApplyPlan,
+    this.actions = const [],
+    this.decidingIds = const {},
+    required this.onApprove,
+    required this.onReject,
+  });
   final AdaMessage message;
   final ValueChanged<String> onApplyPlan;
+  final List<AdaAction> actions;
+  final Set<String> decidingIds;
+  final ValueChanged<AdaAction> onApprove;
+  final ValueChanged<AdaAction> onReject;
 
   @override
   Widget build(BuildContext context) {
@@ -358,6 +441,15 @@ class _Bubble extends StatelessWidget {
                   const SizedBox(height: 6),
                   _ApplyPlanButton(onTap: () => onApplyPlan(message.id)),
                 ],
+                for (final action in actions) ...[
+                  const SizedBox(height: 6),
+                  _ActionCard(
+                    action: action,
+                    busy: decidingIds.contains(action.id),
+                    onApprove: () => onApprove(action),
+                    onReject: () => onReject(action),
+                  ),
+                ],
               ],
             ),
           ),
@@ -391,6 +483,317 @@ class _ApplyPlanButton extends StatelessWidget {
             Text(
               'Add to my plan',
               style: AppText.sans(size: 11, weight: FontWeight.w800, color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A change Ada wants to make, with the user's approve/decline gate.
+///
+/// Nothing behind this card has happened yet: the backend holds it as a pending
+/// action and applies it only when Approve is tapped. Once decided the card
+/// freezes into a receipt so the conversation stays readable on reload.
+class _ActionCard extends StatelessWidget {
+  const _ActionCard({
+    required this.action,
+    required this.busy,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  final AdaAction action;
+  final bool busy;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  Color _accentFor(AppColors colors) => switch (action.operation) {
+        AdaActionOperation.delete => const Color(0xFFFF5C7C),
+        AdaActionOperation.create => colors.accent,
+        AdaActionOperation.update => colors.accent,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final accent = _accentFor(colors);
+    final decided = action.status.isDecided;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 230),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: decided ? colors.border : accent.alpha8(0x55),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accent.alpha8(0x1A),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: Text(
+                  action.operation.label.toUpperCase(),
+                  style: AppText.sans(size: 8, weight: FontWeight.w800, color: accent),
+                ),
+              ),
+              const Spacer(),
+              if (decided) _StatusChip(status: action.status),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            action.title,
+            style: AppText.sans(size: 12, weight: FontWeight.w700, height: 1.35, color: colors.text),
+          ),
+          if (action.fields.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            for (final f in action.fields) _FieldRow(field: f),
+          ],
+          if (action.warning != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              action.warning!,
+              style: AppText.sans(size: 10, height: 1.35, color: const Color(0xFFFF5C7C)),
+            ),
+          ],
+          if (action.status.isFailed && action.error != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              action.error!,
+              style: AppText.sans(size: 10, height: 1.35, color: const Color(0xFFFF5C7C)),
+            ),
+          ],
+          if (!decided) ...[
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    label: 'Approve',
+                    filled: true,
+                    accent: accent,
+                    busy: busy,
+                    onTap: busy ? null : onApprove,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _ActionButton(
+                    label: 'Decline',
+                    filled: false,
+                    accent: colors.textMed,
+                    busy: false,
+                    onTap: busy ? null : onReject,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FieldRow extends StatelessWidget {
+  const _FieldRow({required this.field});
+  final AdaActionField field;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 72,
+            child: Text(
+              field.label,
+              style: AppText.sans(size: 10, color: colors.textDim),
+            ),
+          ),
+          Expanded(
+            child: field.isChange
+                // Show the old value struck through so a change reads as a
+                // change, not as a fresh value the user has to reason about.
+                ? Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        field.from!,
+                        style: AppText.sans(size: 10, color: colors.textDim).copyWith(
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                      Text('  →  ', style: AppText.sans(size: 10, color: colors.textDim)),
+                      Text(
+                        field.to ?? '—',
+                        style: AppText.sans(size: 10, weight: FontWeight.w700, color: colors.text),
+                      ),
+                    ],
+                  )
+                : Text(
+                    field.to ?? '—',
+                    style: AppText.sans(size: 10, weight: FontWeight.w700, color: colors.text),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+  final AdaActionStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final (label, color) = switch (status) {
+      AdaActionStatus.executed => ('Applied ✓', const Color(0xFF34C759)),
+      AdaActionStatus.rejected => ('Declined', colors.textDim),
+      AdaActionStatus.failed => ('Failed', const Color(0xFFFF5C7C)),
+      _ => ('Done', colors.textDim),
+    };
+    return Text(
+      label,
+      style: AppText.sans(size: 9, weight: FontWeight.w800, color: color),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.filled,
+    required this.accent,
+    required this.busy,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool filled;
+  final Color accent;
+  final bool busy;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: filled ? accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: filled ? null : Border.all(color: colors.border),
+        ),
+        child: busy
+            ? SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: filled ? Colors.white : accent,
+                ),
+              )
+            : Text(
+                label,
+                style: AppText.sans(
+                  size: 11,
+                  weight: FontWeight.w800,
+                  color: filled ? Colors.white : colors.textMed,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+/// Shown above the input when Ada has proposed several changes at once.
+class _DecideAllBar extends StatelessWidget {
+  const _DecideAllBar({
+    required this.count,
+    required this.busy,
+    required this.onApproveAll,
+    required this.onRejectAll,
+  });
+
+  final int count;
+  final bool busy;
+  final VoidCallback onApproveAll;
+  final VoidCallback onRejectAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        decoration: BoxDecoration(
+          color: colors.accent.alpha8(0x14),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colors.accent.alpha8(0x33)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '$count changes waiting',
+                style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.text),
+              ),
+            ),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: busy ? null : onRejectAll,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  'Decline all',
+                  style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.textMed),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: busy ? null : onApproveAll,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colors.accent,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+                child: busy
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.6, color: Colors.white),
+                      )
+                    : Text(
+                        'Approve all',
+                        style: AppText.sans(size: 11, weight: FontWeight.w800, color: Colors.white),
+                      ),
+              ),
             ),
           ],
         ),

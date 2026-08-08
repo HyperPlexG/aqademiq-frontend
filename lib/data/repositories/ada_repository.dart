@@ -4,22 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/env/env.dart';
 import '../../core/network/dio_client.dart';
 import '../adapters/adapters.dart';
+import '../models/ada_action.dart';
 import '../models/ada_message.dart';
 import '../models/enums.dart';
 import '../sources/ada_source.dart';
+
+/// One assistant turn as the UI sees it: the message plus the changes Ada is
+/// asking permission to make.
+typedef AdaReplyResult = ({AdaMessage message, List<AdaAction> actions});
 
 class AdaRepository {
   AdaRepository(this._source);
 
   final AdaSource _source;
 
-  Future<AdaMessage> reply(
+  Future<AdaReplyResult> reply(
     String userText,
     List<AdaMessage> history, {
     List<AdaAttachmentRef> attachments = const [],
   }) async {
-    final dto = await _source.reply(userText, const [], attachments: attachments);
-    return dto.toModel();
+    final turn = await _source.reply(userText, const [], attachments: attachments);
+    return (message: turn.message.toModel(), actions: turn.actions);
   }
 
   /// Presign + upload a file and return the ref to attach to the next message.
@@ -33,18 +38,30 @@ class AdaRepository {
   /// Past conversations for the chat-history panel (most-recent first).
   Future<List<AdaConversationDto>> conversations() => _source.conversations();
 
-  /// Load a past conversation's messages and make it the active one.
-  Future<List<AdaMessage>> openConversation(String id) async {
+  /// Load a past conversation's messages (with their action cards) and make it
+  /// the active one.
+  Future<List<AdaReplyResult>> openConversation(String id) async {
     _source.conversationId = id;
-    final dtos = await _source.messages(id);
-    return dtos.map((d) => d.toModel()).toList(growable: false);
+    final turns = await _source.messages(id);
+    return turns
+        .map((t) => (message: t.message.toModel(), actions: t.actions))
+        .toList(growable: false);
   }
 
   /// Drop the active conversation so the next reply starts a fresh one.
   void startNewConversation() => _source.conversationId = null;
 
-  /// Apply the schedule Ada proposed in [messageId] to the user's plan.
+  /// Apply the schedule Ada proposed in [messageId] (legacy pre-agent plans).
   Future<void> applyPlan(String messageId) => _source.applyPlan(messageId);
+
+  Future<AdaDecisionResult> approveAction(String actionId) =>
+      _source.approveAction(actionId);
+
+  Future<AdaDecisionResult> rejectAction(String actionId) =>
+      _source.rejectAction(actionId);
+
+  Future<AdaBulkDecision> decideAll({required bool approve}) =>
+      _source.decideAll(approve: approve);
 }
 
 final adaRepositoryProvider = Provider<AdaRepository>((ref) {
@@ -54,13 +71,15 @@ final adaRepositoryProvider = Provider<AdaRepository>((ref) {
 });
 
 /// Immutable Ada chat state: the message log + a typing indicator + staged
-/// attachments waiting to be sent with the next message.
+/// attachments waiting to be sent + the changes awaiting the user's decision.
 class AdaChatState {
   const AdaChatState({
     this.messages = const [],
     this.typing = false,
     this.uploading = false,
     this.pendingAttachments = const [],
+    this.actionsByMessage = const {},
+    this.decidingActionIds = const {},
   });
 
   final List<AdaMessage> messages;
@@ -72,19 +91,36 @@ class AdaChatState {
   /// Files uploaded and ready to attach on the next explicit Send.
   final List<AdaAttachmentRef> pendingAttachments;
 
+  /// Proposed changes keyed by the assistant message that asked for them.
+  final Map<String, List<AdaAction>> actionsByMessage;
+
+  /// Actions with a decision in flight — their card shows a spinner.
+  final Set<String> decidingActionIds;
+
   bool get isEmpty => messages.isEmpty;
+
+  /// Every change still waiting on the user, across the whole conversation.
+  List<AdaAction> get outstandingActions => [
+        for (final list in actionsByMessage.values)
+          for (final a in list)
+            if (a.status.isPending) a,
+      ];
 
   AdaChatState copyWith({
     List<AdaMessage>? messages,
     bool? typing,
     bool? uploading,
     List<AdaAttachmentRef>? pendingAttachments,
+    Map<String, List<AdaAction>>? actionsByMessage,
+    Set<String>? decidingActionIds,
   }) =>
       AdaChatState(
         messages: messages ?? this.messages,
         typing: typing ?? this.typing,
         uploading: uploading ?? this.uploading,
         pendingAttachments: pendingAttachments ?? this.pendingAttachments,
+        actionsByMessage: actionsByMessage ?? this.actionsByMessage,
+        decidingActionIds: decidingActionIds ?? this.decidingActionIds,
       );
 }
 
@@ -125,7 +161,7 @@ class AdaChatController extends Notifier<AdaChatState> {
             state.messages,
             attachments: attachments,
           );
-      state = state.copyWith(messages: [...state.messages, reply], typing: false);
+      _appendTurn(reply, typing: false);
     } on Object catch (_) {
       // Restore staged files so the user can retry without re-uploading.
       state = state.copyWith(
@@ -171,8 +207,14 @@ class AdaChatController extends Notifier<AdaChatState> {
   Future<void> openConversation(String id) async {
     state = const AdaChatState(typing: true);
     try {
-      final messages = await ref.read(adaRepositoryProvider).openConversation(id);
-      state = AdaChatState(messages: messages);
+      final turns = await ref.read(adaRepositoryProvider).openConversation(id);
+      state = AdaChatState(
+        messages: turns.map((t) => t.message).toList(growable: false),
+        actionsByMessage: {
+          for (final t in turns)
+            if (t.actions.isNotEmpty) t.message.id: t.actions,
+        },
+      );
     } on Object {
       state = const AdaChatState();
     }
@@ -184,9 +226,92 @@ class AdaChatController extends Notifier<AdaChatState> {
     state = const AdaChatState();
   }
 
-  /// Apply Ada's proposed schedule (from [messageId]) to the plan.
+  /// Apply Ada's proposed schedule (from [messageId]) — legacy plan path.
   Future<void> applyPlan(String messageId) =>
       ref.read(adaRepositoryProvider).applyPlan(messageId);
+
+  /// Approve one proposed change. Returns true when it was actually applied —
+  /// the server can legitimately fail it if the underlying data moved on.
+  Future<bool> approveAction(String actionId) =>
+      _decide(actionId, approve: true);
+
+  /// Decline one proposed change.
+  Future<bool> rejectAction(String actionId) =>
+      _decide(actionId, approve: false);
+
+  Future<bool> _decide(String actionId, {required bool approve}) async {
+    if (state.decidingActionIds.contains(actionId)) return false;
+    state = state.copyWith(
+      decidingActionIds: {...state.decidingActionIds, actionId},
+    );
+    try {
+      final repo = ref.read(adaRepositoryProvider);
+      final result = approve
+          ? await repo.approveAction(actionId)
+          : await repo.rejectAction(actionId);
+
+      _replaceAction(result.action);
+      if (result.followUp != null) {
+        _appendTurn(
+          (message: result.followUp!.message.toModel(), actions: result.followUp!.actions),
+        );
+      }
+      return result.action.status.isApplied;
+    } on Object {
+      return false;
+    } finally {
+      state = state.copyWith(
+        decidingActionIds: {...state.decidingActionIds}..remove(actionId),
+      );
+    }
+  }
+
+  /// Approve or decline everything outstanding in one go.
+  Future<int> decideAll({required bool approve}) async {
+    final outstanding = state.outstandingActions;
+    if (outstanding.isEmpty) return 0;
+    final ids = outstanding.map((a) => a.id).toSet();
+    state = state.copyWith(
+      decidingActionIds: {...state.decidingActionIds, ...ids},
+    );
+    try {
+      final result =
+          await ref.read(adaRepositoryProvider).decideAll(approve: approve);
+      result.actions.forEach(_replaceAction);
+      for (final turn in result.followUps) {
+        _appendTurn((message: turn.message.toModel(), actions: turn.actions));
+      }
+      return result.actions.where((a) => a.status.isApplied).length;
+    } on Object {
+      return 0;
+    } finally {
+      state = state.copyWith(
+        decidingActionIds: {...state.decidingActionIds}..removeAll(ids),
+      );
+    }
+  }
+
+  /// Append an assistant turn and index any cards it brought with it.
+  void _appendTurn(AdaReplyResult turn, {bool? typing}) {
+    state = state.copyWith(
+      messages: [...state.messages, turn.message],
+      typing: typing ?? state.typing,
+      actionsByMessage: turn.actions.isEmpty
+          ? state.actionsByMessage
+          : {...state.actionsByMessage, turn.message.id: turn.actions},
+    );
+  }
+
+  /// Swap an action for its post-decision version, wherever it lives.
+  void _replaceAction(AdaAction updated) {
+    final next = <String, List<AdaAction>>{};
+    for (final entry in state.actionsByMessage.entries) {
+      next[entry.key] = [
+        for (final a in entry.value) a.id == updated.id ? updated : a,
+      ];
+    }
+    state = state.copyWith(actionsByMessage: next);
+  }
 }
 
 /// Past Ada conversations for the history panel.
