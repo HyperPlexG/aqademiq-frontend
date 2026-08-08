@@ -10,5 +10,9 @@
 	     distribution/TestFlight archives; `development` is correct for the file. -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Lets task reminders deliver as time-sensitive (interruption-level in the
+	     push payload), breaking through Focus / Scheduled Summary batching. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
 </dict>
 </plist>
