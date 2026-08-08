@@ -1,4 +1,5 @@
 import AVFoundation
+import FirebaseCore
 import FirebaseMessaging
 import Flutter
 import UIKit
@@ -16,6 +17,16 @@ import UIKit
     let session = AVAudioSession.sharedInstance()
     try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
     try? session.setActive(true)
+
+    // Ask iOS for an APNs token at launch. FlutterFire's automatic registration
+    // isn't firing under the implicit-engine AppDelegate lifecycle, so the token
+    // callback below never ran and the device never registered (no iOS rows in
+    // device_profiles → every push 400s "no registered device"). This is the
+    // missing trigger; the token then flows to Firebase in the callback below.
+    // (Independent of notification permission — the token is issued regardless;
+    // permission only gates whether banners display.)
+    application.registerForRemoteNotifications()
+
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -34,7 +45,12 @@ import UIKit
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
-    Messaging.messaging().apnsToken = deviceToken
+    // Guard: Messaging needs a configured FirebaseApp. Dart's
+    // Firebase.initializeApp() runs in main() and normally finishes before the
+    // APNs token arrives, but guard so an early token can never crash the app.
+    if FirebaseApp.app() != nil {
+      Messaging.messaging().apnsToken = deviceToken
+    }
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
