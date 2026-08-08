@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/error/failure.dart';
 import '../models/user_settings.dart';
 import 'api_helpers.dart';
 import 'mock_latency.dart';
@@ -170,15 +171,13 @@ class ApiSettingsSource implements SettingsSource {
         status: body['status'] as String? ?? 'unknown',
         error: body['error'] as String?,
       );
-    } on DioException catch (e) {
-      // Surface the backend's own message (e.g. 400 "No registered device to
-      // send a test push to") so the diagnostic is actionable.
-      final data = e.response?.data;
-      final msg = data is Map<String, dynamic> ? data['message'] as String? : null;
-      return (
-        status: 'failed',
-        error: msg ?? 'HTTP ${e.response?.statusCode ?? 'error'}',
-      );
+    } on Failure catch (f) {
+      // postMap maps every HTTP error to a typed Failure, so THIS is what a
+      // non-2xx (e.g. 400 "No registered device to send a test push to")
+      // surfaces as — not a DioException. Show its message verbatim.
+      return (status: 'failed', error: f.message);
+    } on Object catch (e) {
+      return (status: 'failed', error: e.toString());
     }
   }
 
