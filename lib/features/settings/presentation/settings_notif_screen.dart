@@ -64,16 +64,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Future<void> _sendTest() async {
     final messenger = ScaffoldMessenger.of(context);
+    String message;
     try {
-      await _repo.sendTestNotification();
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Test notification sent — check your device.')),
-      );
+      final result = await _repo.sendTestNotification();
+      message = switch (result.status) {
+        'sent' =>
+          'Sent ✓ — if nothing appears, check Aqademiq is allowed in iOS '
+              'Settings → Notifications, and that the app is backgrounded.',
+        'skipped_no_provider' =>
+          "Server push isn't configured (FCM secrets missing on the backend).",
+        'failed' => 'Delivery failed: ${result.error ?? 'unknown error'}',
+        _ => 'Result: ${result.status}'
+            '${result.error != null ? ' — ${result.error}' : ''}',
+      };
     } on Object {
-      messenger.showSnackBar(
-        const SnackBar(content: Text("Couldn't send a test notification.")),
-      );
+      message = "Couldn't send a test notification (network error).";
     }
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 6)),
+    );
   }
 
   Future<void> _pickTime(String current, ValueChanged<String> apply) async {

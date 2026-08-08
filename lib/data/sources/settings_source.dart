@@ -30,8 +30,10 @@ abstract interface class SettingsSource {
 
   Future<void> submitRating({required int rating, String? comment});
 
-  /// Ask the backend to push a test notification to this device.
-  Future<void> sendTestNotification();
+  /// Ask the backend to push a test notification to this device. Returns the
+  /// delivery outcome so the UI can distinguish "sent" from a server-side
+  /// misconfiguration (`skipped_no_provider`) or an APNs/FCM `failed`.
+  Future<({String status, String? error})> sendTestNotification();
 }
 
 class MockSettingsSource implements SettingsSource {
@@ -80,7 +82,8 @@ class MockSettingsSource implements SettingsSource {
       mockDelay(null);
 
   @override
-  Future<void> sendTestNotification() => mockDelay(null);
+  Future<({String status, String? error})> sendTestNotification() =>
+      mockDelay((status: 'sent', error: null));
 }
 
 class ApiSettingsSource implements SettingsSource {
@@ -160,8 +163,23 @@ class ApiSettingsSource implements SettingsSource {
   }
 
   @override
-  Future<void> sendTestNotification() async {
-    await _dio.postMap('/me/notifications/test');
+  Future<({String status, String? error})> sendTestNotification() async {
+    try {
+      final body = await _dio.postMap('/me/notifications/test');
+      return (
+        status: body['status'] as String? ?? 'unknown',
+        error: body['error'] as String?,
+      );
+    } on DioException catch (e) {
+      // Surface the backend's own message (e.g. 400 "No registered device to
+      // send a test push to") so the diagnostic is actionable.
+      final data = e.response?.data;
+      final msg = data is Map<String, dynamic> ? data['message'] as String? : null;
+      return (
+        status: 'failed',
+        error: msg ?? 'HTTP ${e.response?.statusCode ?? 'error'}',
+      );
+    }
   }
 
   NotificationPrefs _notifFrom(Map<String, dynamic> body) {

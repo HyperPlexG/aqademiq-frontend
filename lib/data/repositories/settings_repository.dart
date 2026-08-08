@@ -45,7 +45,8 @@ class SettingsRepository {
   Future<void> submitRating({required int rating, String? comment}) =>
       _source.submitRating(rating: rating, comment: comment);
 
-  Future<void> sendTestNotification() => _source.sendTestNotification();
+  Future<({String status, String? error})> sendTestNotification() =>
+      _source.sendTestNotification();
 }
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
