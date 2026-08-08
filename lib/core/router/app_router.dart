@@ -33,6 +33,7 @@ import '../../features/plan/presentation/add_task_screen.dart';
 import '../../features/plan/presentation/plan_screen.dart';
 import '../../features/settings/presentation/settings_email_screen.dart';
 import '../../features/settings/presentation/settings_home_screen.dart';
+import '../../features/settings/presentation/settings_memories_screen.dart';
 import '../../features/settings/presentation/settings_notif_screen.dart';
 import '../../features/settings/presentation/settings_profile_screen.dart';
 import '../../features/settings/presentation/settings_sounds_screen.dart';
@@ -80,6 +81,7 @@ abstract final class Routes {
   static const settingsProfile = '/settings/profile';
   static const settingsNotif = '/settings/notifications';
   static const settingsSounds = '/settings/prism';
+  static const settingsMemories = '/settings/memories';
   static const settingsEmail = '/settings/email';
 
   // Feedback board (full-screen, pushed over the shell).
@@ -137,6 +139,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.settingsProfile, builder: (_, _) => const SettingsProfileScreen()),
       GoRoute(path: Routes.settingsNotif, builder: (_, _) => const NotificationsScreen()),
       GoRoute(path: Routes.settingsSounds, builder: (_, _) => const PrismSettingsScreen()),
+      GoRoute(path: Routes.settingsMemories, builder: (_, _) => const SettingsMemoriesScreen()),
       GoRoute(path: Routes.settingsEmail, builder: (_, _) => const EmailSettingsScreen()),
       GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
       GoRoute(
