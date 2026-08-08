@@ -57,6 +57,7 @@ class _PushService {
 
   bool _inited = false;
   bool _registered = false;
+  bool _retryScheduled = false;
   String _permission = 'granted';
 
   Dio get _dio => _ref.read(dioProvider);
@@ -113,16 +114,25 @@ class _PushService {
     // iOS only mints its FCM token after the APNs device token is available.
     // Calling getToken() too early returns null and the device never registers,
     // so the backend has no target and every push (incl. the test) silently
-    // drops. Wait briefly for APNs; if it never arrives, onTokenRefresh will
-    // re-register once FCM issues the token.
+    // drops. The APNs round-trip can take >5s on a cold first launch, so wait
+    // longer, and if it still hasn't arrived, schedule a deferred retry rather
+    // than giving up for the whole session (onTokenRefresh is a second safety
+    // net once FCM finally issues the token).
     if (Platform.isIOS) {
       var apns = await messaging.getAPNSToken();
-      for (var i = 0; i < 5 && apns == null; i++) {
+      for (var i = 0; i < 15 && apns == null; i++) {
         await Future<void>.delayed(const Duration(seconds: 1));
         apns = await messaging.getAPNSToken();
       }
       if (apns == null) {
-        debugPrint('PushService: APNs token unavailable — deferring register.');
+        debugPrint('PushService: APNs token unavailable — will retry shortly.');
+        if (!_retryScheduled) {
+          _retryScheduled = true;
+          Future<void>.delayed(const Duration(seconds: 20), () {
+            _retryScheduled = false;
+            unawaited(_register());
+          });
+        }
         return;
       }
     }
