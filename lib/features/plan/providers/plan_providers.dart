@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_format.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/reminder_scheduler.dart';
 
 /// The day currently shown on the Plan timeline (defaults to the demo "today").
 final selectedDateProvider =
@@ -54,6 +57,7 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     try {
       await ref.read(tasksRepositoryProvider).update(next);
       ref.invalidate(weeklyCompletedProvider);
+      _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
     }
@@ -66,6 +70,7 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     try {
       await ref.read(tasksRepositoryProvider).move(task, newDate);
       ref.invalidate(weeklyCompletedProvider);
+      _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
     }
@@ -78,10 +83,17 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     try {
       await ref.read(tasksRepositoryProvider).delete(task.id);
       ref.invalidate(weeklyCompletedProvider);
+      _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
     }
   }
+
+  /// Completing, moving or deleting a task changes what should be pending on
+  /// the device. Forced (not debounced) so the schedule matches the list the
+  /// user is looking at, and fire-and-forget so it never delays the UI.
+  void _rescheduleReminders() =>
+      unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
 }
 
 /// Completed-task count for the selected week — drives the Stats "COMPLETED"

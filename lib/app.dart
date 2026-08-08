@@ -8,6 +8,7 @@ import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
 import 'services/push_service.dart';
+import 'services/reminder_scheduler.dart';
 
 /// Root widget: wires the router, the light/dark themes (rebuilt on accent
 /// change), and the Light/Dark/System mode.
@@ -24,12 +25,15 @@ class AqademiqApp extends ConsumerWidget {
     // the Prism audio bridge alive so focus-session transitions drive the
     // soundscape from any tab.
     // Keep push registration alive too — the service listens to auth internally
-    // and registers this device once signed in (no-op under mocks).
+    // and registers this device once signed in (no-op under mocks) — and the
+    // reminder scheduler, which keeps the device's own notification schedule in
+    // step with the task list.
     ref
       ..watch(revisionSyncProvider)
       ..watch(sessionResetProvider)
       ..watch(prismAudioControllerProvider)
-      ..watch(pushServiceProvider);
+      ..watch(pushServiceProvider)
+      ..watch(reminderSchedulerProvider);
 
     return MaterialApp.router(
       title: 'Aqademiq',

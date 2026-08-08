@@ -77,4 +77,17 @@ abstract final class Env {
   /// Whether native Google sign-in is configured (the web/server client ID is
   /// the minimum; iOS additionally needs the iOS client ID + URL scheme).
   static bool get hasGoogleSignIn => googleServerClientId.isNotEmpty;
+
+  /// Client-side reminder scheduling (`services/reminder_scheduler.dart`).
+  ///
+  /// **On by default.** Server push (`pg_cron` → `/cron/notifications` → FCM)
+  /// has not been delivering reliably and only ever covered one of the seven
+  /// channels the Notifications screen offers, so the device schedules its own
+  /// reminders from the task list.
+  ///
+  /// Build with `--dart-define=LOCAL_REMINDERS=false` to hand scheduling back
+  /// to the backend once its sweep is verified — otherwise a working server
+  /// path would notify on top of the local one.
+  static const bool localReminders =
+      bool.fromEnvironment('LOCAL_REMINDERS', defaultValue: true);
 }

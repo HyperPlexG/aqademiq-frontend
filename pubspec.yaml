@@ -54,6 +54,9 @@ dependencies:
   sign_in_with_apple: ^6.1.0
   socket_io_client: ^3.1.6
   supabase_flutter: ^2.8.0
+  # Direct (not just transitive via flutter_local_notifications): the reminder
+  # scheduler builds TZDateTimes in the device's own IANA zone.
+  timezone: ^0.10.1
   url_launcher: ^6.3.2
 
 dev_dependencies:

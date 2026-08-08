@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/user_settings.dart';
 import '../../../data/repositories/settings_repository.dart';
+import '../../../services/reminder_scheduler.dart';
 import '../../../shared/widgets/settings_row.dart';
 import 'sheets/notif_sound_sheet.dart';
 import 'widgets/settings_scaffold.dart';
@@ -44,6 +45,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   void _setPrefs(NotificationPrefs next) => setState(() => _prefs = next);
 
+  /// Re-derive the device's reminder schedule. Called *after* the write lands,
+  /// because the scheduler re-reads preferences from the server rather than
+  /// from this screen's local copy.
+  void _reschedule() =>
+      unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
+
   Future<void> _setSound(String sound) async {
     _setPrefs(_prefs!.copyWith(sound: sound));
     await _repo.patchNotificationPrefs(sound: sound).catchError((_) {});
@@ -60,6 +67,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           weeklyReviewTime: p.weeklyReviewTime,
         )
         .catchError((_) {});
+    _reschedule();
   }
 
   Future<void> _sendTest() async {
@@ -185,6 +193,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               onTap: () => unawaited(_pickTime(prefs.morningTime, (t) async {
                 _setPrefs(_prefs!.copyWith(morningTime: t));
                 await _repo.patchNotificationPrefs(morningTime: t).catchError((_) {});
+                _reschedule();
               })),
             ),
             SettingsRow(
@@ -198,6 +207,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               onTap: () => unawaited(_pickTime(prefs.reviewTime, (t) async {
                 _setPrefs(_prefs!.copyWith(reviewTime: t));
                 await _repo.patchNotificationPrefs(reviewTime: t).catchError((_) {});
+                _reschedule();
               })),
             ),
             SettingsRow(

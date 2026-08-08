@@ -4,13 +4,13 @@ import 'dart:io' show Platform;
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../core/env/env.dart';
 import '../core/network/dio_client.dart';
 import '../data/auth/auth_repository.dart';
+import 'local_notifications.dart';
 
 /// FCM background/terminated handler — must be a top-level, annotated function so
 /// the engine can invoke it in a fresh isolate. The OS renders the `notification`
@@ -18,14 +18,6 @@ import '../data/auth/auth_repository.dart';
 /// and as a hook for future data-only messages.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {}
-
-/// Android channel that foreground reminders post to (Android 8+ requires one).
-const _channel = AndroidNotificationChannel(
-  'aqademiq_default',
-  'Reminders',
-  description: 'Task reminders and check-ins',
-  importance: Importance.high,
-);
 
 /// Push notifications: permission, FCM token, device registration (`POST /devices`),
 /// token-refresh re-registration, and foreground display via local notifications.
@@ -52,8 +44,6 @@ class _PushService {
   _PushService(this._ref);
 
   final Ref _ref;
-  final FlutterLocalNotificationsPlugin _local =
-      FlutterLocalNotificationsPlugin();
 
   bool _inited = false;
   bool _registered = false;
@@ -84,15 +74,9 @@ class _PushService {
       _ => 'denied',
     };
 
-    const initSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-    );
-    await _local.initialize(initSettings);
-    await _local
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(_channel);
+    // The local-notification plugin is process-wide state, shared with the
+    // reminder scheduler — see `local_notifications.dart`.
+    await LocalNotifications.instance.ensureInitialized();
 
     // Show a banner for messages that arrive while the app is foregrounded.
     await messaging.setForegroundNotificationPresentationOptions(
@@ -163,19 +147,11 @@ class _PushService {
     if (Platform.isIOS) return;
     final notification = message.notification;
     if (notification == null) return;
-    unawaited(_local.show(
+    unawaited(LocalNotifications.instance.plugin.show(
       notification.hashCode,
       notification.title,
       notification.body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'aqademiq_default',
-          'Reminders',
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: DarwinNotificationDetails(),
-      ),
+      reminderDetails,
     ));
   }
 

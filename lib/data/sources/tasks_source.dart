@@ -9,6 +9,11 @@ import 'mock_latency.dart';
 /// `Env.useMocks`; widgets never see this layer.
 abstract interface class TasksSource {
   Future<List<TaskDto>> tasksForDay(DateTime date);
+
+  /// Occurrences from [from] to [to] inclusive (`GET /tasks?from=&to=`). Used
+  /// by the local reminder scheduler, which needs a horizon rather than a day.
+  Future<List<TaskDto>> tasksInRange(DateTime from, DateTime to);
+
   Future<TaskDto> create(TaskDto input);
   Future<TaskDto> update(TaskDto task);
   Future<TaskDto> move(String id, DateTime newDate);
@@ -46,6 +51,20 @@ class MockTasksSource implements TasksSource {
       }
     }
     return mockDelay(List<TaskDto>.unmodifiable([...base, ...recurring]));
+  }
+
+  @override
+  Future<List<TaskDto>> tasksInRange(DateTime from, DateTime to) async {
+    final out = <TaskDto>[];
+    var day = _dayOnly(from);
+    final last = _dayOnly(to);
+    while (!day.isAfter(last)) {
+      out.addAll(await tasksForDay(day));
+      // Re-normalise each step: adding 24h across a DST boundary lands at
+      // 01:00, and `_key` would then bucket the wrong day.
+      day = DateTime(day.year, day.month, day.day + 1);
+    }
+    return List<TaskDto>.unmodifiable(out);
   }
 
   /// Whether a recurring [base] task lands on [day] (excluding its own start
@@ -168,6 +187,19 @@ class ApiTasksSource implements TasksSource {
     final body = await _dio.getMap('/tasks', query: {'date': ymd(date)});
     return listOf(body, 'tasks')
         .map((j) => _occToDto(j, fallbackDate: date))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<List<TaskDto>> tasksInRange(DateTime from, DateTime to) async {
+    final body = await _dio.getMap(
+      '/tasks',
+      query: {'from': ymd(from), 'to': ymd(to)},
+    );
+    // Every occurrence in a range response carries its own date in the id, so
+    // the fallback is only a guard against a malformed row.
+    return listOf(body, 'tasks')
+        .map((j) => _occToDto(j, fallbackDate: from))
         .toList(growable: false);
   }
 

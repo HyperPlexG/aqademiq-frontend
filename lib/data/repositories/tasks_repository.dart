@@ -19,6 +19,13 @@ class TasksRepository {
     return dtos.map((d) => d.toModel()).toList(growable: false);
   }
 
+  /// Occurrences from [from] to [to] inclusive — the reminder scheduler's view,
+  /// which spans a horizon rather than the single day the planner shows.
+  Future<List<Task>> tasksInRange(DateTime from, DateTime to) async {
+    final dtos = await _source.tasksInRange(from, to);
+    return dtos.map((d) => d.toModel()).toList(growable: false);
+  }
+
   Future<Task> create(Task draft) async {
     final dto = await _source.create(draft.toDto());
     return dto.toModel();

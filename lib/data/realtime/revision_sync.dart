@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/env/env.dart';
 import '../../features/plan/providers/plan_providers.dart';
+import '../../services/reminder_scheduler.dart';
 import '../auth/auth_repository.dart';
 import '../repositories/mood_repository.dart';
 import '../repositories/profile_repository.dart';
@@ -38,5 +41,8 @@ final revisionSyncProvider = Provider<void>((ref) {
         ..invalidate(tagsProvider)
         ..invalidate(moodWeekProvider)
         ..invalidate(statsProvider);
+      // Tasks Ada scheduled server-side arrive as a revision bump and nothing
+      // else, so this is the only trigger that catches them.
+      unawaited(ref.read(reminderSchedulerProvider).reconcile());
     });
 });

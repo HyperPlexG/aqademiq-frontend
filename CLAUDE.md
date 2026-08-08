@@ -79,6 +79,44 @@ system widgets in `shared/widgets/`.
   `providers/`, and (if it mutates) `controllers/`; its data goes through a new
   `data/sources` + `data/repositories` pair with both mock and API impls.
 
+## Notifications: two paths, one plugin
+
+Reminders can arrive two ways, and both render through the **single**
+`FlutterLocalNotificationsPlugin` owned by `services/local_notifications.dart`.
+`initialize()` is global state, so never construct a second instance — whichever
+initialised last silently wins.
+
+- **Server push** (`services/push_service.dart`) — FCM token → `POST /devices`;
+  the backend's `pg_cron` sweep sends. It only ever implemented `before_task`
+  and has not been delivering reliably.
+- **Client-side schedule** (`services/reminder_scheduler.dart`) — the default,
+  gated by `Env.localReminders` (`--dart-define=LOCAL_REMINDERS=false` disables
+  it once server push is verified, so the two can't double-notify). Covers all
+  seven channels the Notifications screen offers, needs no account, and works in
+  Guest Mode.
+
+The scheduler **reconciles**; it does not fire-and-forget. Every trigger
+(sign-in, app resume, a task mutation, a revision bump, a notification-settings
+change) re-derives the whole desired schedule from current state and diffs it
+against `pendingNotificationRequests()`. Things to preserve when touching it:
+
+- `planTaskReminders` / `planCheckIns` are pure and are the tested surface
+  (`test/reminder_scheduler_test.dart`) — keep IO out of them.
+- Notification ids must stay deterministic (`reminderIdFor`), so re-scheduling an
+  unchanged task replaces its pending entry rather than duplicating it.
+- Never `cancelAll()` — it also clears notifications already on screen. Cancel
+  only pending ids that are no longer wanted.
+- A failed task/prefs load aborts the pass rather than applying an empty
+  schedule; otherwise opening the app offline would wipe the week.
+- iOS drops pending local notifications past 64, hence `maxTaskReminders` and
+  the repeating (not materialised) check-ins.
+- `reminderLead` mirrors `REMINDER_LEAD_MS` in the backend's `tasks.service.ts`.
+
+Android needs `RECEIVE_BOOT_COMPLETED` plus the two
+`flutter_local_notifications` receivers in `AndroidManifest.xml` or the schedule
+dies on reboot. Scheduling is deliberately **inexact** — exact alarms need
+`SCHEDULE_EXACT_ALARM`, which triggers a Play Store policy review.
+
 ## Backend integration status
 
 Wired end-to-end behind the seams (mock + `ApiXxxSource`): tasks, subjects, tags,
