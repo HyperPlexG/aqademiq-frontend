@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -25,6 +27,11 @@ const reminderDetails = NotificationDetails(
     channelDescription: 'Task reminders and check-ins',
     importance: Importance.high,
     priority: Priority.high,
+    // Monochrome status-bar icon (white Aqademiq mark on transparent). Android
+    // renders the small icon as a silhouette from the alpha channel, so the
+    // full-colour launcher icon showed as a blank square / the Flutter default.
+    icon: 'ic_stat_notification',
+    color: Color(0xFF6B5CF0),
   ),
   // Matches the `interruption-level` the backend sets on its APNs payload:
   // time-sensitive breaks through Focus and Scheduled Summary, which were
@@ -87,7 +94,7 @@ class LocalNotifications {
 
       await plugin.initialize(
         const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+          android: AndroidInitializationSettings('ic_stat_notification'),
           // Permission is requested explicitly via [requestPermission] so the
           // answer is observable; asking here throws the result away.
           iOS: DarwinInitializationSettings(

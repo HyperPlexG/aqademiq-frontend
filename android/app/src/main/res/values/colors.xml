@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aqademiq accent — tints the status-bar notification icon. -->
+    <color name="notification_color">#FF6B5CF0</color>
+</resources>
