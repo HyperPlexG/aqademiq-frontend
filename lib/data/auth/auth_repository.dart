@@ -58,8 +58,11 @@ abstract interface class AuthRepository {
   /// Resend the pending signup/link OTP (`POST /auth/resend-otp`).
   Future<void> resendOtp();
 
-  /// Google Sign-In — post the provider **ID token** (`POST /auth/sso/google`).
-  Future<AppUser> signInWithGoogle(String idToken);
+  /// Google Sign-In — exchange the provider **ID token** for a Supabase session
+  /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
+  /// handed to Google's SDK; on iOS the token embeds that nonce and Supabase
+  /// needs the raw value to validate it (Android passes `null`).
+  Future<AppUser> signInWithGoogle(String idToken, {String? nonce});
 
   /// Apple Sign-In — exchange the Apple identity token for a Supabase session
   /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
@@ -168,7 +171,7 @@ class MockAuthRepository implements AuthRepository {
   Future<void> resendOtp() => _delayed(null);
 
   @override
-  Future<AppUser> signInWithGoogle(String idToken) async {
+  Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
     final user = await _delayed(
       const AppUser(id: 'user-google', name: 'Google User', isGuest: false),
     );
@@ -362,8 +365,12 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AppUser> signInWithGoogle(String idToken) async {
-    final res = await _auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+  Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
+    final res = await _auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      nonce: nonce,
+    );
     return _require(res.session);
   }
 

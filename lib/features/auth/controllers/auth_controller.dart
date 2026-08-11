@@ -106,11 +106,23 @@ class AuthController extends AsyncNotifier<void> {
   }
 
   bool _googleInitialized = false;
+  String? _googleRawNonce;
 
   /// Native "Sign in with Google". Uses `google_sign_in` 7.x (`initialize` +
   /// `authenticate`), passing the web/server client ID so the returned ID token
   /// has the audience Supabase's Google provider expects. Cancellation returns
   /// `false` with no error; real failures set the error state.
+  ///
+  /// iOS quirk: Apple's Google SDK stamps a `nonce` claim into the ID token, and
+  /// Supabase then *requires* the matching raw nonce or rejects the exchange with
+  /// "Passed nonce and nonce in id_token should either both exist or not." (This
+  /// is why iOS failed while Android — whose Credential Manager token carries no
+  /// nonce — worked.) So on Apple platforms we drive the nonce ourselves exactly
+  /// like the Apple sign-in flow: hand Google the SHA-256 hash (which it echoes
+  /// into the token verbatim) and hand Supabase the raw value (which GoTrue
+  /// re-hashes and compares). The nonce is fixed for the app session because
+  /// `initialize` runs once; that still binds the token to this client. Android
+  /// stays nonce-free, so its already-working path is unchanged.
   Future<bool> signInWithGoogle() async {
     state = const AsyncLoading();
     try {
@@ -119,6 +131,12 @@ class AuthController extends AsyncNotifier<void> {
         final isApple = !kIsWeb &&
             (defaultTargetPlatform == TargetPlatform.iOS ||
                 defaultTargetPlatform == TargetPlatform.macOS);
+        String? hashedNonce;
+        if (isApple) {
+          final rawNonce = _generateNonce();
+          _googleRawNonce = rawNonce;
+          hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+        }
         await google.initialize(
           // clientId is an iOS/macOS concept; Android rejects it.
           clientId: isApple && Env.googleIosClientId.isNotEmpty
@@ -127,6 +145,7 @@ class AuthController extends AsyncNotifier<void> {
           serverClientId: Env.googleServerClientId.isNotEmpty
               ? Env.googleServerClientId
               : null,
+          nonce: hashedNonce,
         );
         _googleInitialized = true;
       }
@@ -136,7 +155,9 @@ class AuthController extends AsyncNotifier<void> {
         throw const AuthFailure(
             message: 'Google sign-in failed — no ID token returned.');
       }
-      await ref.read(authRepositoryProvider).signInWithGoogle(idToken);
+      await ref
+          .read(authRepositoryProvider)
+          .signInWithGoogle(idToken, nonce: _googleRawNonce);
       state = const AsyncData(null);
       return true;
     } on GoogleSignInException catch (e) {
