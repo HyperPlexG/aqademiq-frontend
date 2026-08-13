@@ -31,6 +31,32 @@ class AuthController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {}
 
+  /// Ceiling on a native SSO round trip.
+  ///
+  /// The SSO flows below only leave `AsyncLoading` when the platform calls
+  /// back. If it never does — an auth sheet that cannot present, which is
+  /// exactly what an unconfigured client id produces — this notifier stays
+  /// loading forever. Every actionable control on the sign-in screen is gated
+  /// on that flag, so the screen stops responding to taps entirely, with no
+  /// error, no spinner that ends, and (before this change) no way back.
+  ///
+  /// That is what App Review hit: submission 7d5244b9, iPad Air 11-inch,
+  /// iPadOS 26.6 — "the app became unresponsive when tapping anywhere".
+  ///
+  /// Long enough for someone to actually type a password into Apple's or
+  /// Google's sheet; short enough that a wedged flow heals itself rather than
+  /// bricking the screen.
+  static const _ssoTimeout = Duration(seconds: 90);
+
+  /// Leave the loading state no matter how the flow ended.
+  ///
+  /// The individual `catch` blocks below are thorough, but they only run for
+  /// errors that reach Dart. A platform channel that never replies produces no
+  /// error at all, so correctness here cannot depend on them.
+  void _clearIfStillLoading() {
+    if (state.isLoading) state = const AsyncData(null);
+  }
+
   Future<bool> guest() =>
       _run(() => ref.read(authRepositoryProvider).signInAnonymously());
 
@@ -73,7 +99,7 @@ class AuthController extends AsyncNotifier<void> {
           AppleIDAuthorizationScopes.fullName,
         ],
         nonce: hashedNonce,
-      );
+      ).timeout(_ssoTimeout);
       final idToken = credential.identityToken;
       if (idToken == null) {
         throw const AuthFailure(
@@ -99,9 +125,18 @@ class AuthController extends AsyncNotifier<void> {
       }
       state = AsyncError(AuthFailure(message: e.message), StackTrace.current);
       return false;
+    } on TimeoutException {
+      state = AsyncError(
+        const AuthFailure(
+            message: "Apple sign-in didn't respond. Please try again."),
+        StackTrace.current,
+      );
+      return false;
     } on Object catch (e, st) {
       state = AsyncError(e, st);
       return false;
+    } finally {
+      _clearIfStillLoading();
     }
   }
 
@@ -146,10 +181,10 @@ class AuthController extends AsyncNotifier<void> {
               ? Env.googleServerClientId
               : null,
           nonce: hashedNonce,
-        );
+        ).timeout(_ssoTimeout);
         _googleInitialized = true;
       }
-      final account = await google.authenticate();
+      final account = await google.authenticate().timeout(_ssoTimeout);
       final idToken = account.authentication.idToken;
       if (idToken == null) {
         throw const AuthFailure(
@@ -177,10 +212,21 @@ class AuthController extends AsyncNotifier<void> {
                   : 'Google sign-in failed (${e.code.name}).'),
           StackTrace.current);
       return false;
+    } on TimeoutException {
+      // The sheet never came back. Most often it never presented at all —
+      // see _ssoTimeout and _googleAvailable on the sign-in screen.
+      state = AsyncError(
+        const AuthFailure(
+            message: "Google sign-in didn't respond. Please try again."),
+        StackTrace.current,
+      );
+      return false;
     } on Object catch (e, st) {
       debugPrint('Google sign-in failed (unexpected): $e');
       state = AsyncError(e, st);
       return false;
+    } finally {
+      _clearIfStillLoading();
     }
   }
 
@@ -195,7 +241,12 @@ class AuthController extends AsyncNotifier<void> {
 
   Future<bool> _run(Future<void> Function() action) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(action);
-    return !state.hasError;
+    try {
+      state = await AsyncValue.guard(action);
+      return !state.hasError;
+    } finally {
+      // AsyncValue.guard catches errors, but not a call that never returns.
+      _clearIfStillLoading();
+    }
   }
 }

@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/app_text_field.dart';
+import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
@@ -90,7 +91,14 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
 
   /// Native Google sign-in is wired for mobile; hidden until the client IDs are
   /// configured (and off the web build, which needs the button-render flow).
-  bool get _googleAvailable => !kIsWeb && Env.hasGoogleSignIn;
+  ///
+  /// Apple platforms are checked separately because they need an *iOS* client
+  /// id that Android does not. Offering the button without one is worse than
+  /// hiding it: the SDK cannot present its sheet, never calls back, and the
+  /// screen wedges on `busy` (see Env.hasAppleGoogleSignIn).
+  bool get _googleAvailable =>
+      !kIsWeb &&
+      (_appleAvailable ? Env.hasAppleGoogleSignIn : Env.hasGoogleSignIn);
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +113,13 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Sign-up and OTP both have one; this screen did not, so anything
+              // that wedged here left no way out at all.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: CircleBackButton(onTap: () => context.pop()),
+              ),
+              const SizedBox(height: 10),
               Text('Welcome.', style: AppText.sans(size: 30, weight: FontWeight.w800, color: colors.text)),
               const SizedBox(height: 4),
               Text('Sign in to continue', style: AppText.sans(size: 12, color: colors.textMed)),
