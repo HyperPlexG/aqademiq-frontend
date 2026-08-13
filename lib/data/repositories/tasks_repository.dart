@@ -48,6 +48,9 @@ class TasksRepository {
   Future<void> breakdown(String id, DateTime date) =>
       _source.breakdown(id, date);
 
+  /// Drop the occurrence's micro-steps (breakdown toggled off while editing).
+  Future<void> clearSteps(String id) => _source.clearSteps(id);
+
   Future<int> completedThisWeek(DateTime around) =>
       _source.completedThisWeek(around);
 }

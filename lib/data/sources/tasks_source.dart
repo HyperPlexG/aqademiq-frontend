@@ -24,6 +24,13 @@ abstract interface class TasksSource {
   /// come back on the next `tasksForDay` as the task's subtasks.
   Future<void> breakdown(String id, DateTime date);
 
+  /// `DELETE /tasks/{id}/steps` — drop the occurrence's micro-steps.
+  ///
+  /// Backs turning the breakdown toggle off while editing: the switch has to
+  /// actually remove the steps, or it reads "off" while the plan still shows
+  /// microtasks and the next save appends a second set on top.
+  Future<void> clearSteps(String id);
+
   /// Count of completed tasks in the Mon–Sun week containing [around].
   Future<int> completedThisWeek(DateTime around);
 }
@@ -143,6 +150,18 @@ class MockTasksSource implements TasksSource {
   }
 
   @override
+  Future<void> clearSteps(String id) {
+    for (final entry in _byDay.entries) {
+      final i = entry.value.indexWhere((t) => t.id == id);
+      if (i >= 0) {
+        entry.value[i] = entry.value[i].copyWith(subtasks: const []);
+        break;
+      }
+    }
+    return mockDelayVoid();
+  }
+
+  @override
   Future<void> breakdown(String id, DateTime date) async {
     for (final list in _byDay.values) {
       final i = list.indexWhere((t) => t.id == id);
@@ -150,9 +169,9 @@ class MockTasksSource implements TasksSource {
         final t = list[i];
         if (t.subtasks.isEmpty) {
           list[i] = t.copyWith(subtasks: [
-            SubtaskDto(id: '$id-s1', title: 'Get started on ${t.title}'),
-            SubtaskDto(id: '$id-s2', title: 'Work through the core'),
-            SubtaskDto(id: '$id-s3', title: 'Review and wrap up'),
+            SubtaskDto(id: '$id-s1', title: 'List what the brief actually asks for'),
+            SubtaskDto(id: '$id-s2', title: 'Draft the part you understand best'),
+            SubtaskDto(id: '$id-s3', title: 'Fill the gaps and check it against the brief'),
           ]);
         }
         break;
@@ -260,6 +279,13 @@ class ApiTasksSource implements TasksSource {
   @override
   Future<void> breakdown(String id, DateTime date) async {
     await _dio.postMap('/tasks/$id/breakdown', {'date': ymd(date)});
+  }
+
+  @override
+  Future<void> clearSteps(String id) async {
+    // The occurrence id already carries the date for a repeating task
+    // ("<id>@<yyyy-MM-dd>"), so only that day's steps are removed.
+    await _dio.deleteMap('/tasks/$id/steps');
   }
 
   @override

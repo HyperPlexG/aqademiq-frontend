@@ -54,7 +54,18 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   late DateTime _date;
   int _durationMin = 30;
   RepeatRule? _repeat;
-  bool _adaBreakdown = true;
+  /// Off by default. Breaking a task down costs a model call and rewrites the
+  /// user's plan, so it is opt-in rather than something that happens to every
+  /// task someone types.
+  ///
+  /// When editing, it is initialised from whether the task already HAS steps,
+  /// so the switch describes the task's real state instead of an intention.
+  bool _adaBreakdown = false;
+
+  /// What the toggle read when the screen opened. The save path compares
+  /// against it so it can tell "leave it alone" from "the user just changed
+  /// their mind", which is what decides between generating and deleting.
+  bool _hadBreakdown = false;
   bool _saving = false;
 
   @override
@@ -77,6 +88,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _date = existing.date;
       _durationMin = existing.durationMin ?? 30;
       _repeat = existing.repeat;
+      _adaBreakdown = existing.subtasks.isNotEmpty;
+      _hadBreakdown = _adaBreakdown;
       return;
     }
     _date = ref.read(selectedDateProvider);
@@ -158,12 +171,21 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           repeat: repeat,
         ));
       }
-      // Let Ada break the task into microtasks (best-effort — never blocks save).
-      if (_adaBreakdown && saved.id.isNotEmpty) {
+      // Act on the CHANGE, not on the flag. Re-running breakdown on a task that
+      // already has steps appends a second set, and re-deleting steps that were
+      // never there is a wasted round trip.
+      //
+      // Both are best-effort: the task itself is already saved, and losing the
+      // microsteps is not worth failing the save the user asked for.
+      if (saved.id.isNotEmpty && _adaBreakdown != _hadBreakdown) {
         try {
-          await repo.breakdown(saved.id, date);
+          if (_adaBreakdown) {
+            await repo.breakdown(saved.id, date);
+          } else {
+            await repo.clearSteps(saved.id);
+          }
         } on Object {
-          // Non-fatal: the task is saved even if breakdown fails.
+          // Non-fatal.
         }
       }
       ref.invalidate(dayTasksProvider);
