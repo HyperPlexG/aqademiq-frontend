@@ -1,0 +1,14 @@
+{
+  "_README": "Copy to dart_defines.json (gitignored) on EVERY machine that builds a release, including the Mac you archive from. Build with: flutter build ipa --dart-define-from-file=dart_defines.json. A missing key does not fail the build - it silently changes behaviour, which is how GOOGLE_IOS_CLIENT_ID went absent and got the app rejected (App Review 7d5244b9).",
+
+  "USE_MOCKS": "false",
+  "API_BASE_URL": "https://<supabase-ref>.supabase.co/functions/v1/api/v1",
+  "SUPABASE_URL": "https://<supabase-ref>.supabase.co",
+  "SUPABASE_ANON_KEY": "<supabase publishable/anon key>",
+
+  "_GOOGLE_SERVER_CLIENT_ID": "Google OAuth WEB client id. Passed as serverClientId so the ID token carries the audience Supabase's Google provider expects. Required on every platform.",
+  "GOOGLE_SERVER_CLIENT_ID": "<web-client>.apps.googleusercontent.com",
+
+  "_GOOGLE_IOS_CLIENT_ID": "Google OAuth iOS client id. REQUIRED on iOS/macOS: the Google SDK has no other source for it here (Info.plist has no GIDClientID and GoogleService-Info.plist is FCM-only with no CLIENT_ID). Without it the sign-in sheet cannot present, never calls back, and the sign-in screen wedges. Its reversed form must also be a CFBundleURLSchemes entry in ios/Runner/Info.plist.",
+  "GOOGLE_IOS_CLIENT_ID": "<ios-client>.apps.googleusercontent.com"
+}
