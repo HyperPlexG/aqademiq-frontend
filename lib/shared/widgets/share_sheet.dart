@@ -206,11 +206,26 @@ class _ShareInviteButton extends ConsumerWidget {
       onTap: () async {
         final code = ref.read(referralCodeProvider).value ?? '';
         final codePart = code.isEmpty ? '' : ' Use my referral code $code.';
+        // iPad presents the share sheet as a POPOVER, and UIKit requires an
+        // anchor rect for it. Without one the presentation fails on iPad while
+        // working fine on iPhone (where it is a modal sheet) — and because the
+        // failure happens in UIKit rather than Dart, the await below can never
+        // return, leaving the sheet looking frozen. iPhone ignores the rect.
+        final box = context.findRenderObject() as RenderBox?;
+        final screen = MediaQuery.sizeOf(context);
+        final origin = (box != null && box.hasSize)
+            ? box.localToGlobal(Offset.zero) & box.size
+            : Rect.fromCenter(
+                center: Offset(screen.width / 2, screen.height / 2),
+                width: 1,
+                height: 1,
+              );
         await SharePlus.instance.share(
           ShareParams(
             text: 'Join me on Aqademiq — my focus sanctuary.$codePart '
                 'https://www.aqademiq.com',
             subject: 'Join me on Aqademiq',
+            sharePositionOrigin: origin,
           ),
         );
         if (context.mounted) Navigator.of(context).pop();

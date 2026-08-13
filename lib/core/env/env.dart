@@ -78,6 +78,25 @@ abstract final class Env {
   /// the minimum; iOS additionally needs the iOS client ID + URL scheme).
   static bool get hasGoogleSignIn => googleServerClientId.isNotEmpty;
 
+  /// Whether native Google sign-in can actually run on **Apple** platforms.
+  ///
+  /// The Google iOS SDK needs a client id and has exactly three places to look
+  /// for one: this define, `GIDClientID` in `Info.plist`, or `CLIENT_ID` in
+  /// `GoogleService-Info.plist`. Ours is an FCM-only plist with no `CLIENT_ID`,
+  /// and there is no `GIDClientID` — so without this define there is no client
+  /// id anywhere and `initialize()` cannot succeed.
+  ///
+  /// That matters more than a hidden button: the sheet never presents, the
+  /// platform never calls back, and the sign-in screen — whose every control is
+  /// gated on `isLoading` — stops responding to taps. App Review saw exactly
+  /// that (submission 7d5244b9, iPad Air 11-inch, iPadOS 26.6).
+  ///
+  /// Deliberately separate from [hasGoogleSignIn]: Android needs only the
+  /// server client id, and gating it on the iOS one would break a flow that
+  /// works today.
+  static bool get hasAppleGoogleSignIn =>
+      hasGoogleSignIn && googleIosClientId.isNotEmpty;
+
   /// Client-side reminder scheduling (`services/reminder_scheduler.dart`).
   ///
   /// **On by default.** Server push (`pg_cron` → `/cron/notifications` → FCM)

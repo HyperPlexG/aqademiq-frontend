@@ -34,7 +34,18 @@ dart run build_runner watch --delete-conflicting-outputs   # continuous
 flutter run --dart-define=USE_MOCKS=false \
   --dart-define=API_BASE_URL=http://localhost:8080/v1 \
   --dart-define=SOCKET_URL=http://localhost:8080
+
+# Release builds MUST pass the defines, or config silently goes missing:
+flutter build ipa --dart-define-from-file=dart_defines.json
 ```
+
+`dart_defines.json` is **gitignored**, so it does not travel with a clone or a
+merge — every machine that builds a release needs its own copy, including the
+Mac you archive from. `dart_defines.example.json` (tracked) lists every required
+key and what breaks without it. A missing key never fails the build, it just
+changes behaviour: an absent `GOOGLE_IOS_CLIENT_ID` left the Google button
+visible but unable to present its sheet, which wedged the sign-in screen and got
+the app rejected (App Review 7d5244b9).
 
 `*.freezed.dart` / `*.g.dart` are generated (git-tracked). If analyze/build
 complains about missing generated members, re-run build_runner before editing.
