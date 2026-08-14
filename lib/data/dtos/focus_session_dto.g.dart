@@ -21,6 +21,7 @@ _FocusSessionDto _$FocusSessionDtoFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['completedAt'] as String),
       endMood: (json['endMood'] as num?)?.toInt(),
+      controlArm: json['controlArm'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$FocusSessionDtoToJson(_FocusSessionDto instance) =>
@@ -34,4 +35,5 @@ Map<String, dynamic> _$FocusSessionDtoToJson(_FocusSessionDto instance) =>
       'startedAt': instance.startedAt?.toIso8601String(),
       'completedAt': instance.completedAt?.toIso8601String(),
       'endMood': instance.endMood,
+      'controlArm': instance.controlArm,
     };

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../sound_engine/sound_engine.dart' show kPrismEngineVersion;
 import '../dtos/focus_session_dto.dart';
 import 'api_helpers.dart';
 import 'mock_latency.dart';
@@ -14,7 +15,12 @@ abstract interface class FocusSource {
     required bool paused,
   });
 
-  Future<FocusSessionDto> complete(String id, {int? mood, int? elapsedSec});
+  Future<FocusSessionDto> complete(
+    String id, {
+    int? mood,
+    int? elapsedSec,
+    int? rating,
+  });
 }
 
 class MockFocusSource implements FocusSource {
@@ -45,7 +51,12 @@ class MockFocusSource implements FocusSource {
       );
 
   @override
-  Future<FocusSessionDto> complete(String id, {int? mood, int? elapsedSec}) =>
+  Future<FocusSessionDto> complete(
+    String id, {
+    int? mood,
+    int? elapsedSec,
+    int? rating,
+  }) =>
       mockDelay(
         FocusSessionDto(
           id: id,
@@ -73,6 +84,9 @@ class ApiFocusSource implements FocusSource {
     final body = <String, dynamic>{
       'planned_min': session.durationMin,
       'prism_mode': ?session.prismMode,
+      // Which soundscape build ran, so an engine change is separable from a
+      // change in the users when the analytics are read.
+      'engine_version': kPrismEngineVersion,
       if (linkedId != null && linkedId.isNotEmpty) 'task_id': seriesIdOf(linkedId),
       if (linkedDate != null) 'task_date': ymd(linkedDate),
     };
@@ -97,10 +111,12 @@ class ApiFocusSource implements FocusSource {
     String id, {
     int? mood,
     int? elapsedSec,
+    int? rating,
   }) async {
     final json = await _dio.postMap('/focus-sessions/$id/complete', {
       'mood_index': ?mood,
       'elapsed_sec': ?elapsedSec,
+      'session_rating': ?rating,
     });
     return _toDto(json);
   }
@@ -118,6 +134,7 @@ class ApiFocusSource implements FocusSource {
       status: _statusToDto(j['status'] as String?),
       startedAt: parseDateTime(j['created_at']),
       endMood: (j['mood_index'] as num?)?.toInt(),
+      controlArm: j['control_arm'] as bool? ?? false,
     );
   }
 

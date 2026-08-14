@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +22,9 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
   static const _ink = Color(0xFF1A1320);
   static const _inkSub = Color.fromRGBO(36, 24, 52, 0.58);
   int _mood = 3;
+  /// 1-5, null until tapped. Optional by design — leaving is never blocked on it.
+  int? _rating;
+  bool _submitting = false;
 
   /// Time actually focused, not the planned duration. Ending a 30-minute
   /// session after 20 seconds must read 00:20, not 30:00 — `elapsedSec` is the
@@ -31,15 +36,35 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
-  void _backToPlan() {
+  /// Send what this screen collected, then leave.
+  ///
+  /// The mood picker was previously decorative: the timer's End button calls
+  /// complete() with no arguments and this screen only ever reset the
+  /// controller, so every mood the user selected was discarded. Both fields are
+  /// submitted here instead.
+  ///
+  /// A second complete() is safe — the server pins ended_at and the duration to
+  /// the first one, so the summary sitting on screen cannot stretch the session.
+  /// It is also best-effort: failing to record a mood must never trap someone on
+  /// this screen.
+  Future<void> _submitThen(void Function() go) async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      await ref
+          .read(focusControllerProvider.notifier)
+          .complete(mood: _mood, rating: _rating);
+    } on Object {
+      // Non-fatal.
+    }
+    if (!mounted) return;
     ref.read(focusControllerProvider.notifier).reset();
-    context.go(Routes.plan);
+    go();
   }
 
-  void _again() {
-    ref.read(focusControllerProvider.notifier).reset();
-    context.pop();
-  }
+  void _backToPlan() => unawaited(_submitThen(() => context.go(Routes.plan)));
+
+  void _again() => unawaited(_submitThen(context.pop));
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +107,11 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                   Text('Focused', style: AppText.sans(size: 12, color: _inkSub)),
                   const SizedBox(height: 18),
                   _MoodCard(selected: _mood, onSelect: (i) => setState(() => _mood = i)),
+                  const SizedBox(height: 10),
+                  _RatingCard(
+                    selected: _rating,
+                    onSelect: (v) => setState(() => _rating = _rating == v ? null : v),
+                  ),
                   const SizedBox(height: 16),
                   GestureDetector(
                     onTap: _backToPlan,
@@ -143,6 +173,77 @@ class _MoodCard extends StatelessWidget {
                     ),
                   ),
                 ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+/// Optional 1-5 rating of how the session went (`focus_sessions.session_rating`).
+///
+/// Deliberately skippable and unselected by default: a forced rating produces
+/// compliance data rather than a signal, and the analytics treat null as "not
+/// asked" rather than as a middling score. Tapping the current value clears it.
+class _RatingCard extends StatelessWidget {
+  const _RatingCard({required this.selected, required this.onSelect});
+
+  final int? selected;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'How did it go?',
+            style: AppText.sans(
+              size: 11,
+              weight: FontWeight.w700,
+              color: _FocusEndScreenState._inkSub,
+            ),
+          ),
+          const SizedBox(height: 9),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var v = 1; v <= 5; v++) ...[
+                if (v > 1) const SizedBox(width: 8),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onSelect(v),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected != null && v <= selected!
+                          ? const Color(0xFF6B5CF0)
+                          : Colors.white.withValues(alpha: 0.7),
+                    ),
+                    child: Text(
+                      '$v',
+                      style: AppText.sans(
+                        size: 13,
+                        weight: FontWeight.w700,
+                        color: selected != null && v <= selected!
+                            ? Colors.white
+                            : _FocusEndScreenState._inkSub,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ],

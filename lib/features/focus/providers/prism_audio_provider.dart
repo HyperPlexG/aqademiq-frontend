@@ -100,6 +100,16 @@ class PrismAudioController extends Notifier<PrismAudioState> {
   String _effectiveLabel(FocusSession session) =>
       session.prismMode ?? ref.read(prismDefaultModeProvider);
 
+  /// This session is in the Prism holdout, so the soundscape stays silent.
+  ///
+  /// The arm is assigned server-side and arrives on the session; the client is
+  /// told, never asked. It is checked at every point audio could start —
+  /// including an explicit mode pick — because a held-out user tapping the
+  /// Prism pill would otherwise quietly re-enter the treatment arm and spoil
+  /// their own data. Nothing is shown about it: §4.3 requires the holdout be
+  /// silent, or awareness becomes the confound it was meant to remove.
+  bool _heldOut(FocusSession session) => session.controlArm;
+
   void _onFocusChanged(FocusSession? prev, FocusSession next) {
     final prevStatus = prev?.status ?? FocusStatus.idle;
     final label = _effectiveLabel(next);
@@ -110,7 +120,7 @@ class PrismAudioController extends Notifier<PrismAudioState> {
       final prevLabel = prev == null ? null : _effectiveLabel(prev);
       final inSession = next.status == FocusStatus.running ||
           next.status == FocusStatus.paused;
-      if (inSession && prevLabel != label) {
+      if (inSession && prevLabel != label && !_heldOut(next)) {
         unawaited(
           _switchMode(label,
               whileFrozen: next.status == FocusStatus.paused),
@@ -134,7 +144,7 @@ class PrismAudioController extends Notifier<PrismAudioState> {
           }
         } else {
           final autoplay = ref.read(prismAutoplayProvider);
-          if (autoplay && label != kPrismNoSound) {
+          if (autoplay && label != kPrismNoSound && !_heldOut(next)) {
             unawaited(_start(label));
           }
         }

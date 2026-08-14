@@ -39,8 +39,14 @@ class FocusRepository {
       (await _source.checkpoint(id, elapsedSec: elapsedSec, paused: paused))
           .toModel();
 
-  Future<FocusSession> complete(String id, {int? mood, int? elapsedSec}) async =>
-      (await _source.complete(id, mood: mood, elapsedSec: elapsedSec)).toModel();
+  Future<FocusSession> complete(
+    String id, {
+    int? mood,
+    int? elapsedSec,
+    int? rating,
+  }) async =>
+      (await _source.complete(id, mood: mood, elapsedSec: elapsedSec, rating: rating))
+          .toModel();
 }
 
 final focusRepositoryProvider = Provider<FocusRepository>((ref) {
@@ -107,7 +113,7 @@ class FocusController extends Notifier<FocusSession> {
     );
   }
 
-  Future<void> complete({int? mood}) async {
+  Future<void> complete({int? mood, int? rating}) async {
     _timer?.cancel();
     state = state.copyWith(
       status: FocusStatus.completed,
@@ -117,7 +123,7 @@ class FocusController extends Notifier<FocusSession> {
     if (state.id.isNotEmpty) {
       await ref
           .read(focusRepositoryProvider)
-          .complete(state.id, mood: mood, elapsedSec: state.elapsedSec);
+          .complete(state.id, mood: mood, elapsedSec: state.elapsedSec, rating: rating);
     }
   }
 

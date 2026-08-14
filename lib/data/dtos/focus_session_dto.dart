@@ -15,6 +15,8 @@ abstract class FocusSessionDto with _$FocusSessionDto {
     DateTime? startedAt,
     DateTime? completedAt,
     int? endMood,
+    /// Server-assigned: true when Prism audio must stay off for this session.
+    @Default(false) bool controlArm,
   }) = _FocusSessionDto;
 
   factory FocusSessionDto.fromJson(Map<String, dynamic> json) =>

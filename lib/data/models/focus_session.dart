@@ -19,6 +19,9 @@ abstract class FocusSession with _$FocusSession {
     DateTime? startedAt,
     DateTime? completedAt,
     int? endMood,
+    /// Server-assigned experiment arm. When true the soundscape stays silent
+    /// for this session — the client is told, never asked (see §4.3 holdout).
+    @Default(false) bool controlArm,
   }) = _FocusSession;
 
   const FocusSession._();

@@ -20,6 +20,16 @@ typedef ParamsTransform = SoundscapeParams Function(SoundscapeParams params);
 /// The Prism engine facade (PRISM_SOUND_ENGINE_ARCHITECTURE §7): singleton
 /// lifecycle, preset switching with a 10 s stem crossfade + 5 s param lerp,
 /// and the user volume multipliers.
+/// Build identifier for the Prism engine, recorded on every focus session.
+///
+/// Sent to the backend as `engine_version` so a change in the soundscape can be
+/// separated from a change in the users: without it, "focus improved" and "we
+/// shipped a new engine" are indistinguishable in the analytics.
+///
+/// Bump this whenever the audible behaviour changes — presets, DSP chain,
+/// scheduler, or the stem manifest.
+const String kPrismEngineVersion = 'prism-1.0.0';
+
 class AdaptiveSoundEngine extends ChangeNotifier {
   factory AdaptiveSoundEngine() => instance;
 

@@ -162,6 +162,7 @@ extension FocusSessionDtoX on FocusSessionDto {
         startedAt: startedAt,
         completedAt: completedAt,
         endMood: endMood,
+        controlArm: controlArm,
       );
 }
 
