@@ -17,11 +17,15 @@ class PlanTaskExpandedCard extends StatelessWidget {
     required this.task,
     this.tag,
     this.onCollapse,
+    this.onToggleStep,
   });
 
   final Task task;
   final Tag? tag;
   final VoidCallback? onCollapse;
+
+  /// Tick a micro-step off. Null renders the list read-only.
+  final ValueChanged<Subtask>? onToggleStep;
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +36,7 @@ class PlanTaskExpandedCard extends StatelessWidget {
     final total = subtasks.isEmpty ? 1 : subtasks.length;
     final progress = doneCount / total;
 
-    return GestureDetector(
-      onTap: onCollapse,
-      child: Container(
+    return Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: colors.surface,
@@ -45,7 +47,13 @@ class PlanTaskExpandedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            IntrinsicHeight(
+            // Only the header collapses. Wrapping the whole card meant a tap on
+            // a micro-step bubbled up here and closed it, which is what made the
+            // list look unusable.
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onCollapse,
+              child: IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -108,6 +116,7 @@ class PlanTaskExpandedCard extends StatelessWidget {
                 ],
               ),
             ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 13),
               child: ClipRRect(
@@ -129,13 +138,15 @@ class PlanTaskExpandedCard extends StatelessWidget {
                       subtask: subtasks[i],
                       isFirst: i == 0,
                       isLast: i == subtasks.length - 1,
+                      onTap: onToggleStep == null
+                          ? null
+                          : () => onToggleStep!(subtasks[i]),
                     ),
                 ],
               ),
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -163,16 +174,27 @@ class _AdaBadge extends StatelessWidget {
 }
 
 class _MicrotaskRow extends StatelessWidget {
-  const _MicrotaskRow({required this.subtask, required this.isFirst, required this.isLast});
+  const _MicrotaskRow({
+    required this.subtask,
+    required this.isFirst,
+    required this.isLast,
+    this.onTap,
+  });
   final Subtask subtask;
   final bool isFirst;
   final bool isLast;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final done = subtask.done;
-    return IntrinsicHeight(
+    return GestureDetector(
+      // Opaque and wrapping the whole row: the circle alone is 15px, far under
+      // a comfortable touch target, and the row is what reads as tappable.
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -215,6 +237,7 @@ class _MicrotaskRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

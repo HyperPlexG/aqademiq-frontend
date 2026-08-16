@@ -63,6 +63,30 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     }
   }
 
+  /// Optimistically tick a micro-step off, rolling back on failure.
+  ///
+  /// The whole point of a breakdown is working through it, so this has to feel
+  /// instant — the step was previously not tappable at all, and a round trip
+  /// before the tick appears would make it feel broken in a different way.
+  Future<void> toggleStep(Task task, Subtask step) async {
+    final previous = state.value ?? const <Task>[];
+    final done = !step.done;
+    final next = task.copyWith(
+      subtasks: [
+        for (final s in task.subtasks)
+          if (s.id == step.id) s.copyWith(done: done) else s,
+      ],
+    );
+    state = AsyncData([
+      for (final t in previous) if (t.id == task.id) next else t,
+    ]);
+    try {
+      await ref.read(tasksRepositoryProvider).setStepDone(task.id, step.id, done: done);
+    } on Object catch (_) {
+      state = AsyncData(previous);
+    }
+  }
+
   /// Move a task to another day — it leaves the current day's list.
   Future<void> move(Task task, DateTime newDate) async {
     final previous = state.value ?? const <Task>[];

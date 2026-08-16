@@ -48,6 +48,10 @@ class TasksRepository {
   Future<void> breakdown(String id, DateTime date) =>
       _source.breakdown(id, date);
 
+  /// Tick a micro-step off, or un-tick it.
+  Future<void> setStepDone(String id, String stepId, {required bool done}) =>
+      _source.setStepDone(id, stepId, done: done);
+
   /// Drop the occurrence's micro-steps (breakdown toggled off while editing).
   Future<void> clearSteps(String id) => _source.clearSteps(id);
 

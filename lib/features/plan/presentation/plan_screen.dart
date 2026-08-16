@@ -193,6 +193,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   onTogglePlanned: () => setState(() => _plannedOpen = !_plannedOpen),
                   onToggleDone: _toggleDone,
                   onExpand: (t) => ref.read(expandedTaskProvider.notifier).toggle(t.id),
+                  onToggleStep: _toggleStep,
                   onLater: _later,
                   onDelete: _delete,
                   onOverflow: _overflow,
@@ -206,6 +207,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   void _toggleDone(Task t) => ref.read(dayTasksProvider.notifier).toggleDone(t);
+
+  void _toggleStep(Task t, Subtask s) =>
+      unawaited(ref.read(dayTasksProvider.notifier).toggleStep(t, s));
 
   void _delete(Task t) => unawaited(ref.read(dayTasksProvider.notifier).delete(t));
 
@@ -300,6 +304,7 @@ class _PlanTimeline extends StatelessWidget {
     required this.onTogglePlanned,
     required this.onToggleDone,
     required this.onExpand,
+    required this.onToggleStep,
     required this.onLater,
     required this.onDelete,
     required this.onOverflow,
@@ -314,6 +319,7 @@ class _PlanTimeline extends StatelessWidget {
   final VoidCallback onTogglePlanned;
   final ValueChanged<Task> onToggleDone;
   final ValueChanged<Task> onExpand;
+  final void Function(Task task, Subtask step) onToggleStep;
   final ValueChanged<Task> onLater;
   final ValueChanged<Task> onDelete;
   final ValueChanged<Task> onOverflow;
@@ -330,20 +336,33 @@ class _PlanTimeline extends StatelessWidget {
         CollapseHead(label: 'ANYTIME', count: anytime.length, open: anytimeOpen, icon: Icons.schedule, onTap: onToggleAnytime),
         if (anytimeOpen)
           for (final t in anytime)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _SwipeableTask(
+            // Anytime tasks expand exactly like planned ones. This branch used
+            // to build a plain card unconditionally, so a broken-down anytime
+            // task had no way to ever show its steps — the breakdown existed in
+            // the database and was simply unreachable in the UI.
+            if (expandedId == t.id && t.subtasks.isNotEmpty)
+              PlanTaskExpandedCard(
                 task: t,
-                onLater: () => onLater(t),
-                onDelete: () => onDelete(t),
-                onOverflow: () => onOverflow(t),
-                child: PlanTaskCard(
+                tag: resolveStudyTag(tagsById.values, t.tagId),
+                onCollapse: () => onExpand(t),
+                onToggleStep: (s) => onToggleStep(t, s),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _SwipeableTask(
                   task: t,
-                  tag: resolveStudyTag(tagsById.values, t.tagId),
-                  onToggleDone: () => onToggleDone(t),
+                  onLater: () => onLater(t),
+                  onDelete: () => onDelete(t),
+                  onOverflow: () => onOverflow(t),
+                  child: PlanTaskCard(
+                    task: t,
+                    tag: resolveStudyTag(tagsById.values, t.tagId),
+                    onToggleDone: () => onToggleDone(t),
+                    onTap: t.subtasks.isNotEmpty ? () => onExpand(t) : null,
+                  ),
                 ),
               ),
-            ),
         const SizedBox(height: 8),
         CollapseHead(label: 'PLANNED', count: planned.length, open: plannedOpen, onTap: onTogglePlanned),
         if (plannedOpen)
@@ -360,6 +379,7 @@ class _PlanTimeline extends StatelessWidget {
                 task: t,
                 tag: resolveStudyTag(tagsById.values, t.tagId),
                 onCollapse: () => onExpand(t),
+                onToggleStep: (s) => onToggleStep(t, s),
               )
             else
               _SwipeableTask(

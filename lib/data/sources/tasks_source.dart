@@ -24,6 +24,12 @@ abstract interface class TasksSource {
   /// come back on the next `tasksForDay` as the task's subtasks.
   Future<void> breakdown(String id, DateTime date);
 
+  /// `PATCH /tasks/{id}/steps/{stepId}` — tick a micro-step off, or un-tick it.
+  ///
+  /// `done` is explicit rather than a toggle so a retried request cannot flip
+  /// the step back to where it started.
+  Future<void> setStepDone(String id, String stepId, {required bool done});
+
   /// `DELETE /tasks/{id}/steps` — drop the occurrence's micro-steps.
   ///
   /// Backs turning the breakdown toggle off while editing: the switch has to
@@ -145,6 +151,24 @@ class MockTasksSource implements TasksSource {
   Future<void> delete(String id) async {
     for (final entry in _byDay.entries) {
       entry.value.removeWhere((t) => t.id == id);
+    }
+    return mockDelayVoid();
+  }
+
+  @override
+  Future<void> setStepDone(String id, String stepId, {required bool done}) {
+    for (final entry in _byDay.entries) {
+      final i = entry.value.indexWhere((t) => t.id == id);
+      if (i >= 0) {
+        final t = entry.value[i];
+        entry.value[i] = t.copyWith(
+          subtasks: [
+            for (final s in t.subtasks)
+              if (s.id == stepId) s.copyWith(done: done) else s,
+          ],
+        );
+        break;
+      }
     }
     return mockDelayVoid();
   }
@@ -279,6 +303,11 @@ class ApiTasksSource implements TasksSource {
   @override
   Future<void> breakdown(String id, DateTime date) async {
     await _dio.postMap('/tasks/$id/breakdown', {'date': ymd(date)});
+  }
+
+  @override
+  Future<void> setStepDone(String id, String stepId, {required bool done}) async {
+    await _dio.patchMap('/tasks/$id/steps/$stepId', {'done': done});
   }
 
   @override
