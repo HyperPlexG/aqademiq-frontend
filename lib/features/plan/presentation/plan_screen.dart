@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -51,6 +52,8 @@ class PlanScreen extends ConsumerStatefulWidget {
 class _PlanScreenState extends ConsumerState<PlanScreen> {
   bool _anytimeOpen = true;
   bool _plannedOpen = true;
+  /// A breakdown is a model call. Guards against a second tap spending it twice.
+  bool _breakingDown = false;
 
   Future<void> _add() async {
     final result = await showQuickAddSheet(context);
@@ -217,25 +220,55 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   // silently jumping the task to tomorrow.
   void _later(Task t) => unawaited(_reschedule(t));
 
-  // "Break down": generate micro-tasks server-side (Ada, or a fallback) when the
-  // task has none yet, then expand to reveal them.
+  /// "Break down" / "Break down more".
+  ///
+  /// This used to skip the call entirely when the task already had steps and
+  /// only toggle the expansion, so "Break down more" appeared to do nothing —
+  /// it re-showed the same three. With steps present it now REFINES: the server
+  /// hands them to the model and asks it to split each one, and rejects a result
+  /// that came back no finer, so a failed refinement leaves them untouched
+  /// rather than replacing good steps with a generic three.
   Future<void> _breakDown(Task t) async {
-    if (t.subtasks.isEmpty) {
-      try {
-        await ref
-            .read(tasksRepositoryProvider)
-            .breakdown(t.id, ref.read(selectedDateProvider));
-        ref.invalidate(dayTasksProvider);
-      } on Object {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Couldn't break this down. Try again.")),
-          );
-        }
-        return;
+    if (_breakingDown) return;
+    final refine = t.subtasks.isNotEmpty;
+    setState(() => _breakingDown = true);
+
+    final messenger = ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      // A model call takes seconds; without this the button looks dead.
+      ..showSnackBar(SnackBar(
+        content: Text(refine ? 'Adding more detail…' : 'Breaking this down…'),
+        duration: const Duration(seconds: 30),
+      ));
+
+    try {
+      await ref
+          .read(tasksRepositoryProvider)
+          .breakdown(t.id, ref.read(selectedDateProvider), refine: refine);
+      ref.invalidate(dayTasksProvider);
+      if (!mounted) return;
+      messenger.hideCurrentSnackBar();
+      // Expand rather than toggle: after generating steps, collapsing the card
+      // would hide the very thing the user just asked for.
+      if (ref.read(expandedTaskProvider) != t.id) {
+        ref.read(expandedTaskProvider.notifier).toggle(t.id);
       }
+    } on Object catch (e) {
+      if (!mounted) return;
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(
+            e is Failure
+                ? e.message
+                : refine
+                    ? "Couldn't add more detail. Your steps are unchanged."
+                    : "Couldn't break this down. Try again.",
+          ),
+        ));
+    } finally {
+      if (mounted) setState(() => _breakingDown = false);
     }
-    ref.read(expandedTaskProvider.notifier).toggle(t.id);
   }
 
   void _moveToTomorrow(Task t) {

@@ -45,8 +45,8 @@ class TasksRepository {
   Future<void> delete(String id) => _source.delete(id);
 
   /// Generate micro-steps for the task occurrence (server-side; Ada or fallback).
-  Future<void> breakdown(String id, DateTime date) =>
-      _source.breakdown(id, date);
+  Future<void> breakdown(String id, DateTime date, {bool refine = false}) =>
+      _source.breakdown(id, date, refine: refine);
 
   /// Tick a micro-step off, or un-tick it.
   Future<void> setStepDone(String id, String stepId, {required bool done}) =>

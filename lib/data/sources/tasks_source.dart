@@ -22,7 +22,11 @@ abstract interface class TasksSource {
   /// `POST /tasks/{id}/breakdown` — generate micro-steps for the occurrence
   /// (Ada, or a server-side fallback). The steps are attached server-side and
   /// come back on the next `tasksForDay` as the task's subtasks.
-  Future<void> breakdown(String id, DateTime date);
+  ///
+  /// [refine] is "break down more": the server hands the task's current steps to
+  /// the model and asks it to split each one, so the result is genuinely finer
+  /// rather than another breakdown of the same shape.
+  Future<void> breakdown(String id, DateTime date, {bool refine});
 
   /// `PATCH /tasks/{id}/steps/{stepId}` — tick a micro-step off, or un-tick it.
   ///
@@ -186,12 +190,23 @@ class MockTasksSource implements TasksSource {
   }
 
   @override
-  Future<void> breakdown(String id, DateTime date) async {
+  Future<void> breakdown(String id, DateTime date, {bool refine = false}) async {
     for (final list in _byDay.values) {
       final i = list.indexWhere((t) => t.id == id);
       if (i >= 0) {
         final t = list[i];
-        if (t.subtasks.isEmpty) {
+        // mock == real (README seam 3): refining REPLACES the current steps
+        // with a finer set, rather than leaving them as they are. A mock that
+        // no-ops here would hide exactly the bug this parameter exists to fix.
+        if (refine && t.subtasks.isNotEmpty) {
+          list[i] = t.copyWith(subtasks: [
+            SubtaskDto(id: '$id-r1', title: 'Re-read the brief and list every deliverable'),
+            SubtaskDto(id: '$id-r2', title: 'Mark which deliverables you can already do'),
+            SubtaskDto(id: '$id-r3', title: 'Draft the section you understand best'),
+            SubtaskDto(id: '$id-r4', title: 'Work the parts you flagged as unclear'),
+            SubtaskDto(id: '$id-r5', title: 'Check the draft against the brief line by line'),
+          ]);
+        } else if (t.subtasks.isEmpty) {
           list[i] = t.copyWith(subtasks: [
             SubtaskDto(id: '$id-s1', title: 'List what the brief actually asks for'),
             SubtaskDto(id: '$id-s2', title: 'Draft the part you understand best'),
@@ -301,8 +316,11 @@ class ApiTasksSource implements TasksSource {
   Future<void> delete(String id) => _dio.deleteMap('/tasks/$id');
 
   @override
-  Future<void> breakdown(String id, DateTime date) async {
-    await _dio.postMap('/tasks/$id/breakdown', {'date': ymd(date)});
+  Future<void> breakdown(String id, DateTime date, {bool refine = false}) async {
+    await _dio.postMap('/tasks/$id/breakdown', {
+      'date': ymd(date),
+      if (refine) 'refine': true,
+    });
   }
 
   @override

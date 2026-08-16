@@ -36,7 +36,8 @@ class _RecordingRepo extends TasksRepository {
   Future<Task> update(Task task) async => task;
 
   @override
-  Future<void> breakdown(String id, DateTime date) async => breakdownCalls.add(id);
+  Future<void> breakdown(String id, DateTime date, {bool refine = false}) async =>
+      breakdownCalls.add(id);
 
   @override
   Future<void> clearSteps(String id) async => clearCalls.add(id);
