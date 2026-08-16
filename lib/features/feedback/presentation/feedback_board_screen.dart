@@ -14,6 +14,7 @@ import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_post.dart';
 import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
@@ -66,6 +67,12 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     _search.clear();
     setState(() => _hasText = false);
     ref.read(feedbackSearchProvider.notifier).set('');
+  }
+
+  /// One-tap recovery from a filtered-to-nothing result.
+  void _clearAllFilters() {
+    _clearSearch();
+    ref.read(feedbackStatusFilterProvider.notifier).set(null);
   }
 
   /// Guests may browse but not write — prompt sign-up at the point of action
@@ -159,6 +166,13 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     final sort = ref.watch(feedbackSortProvider);
     final statusFilter = ref.watch(feedbackStatusFilterProvider);
     final postsAsync = ref.watch(feedbackPostsProvider);
+    // Use the APPLIED search (what the posts provider actually fetched with),
+    // not the raw field text, so "filtered to nothing" vs "truly empty" is
+    // decided on the same inputs as the data. Board view bypasses the status
+    // filter (see feedbackPostsProvider), so only search counts there.
+    final appliedSearch = ref.watch(feedbackSearchProvider).trim();
+    final isFiltered = appliedSearch.isNotEmpty ||
+        (view == FeedbackView.list && statusFilter != null);
 
     return Scaffold(
       backgroundColor: colors.bg,
@@ -254,16 +268,20 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                 data: (posts) => view == FeedbackView.list
                     ? _ListBody(
                         posts: posts,
+                        isFiltered: isFiltered,
                         onOpen: _open,
                         onVote: _vote,
+                        onClearFilters: _clearAllFilters,
                         onLoadMore: () => unawaited(
                           ref.read(feedbackPostsProvider.notifier).loadMore(),
                         ),
                       )
                     : _BoardBody(
                         posts: posts,
+                        isFiltered: isFiltered,
                         onOpen: _open,
                         onVote: _vote,
+                        onClearFilters: _clearAllFilters,
                       ),
               ),
             ),
@@ -286,14 +304,21 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
 class _ListBody extends StatelessWidget {
   const _ListBody({
     required this.posts,
+    required this.isFiltered,
     required this.onOpen,
     required this.onVote,
+    required this.onClearFilters,
     required this.onLoadMore,
   });
 
   final List<FeedbackPost> posts;
+
+  /// Whether a search/status filter produced this (possibly empty) list —
+  /// decides which empty state to show.
+  final bool isFiltered;
   final ValueChanged<FeedbackPost> onOpen;
   final ValueChanged<FeedbackPost> onVote;
+  final VoidCallback onClearFilters;
 
   /// Called when the list is scrolled near the bottom, to fetch the next page.
   final VoidCallback onLoadMore;
@@ -321,32 +346,28 @@ class _ListBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        if (posts.isEmpty)
+        // Filtered-to-nothing offers a one-tap way back; a genuinely empty
+        // board invites the first suggestion (the pinned button below is the
+        // CTA, so neither variant adds its own).
+        if (posts.isEmpty && isFiltered)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 36),
-            child: Column(
-              children: [
-                Icon(Icons.forum_outlined, size: 34, color: colors.textDim),
-                const SizedBox(height: 10),
-                Text(
-                  'No suggestions match',
-                  style: AppText.sans(
-                    size: 13,
-                    weight: FontWeight.w800,
-                    color: colors.text,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Try a different search or filter — or make the first suggestion.',
-                  textAlign: TextAlign.center,
-                  style: AppText.sans(
-                    size: 11,
-                    height: 1.5,
-                    color: colors.textMed,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: EmptyState.compact(
+              title: 'No suggestions match',
+              subtitle: 'Nothing fits that search or filter — loosen it up, or suggest it yourself.',
+              expr: AdaExpr.meh,
+              ctaLabel: 'Clear filters',
+              ctaIcon: Icons.close,
+              onCta: onClearFilters,
+            ),
+          )
+        else if (posts.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: EmptyState(
+              title: 'Uhh... nothing here yet',
+              subtitle: 'Be the first — tell us what Aqademiq should build next. We read everything.',
+              sparkles: true,
             ),
           )
         else
@@ -369,17 +390,46 @@ class _ListBody extends StatelessWidget {
 class _BoardBody extends StatelessWidget {
   const _BoardBody({
     required this.posts,
+    required this.isFiltered,
     required this.onOpen,
     required this.onVote,
+    required this.onClearFilters,
   });
 
   final List<FeedbackPost> posts;
+
+  /// Whether a search query produced this (possibly empty) board — the status
+  /// filter doesn't apply in board view.
+  final bool isFiltered;
   final ValueChanged<FeedbackPost> onOpen;
   final ValueChanged<FeedbackPost> onVote;
+  final VoidCallback onClearFilters;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // A wall of six empty columns says nothing — greet instead (the pinned
+    // "Make a suggestion" button below stays the CTA for the unfiltered case).
+    if (posts.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          child: isFiltered
+              ? EmptyState.compact(
+                  title: 'No suggestions match',
+                  subtitle: 'Nothing fits that search — loosen it up.',
+                  expr: AdaExpr.meh,
+                  ctaLabel: 'Clear search',
+                  ctaIcon: Icons.close,
+                  onCta: onClearFilters,
+                )
+              : const EmptyState(
+                  title: 'The board is a blank canvas',
+                  subtitle: 'Suggestions land here once ideas start rolling in — yours could be first.',
+                  expr: AdaExpr.smile,
+                ),
+        ),
+      );
+    }
     return ListView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 2, 6, 12),

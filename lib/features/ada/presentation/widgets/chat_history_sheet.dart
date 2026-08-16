@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/ada_repository.dart';
+import '../../../../shared/mascot/ada_mascot.dart';
+import '../../../../shared/widgets/empty_state.dart';
 
 /// FRAMES `ada-history` — chat-history slide-over panel. Lists the user's past
 /// Ada conversations; tapping one loads it into the chat, and the compose icon
@@ -134,9 +136,19 @@ class _ChatHistoryPanel extends ConsumerWidget {
                       ),
                       data: (list) {
                         if (list.isEmpty) {
-                          return _Empty(
-                            colors: colors,
-                            label: 'No chats yet — start one with Ada',
+                          return Center(
+                            child: SingleChildScrollView(
+                              child: EmptyState.compact(
+                                title: 'Uhh... no chats yet',
+                                subtitle:
+                                    'Every conversation you have with Ada lands '
+                                    "here. Start one and I'll keep the receipts.",
+                                expr: AdaExpr.smile,
+                                ctaLabel: 'Start a chat',
+                                ctaIcon: Icons.edit_note,
+                                onCta: newConversation,
+                              ),
+                            ),
                           );
                         }
                         return ListView.separated(

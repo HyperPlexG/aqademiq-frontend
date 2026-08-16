@@ -93,7 +93,13 @@ class _Body extends ConsumerWidget {
                 children: [
                   Text('Keep it frozen, ${name.split(' ').first}', style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
                   const SizedBox(height: 2),
-                  Text(streak == 1 ? '1-day streak' : '$streak-day streak', style: AppText.sans(size: 10.5, color: colors.textMed)),
+                  // "0-day streak" is a deflating opener — invite instead.
+                  Text(
+                    streak == 0
+                        ? 'Start your streak — log today'
+                        : (streak == 1 ? '1-day streak' : '$streak-day streak'),
+                    style: AppText.sans(size: 10.5, color: colors.textMed),
+                  ),
                 ],
               ),
             ),
@@ -137,11 +143,41 @@ class _StatsCard extends StatelessWidget {
     final colors = context.colors;
     return AppCard(
       padding: EdgeInsets.zero,
-      child: Row(
+      child: Column(
         children: [
-          Expanded(child: _StatCol(value: '$streak', label: 'DAY STREAK', sub: '$streak/7 days', progress: (streak / 7).clamp(0, 1))),
-          Container(width: 1, height: 64, color: colors.border),
-          Expanded(child: _StatCol(value: '$completed', label: 'COMPLETED', sub: '$completed/12 tasks', progress: (completed / 12).clamp(0, 1))),
+          Row(
+            children: [
+              Expanded(child: _StatCol(value: '$streak', label: 'DAY STREAK', sub: '$streak/7 days', progress: (streak / 7).clamp(0, 1))),
+              Container(width: 1, height: 64, color: colors.border),
+              Expanded(child: _StatCol(value: '$completed', label: 'COMPLETED', sub: '$completed/12 tasks', progress: (completed / 12).clamp(0, 1))),
+            ],
+          ),
+          // First-run zeros read as dead; keep the tiles (they're the layout
+          // users grow into) and add one line pointing at the first win.
+          if (streak == 0 && completed == 0) ...[
+            Container(height: 1, color: colors.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: Row(
+                children: [
+                  const AdaMascot(size: 20, expr: AdaExpr.neutral),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Fresh week, clean slate — tick a task or log a mood and these numbers start moving.',
+                      style: AppText.sans(size: 10.5, height: 1.4, color: colors.textMed),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => unawaited(context.push(Routes.moodMorning)),
+                    behavior: HitTestBehavior.opaque,
+                    child: Text('Log mood →', style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.accent)),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -269,6 +305,8 @@ class _MoodCard extends ConsumerWidget {
     final monday = today.subtract(Duration(days: today.weekday - 1));
     final todayIndex = today.weekday - 1;
     final reflections = _weekReflections(monday);
+    final weekEmpty =
+        !List.generate(7, (i) => _moodFor(monday, i)).any((m) => m != null);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,6 +334,18 @@ class _MoodCard extends ConsumerWidget {
                 ),
             ],
           ),
+          // Brand-new week: seven hollow boxes explain nothing on their own.
+          if (weekEmpty) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => unawaited(_editDay(context, ref, today)),
+              child: Text(
+                "Uhh... no vibes recorded yet — tap today's + to log how you're feeling.",
+                style: AppText.sans(size: 10.5, height: 1.4, color: colors.textDim),
+              ),
+            ),
+          ],
           if (reflections.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(height: 1, color: colors.border),
