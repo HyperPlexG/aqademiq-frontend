@@ -140,10 +140,9 @@ class _ChatHistoryPanel extends ConsumerWidget {
                             child: SingleChildScrollView(
                               child: EmptyState.compact(
                                 title: 'Uhh... no chats yet',
-                                subtitle:
-                                    'Every conversation you have with Ada lands '
-                                    "here. Start one and I'll keep the receipts.",
+                                subtitle: 'Our conversations land here.',
                                 expr: AdaExpr.smile,
+                                cheeks: true,
                                 ctaLabel: 'Start a chat',
                                 ctaIcon: Icons.edit_note,
                                 onCta: newConversation,

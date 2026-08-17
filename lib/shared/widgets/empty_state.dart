@@ -22,6 +22,8 @@ class EmptyState extends StatefulWidget {
     this.subtitle,
     this.expr = AdaExpr.happy,
     this.sparkles = false,
+    this.cheeks = false,
+    this.sweat = false,
     this.ctaLabel,
     this.onCta,
     this.ctaIcon = Icons.add,
@@ -36,6 +38,8 @@ class EmptyState extends StatefulWidget {
     this.subtitle,
     this.expr = AdaExpr.happy,
     this.sparkles = false,
+    this.cheeks = false,
+    this.sweat = false,
     this.ctaLabel,
     this.onCta,
     this.ctaIcon = Icons.add,
@@ -46,10 +50,19 @@ class EmptyState extends StatefulWidget {
   final String? subtitle;
 
   /// Ada's face for this moment (happy by default; pick per context).
+  ///
+  /// Lean on these rather than on longer copy — [expr] plus [sparkles],
+  /// [cheeks] and [sweat] carry the tone, so the text can stay short.
   final AdaExpr expr;
 
   /// Draw sparkles behind Ada for celebratory empties ("all done!").
   final bool sparkles;
+
+  /// Blush — warmth for a friendly invitation.
+  final bool cheeks;
+
+  /// A sweat bead — mild "oops" for gone / failed states.
+  final bool sweat;
 
   /// When both [ctaLabel] and [onCta] are given, an ink pill button renders
   /// under the copy (e.g. "Add a task" reusing the screen's existing handler).
@@ -109,6 +122,8 @@ class _EmptyStateState extends State<EmptyState>
           size: compact ? 34 : 48,
           expr: widget.expr,
           sparkles: widget.sparkles,
+          cheeks: widget.cheeks,
+          sweat: widget.sweat,
         ),
       ),
     );

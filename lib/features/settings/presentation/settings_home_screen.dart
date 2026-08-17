@@ -208,7 +208,7 @@ class _TagsCard extends ConsumerWidget {
           // the "New tag" pill stranded on its own.
           if (tagsAsync.hasValue && tags.isEmpty) ...[
             Text(
-              'No tags yet — tag your work (labs, lectures, revision) so Ada can tell them apart.',
+              'No tags yet — add a few so Ada can tell labs from lectures.',
               style: AppText.sans(size: 11.5, height: 1.45, color: colors.textMed),
             ),
             const SizedBox(height: 9),

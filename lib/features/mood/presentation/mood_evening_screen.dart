@@ -193,7 +193,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                     if (logsAsync.hasValue && logs.isEmpty) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'Your week fills in as you check in each day. Tonight counts!',
+                        'Your week fills in as you check in. Tonight counts!',
                         style: AppText.sans(size: 10.5, color: colors.textDim),
                       ),
                     ],

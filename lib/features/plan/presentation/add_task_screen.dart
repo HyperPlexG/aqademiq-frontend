@@ -226,7 +226,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                           // showing a lone dashed chip (skip while loading).
                           if (tagsAsync.hasValue && tags.isEmpty) ...[
                             Text(
-                              'No tags yet — tap "+ New" to make your first one.',
+                              'No tags yet — tap "+ New".',
                               style: AppText.sans(size: 11.5, color: colors.textDim),
                             ),
                             const SizedBox(height: 7),
@@ -260,7 +260,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                         children: [
                           if (subjectsAsync.hasValue && subjects.isEmpty) ...[
                             Text(
-                              "No subjects yet — once you add them, they'll show up here.",
+                              "No subjects yet — they'll show up here.",
                               style: AppText.sans(size: 11.5, color: colors.textDim),
                             ),
                             const SizedBox(height: 7),

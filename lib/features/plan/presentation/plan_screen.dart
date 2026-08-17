@@ -469,8 +469,9 @@ class _PlanListGrouped extends ConsumerWidget {
         child: SingleChildScrollView(
           child: EmptyState(
             title: 'Uhh... nothing here yet',
-            subtitle: 'Add a task and Ada will slot it into your day.',
+            subtitle: "Add a task and I'll slot it in.",
             expr: AdaExpr.smile,
+            cheeks: true,
             ctaLabel: 'Add a task',
             onCta: onAdd,
           ),
@@ -538,8 +539,9 @@ class _OtherDayEmpty extends StatelessWidget {
         if (isToday)
           const EmptyState.compact(
             title: 'Clean slate!',
-            subtitle: 'Nothing planned today — add one small thing to get rolling.',
+            subtitle: 'Add one small thing to get rolling.',
             sparkles: true,
+            cheeks: true,
           ),
         const CollapseHead(label: 'ANYTIME', count: 0, open: true, icon: Icons.schedule),
         AddRow(onTap: onAdd),

@@ -55,8 +55,9 @@ class SubjectDetailScreen extends ConsumerWidget {
       } else if (subjectsAsync.hasError) {
         body = EmptyState(
           title: "Couldn't load your subjects",
-          subtitle: 'Something went wrong on the way there. Give it another go.',
+          subtitle: 'Give it another go.',
           expr: AdaExpr.meh,
+          sweat: true,
           ctaLabel: 'Try again',
           ctaIcon: Icons.refresh,
           onCta: () => ref.invalidate(subjectsProvider),
@@ -64,8 +65,9 @@ class SubjectDetailScreen extends ConsumerWidget {
       } else {
         body = EmptyState(
           title: 'Uhh... this subject melted away',
-          subtitle: 'It may have been deleted, or the link is stale. Head back and pick one from your list.',
+          subtitle: "Deleted, or the link's gone stale.",
           expr: AdaExpr.sad,
+          sweat: true,
           ctaLabel: 'Back to subjects',
           ctaIcon: Icons.arrow_back,
           onCta: () => context.pop(),
@@ -171,7 +173,7 @@ class SubjectDetailScreen extends ConsumerWidget {
                                 const SizedBox(width: 9),
                                 Expanded(
                                   child: Text(
-                                    'No materials yet — drop in your syllabus or notes and I can plan your week smarter.',
+                                    'Drop in your syllabus or notes so I can plan smarter.',
                                     style: AppText.sans(size: 10.5, height: 1.4, color: colors.text),
                                   ),
                                 ),

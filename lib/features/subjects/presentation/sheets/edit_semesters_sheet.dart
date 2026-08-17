@@ -57,7 +57,7 @@ class _EditSemestersBody extends ConsumerWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Create your first term and your subjects will file themselves under it.',
+                    'Add a term and your subjects will file under it.',
                     textAlign: TextAlign.center,
                     style: AppText.sans(size: 11, height: 1.5, color: colors.textMed),
                   ),

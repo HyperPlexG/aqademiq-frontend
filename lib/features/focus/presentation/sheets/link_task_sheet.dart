@@ -114,7 +114,7 @@ class _LinkTaskSheetState extends ConsumerState<_LinkTaskSheet> {
                       const SizedBox(width: 9),
                       Expanded(
                         child: Text(
-                          "Nothing planned today — add a task in Plan and it'll show up here, or just focus freely.",
+                          'Nothing planned today — focus freely, or add a task in Plan.',
                           style: AppText.sans(size: 11, height: 1.4, color: colors.textMed),
                         ),
                       ),

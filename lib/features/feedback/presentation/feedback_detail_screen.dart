@@ -155,8 +155,9 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
                         child: SingleChildScrollView(
                           child: EmptyState(
                             title: 'This suggestion is gone',
-                            subtitle: 'It may have been removed, or the link has gone stale. The board moves fast.',
+                            subtitle: "Removed, or the link's gone stale.",
                             expr: AdaExpr.sad,
+                            sweat: true,
                             ctaLabel: 'Back to the board',
                             ctaIcon: Icons.arrow_back,
                             onCta: () =>
@@ -418,8 +419,9 @@ class _PostBody extends ConsumerWidget {
               ? const Center(
                   child: EmptyState.compact(
                     title: 'No comments yet',
-                    subtitle: 'Start the discussion — the team reads everything.',
+                    subtitle: 'Start the discussion.',
                     expr: AdaExpr.smile,
+                    cheeks: true,
                     padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   ),
                 )

@@ -354,7 +354,7 @@ class _ListBody extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: EmptyState.compact(
               title: 'No suggestions match',
-              subtitle: 'Nothing fits that search or filter — loosen it up, or suggest it yourself.',
+              subtitle: 'Try a looser search or filter.',
               expr: AdaExpr.meh,
               ctaLabel: 'Clear filters',
               ctaIcon: Icons.close,
@@ -366,8 +366,9 @@ class _ListBody extends StatelessWidget {
             padding: EdgeInsets.symmetric(vertical: 24),
             child: EmptyState(
               title: 'Uhh... nothing here yet',
-              subtitle: 'Be the first — tell us what Aqademiq should build next. We read everything.',
+              subtitle: 'Tell us what to build next. We read everything.',
               sparkles: true,
+              cheeks: true,
             ),
           )
         else
@@ -416,16 +417,17 @@ class _BoardBody extends StatelessWidget {
           child: isFiltered
               ? EmptyState.compact(
                   title: 'No suggestions match',
-                  subtitle: 'Nothing fits that search — loosen it up.',
+                  subtitle: 'Try a looser search.',
                   expr: AdaExpr.meh,
                   ctaLabel: 'Clear search',
                   ctaIcon: Icons.close,
                   onCta: onClearFilters,
                 )
               : const EmptyState(
-                  title: 'The board is a blank canvas',
-                  subtitle: 'Suggestions land here once ideas start rolling in — yours could be first.',
+                  title: 'A blank canvas',
+                  subtitle: 'Suggestions land here. Yours could be first.',
                   expr: AdaExpr.smile,
+                  cheeks: true,
                 ),
         ),
       );
