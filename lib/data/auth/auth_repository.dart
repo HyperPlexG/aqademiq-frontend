@@ -9,6 +9,24 @@ import '../../core/error/failure.dart';
 import '../../core/network/dio_client.dart';
 import '../models/app_user.dart';
 
+/// Shown when a signup targets an email that already has an account.
+///
+/// Deliberately names Apple and Google: 40% of real accounts exist only through
+/// a social provider, and their owners genuinely do not remember signing up —
+/// to them this looks like a brand-new registration that silently fails.
+///
+/// Note this does confirm the address is registered, which Supabase itself
+/// declines to do. That is a considered trade: for a student planner the
+/// enumeration risk is slight, and the alternative is a dead end for nearly half
+/// the user base. Soften the wording here if that balance ever changes.
+const String kAccountAlreadyExists =
+    'That email already has an account. Sign in instead — and if you first '
+    'joined with Apple or Google, use that button.';
+
+/// Addresses [MockAuthRepository] treats as already registered, so the
+/// already-has-an-account path can be exercised without a live backend.
+const Set<String> kMockTakenEmails = {'taken@example.com'};
+
 /// Auth behind an interface (README §7, seam 4).
 ///
 /// ⚠️ Contract §3 / mismatch 1: authentication is the backend's **own RS256 JWT
@@ -149,6 +167,12 @@ class MockAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    // mock == real (README §7, seam 3). The live path throws for an address that
+    // already has an account; a mock that always succeeded would hide the one
+    // case worth rehearsing, since it is the failure 40% of real users meet.
+    if (kMockTakenEmails.contains(email.trim().toLowerCase())) {
+      throw const AuthFailure(message: kAccountAlreadyExists);
+    }
     _pendingEmail = email;
     _pendingName = name;
     return _delayed(AppUser(id: '', name: name, email: email));
@@ -330,6 +354,24 @@ class ApiAuthRepository implements AuthRepository {
     _pendingOtpType = OtpType.signup;
     final res = await _auth.signUp(email: email, password: password, data: {'name': name});
     if (res.session != null) return _require(res.session);
+
+    // Supabase will not say "that email is taken" — that would be a
+    // user-enumeration hole — so for an address that already has an account it
+    // returns a FAKE success: no session, an empty `identities` list, and no
+    // email sent at all.
+    //
+    // Checking only `session != null` therefore dropped the user on an OTP
+    // screen waiting for a code that was never going to arrive, and "Resend"
+    // was dead too because there was no pending signup to resend. Measured on
+    // production: 18 of 45 real accounts (40%) exist only via Apple or Google,
+    // so their owners see a first-time signup that silently goes nowhere.
+    //
+    // `identities == []` is the exact obfuscated shape. A null `user` means some
+    // other failure, so it is deliberately not treated as "already exists".
+    final identities = res.user?.identities;
+    if (identities != null && identities.isEmpty) {
+      throw const AuthFailure(message: kAccountAlreadyExists);
+    }
     return AppUser(id: '', name: name, email: email);
   }
 

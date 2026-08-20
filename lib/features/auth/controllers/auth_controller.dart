@@ -16,7 +16,22 @@ import '../../../data/auth/auth_repository.dart';
 /// Human-readable message for an auth error, whether it's a Supabase
 /// [AuthException] (the SDK's errors), a domain [Failure], or anything else.
 String authErrorMessage(Object? error) {
-  if (error is AuthException) return error.message;
+  if (error is AuthException) {
+    // Supabase returns the SAME "Invalid login credentials" whether the password
+    // was wrong or the account has no password at all. 40% of real accounts were
+    // created through Apple or Google and never had one, so the raw wording
+    // sends those users to reset a password that does not exist — and password
+    // reset is not even built yet.
+    //
+    // Nothing is looked up to say this: it is phrased as a reminder rather than
+    // a fact about the address, so it helps without becoming a way to test
+    // which emails are registered.
+    if (error.message.toLowerCase().contains('invalid login credentials')) {
+      return 'Wrong email or password. If you joined with Apple or Google, '
+          'use that button instead — those accounts have no password.';
+    }
+    return error.message;
+  }
   if (error is Failure) return error.message;
   return 'Something went wrong. Please try again.';
 }
