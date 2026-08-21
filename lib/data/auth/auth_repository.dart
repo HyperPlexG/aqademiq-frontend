@@ -76,6 +76,21 @@ abstract interface class AuthRepository {
   /// Resend the pending signup/link OTP (`POST /auth/resend-otp`).
   Future<void> resendOtp();
 
+  /// Email a password-reset code.
+  ///
+  /// Works for an account created with Apple or Google as well: completing the
+  /// reset sets a password, which CREATES the email identity those accounts
+  /// never had. That is what unsticks the 40% who currently cannot sign in with
+  /// an email at all.
+  Future<void> sendPasswordReset(String email);
+
+  /// Set a new password on the session a recovery OTP just established.
+  Future<void> setPassword(String password);
+
+  /// True while the pending OTP is a password recovery rather than a signup, so
+  /// the verify screen knows to ask for a new password instead of onboarding.
+  bool get isRecoveryPending;
+
   /// Google Sign-In — exchange the provider **ID token** for a Supabase session
   /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
   /// handed to Google's SDK; on iOS the token embeds that nonce and Supabase
@@ -193,6 +208,24 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<void> resendOtp() => _delayed(null);
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    _pendingEmail = email;
+    _mockRecovery = true;
+    await _delayed(null);
+  }
+
+  @override
+  Future<void> setPassword(String password) async {
+    _mockRecovery = false;
+    await _delayed(null);
+  }
+
+  @override
+  bool get isRecoveryPending => _mockRecovery;
+
+  bool _mockRecovery = false;
 
   @override
   Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
@@ -398,6 +431,26 @@ class ApiAuthRepository implements AuthRepository {
     _pendingName = null;
     _emit(user);
   }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    _pendingEmail = email;
+    // No name to apply afterwards — this is a returning user, not a signup.
+    _pendingName = null;
+    _pendingOtpType = OtpType.recovery;
+    await _auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> setPassword(String password) async {
+    await _auth.updateUser(UserAttributes(password: password));
+    // Only now is the recovery finished. verifyOtp deliberately leaves the type
+    // alone so the verify screen can still tell which flow it is completing.
+    _pendingOtpType = OtpType.signup;
+  }
+
+  @override
+  bool get isRecoveryPending => _pendingOtpType == OtpType.recovery;
 
   @override
   Future<void> resendOtp() async {

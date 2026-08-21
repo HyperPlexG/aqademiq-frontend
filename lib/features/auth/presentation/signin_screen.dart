@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +51,42 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
         ),
       );
     }
+  }
+
+  /// Email a reset code for whatever is in the email field.
+  ///
+  /// Uses that field rather than opening its own prompt: it is directly above
+  /// this link and usually already filled. For an Apple- or Google-only account
+  /// this is the only way to ever obtain an email login, since completing the
+  /// reset creates the email identity it never had.
+  Future<void> _forgotPassword() async {
+    final email = _email.text.trim();
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    if (email.isEmpty || !email.contains('@')) {
+      messenger.showSnackBar(const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text('Enter your email above first, then tap Forgot password.'),
+      ));
+      return;
+    }
+
+    final ok = await ref
+        .read(authControllerProvider.notifier)
+        .sendPasswordReset(email);
+    if (!mounted) return;
+
+    if (!ok) {
+      messenger.showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+      ));
+      return;
+    }
+    messenger.showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      content: Text('If $email has an account, a reset code is on its way.'),
+    ));
+    await context.push(Routes.verify);
   }
 
   Future<void> _appleSignIn() async {
@@ -159,9 +197,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Password reset arrives with account sync — coming soon.')),
-                  ),
+                  onTap: busy ? null : () => unawaited(_forgotPassword()),
                   child: Text(
                     'Forgot password?',
                     style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.accent),

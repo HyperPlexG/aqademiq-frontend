@@ -58,7 +58,14 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     final ok = await ref.read(authControllerProvider.notifier).verify(_code);
     if (!mounted) return;
     if (ok) {
-      context.go(Routes.obAge);
+      // A recovery code proves the address, it does not finish anything: the
+      // account still has no usable password until the next screen sets one.
+      // Sending it to onboarding instead would leave that half-done.
+      if (ref.read(authRepositoryProvider).isRecoveryPending) {
+        context.go(Routes.resetPassword);
+      } else {
+        context.go(Routes.obAge);
+      }
     } else {
       _showError(ref.read(authControllerProvider).error);
     }

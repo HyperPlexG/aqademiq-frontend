@@ -20,8 +20,8 @@ String authErrorMessage(Object? error) {
     // Supabase returns the SAME "Invalid login credentials" whether the password
     // was wrong or the account has no password at all. 40% of real accounts were
     // created through Apple or Google and never had one, so the raw wording
-    // sends those users to reset a password that does not exist — and password
-    // reset is not even built yet.
+    // sends those users hunting for a password they never set. The reset flow
+    // now gives them a real way out, and this message points at it.
     //
     // Nothing is looked up to say this: it is phrased as a reminder rather than
     // a fact about the address, so it helps without becoming a way to test
@@ -98,6 +98,16 @@ class AuthController extends AsyncNotifier<void> {
   /// Resend the pending signup/link OTP.
   Future<bool> resend() =>
       _run(() => ref.read(authRepositoryProvider).resendOtp());
+
+  /// Email a password-reset code. Also the only route by which an Apple- or
+  /// Google-only account can ever gain an email login: setting the password
+  /// creates the email identity it never had.
+  Future<bool> sendPasswordReset(String email) =>
+      _run(() => ref.read(authRepositoryProvider).sendPasswordReset(email));
+
+  /// Set a new password on the session the recovery OTP established.
+  Future<bool> setPassword(String password) =>
+      _run(() => ref.read(authRepositoryProvider).setPassword(password));
 
   /// Native "Sign in with Apple" (iOS/macOS). Generates a nonce, hands its
   /// SHA-256 to Apple, and passes the raw nonce + identity token to Supabase.

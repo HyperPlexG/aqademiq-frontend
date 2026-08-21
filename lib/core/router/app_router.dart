@@ -8,6 +8,7 @@ import '../../features/auth/presentation/guest_ada_prompt.dart';
 import '../../features/auth/presentation/guest_save_prompt.dart';
 import '../../features/auth/presentation/guest_stats_prompt.dart';
 import '../../features/auth/presentation/otp_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/auth/presentation/signin_screen.dart';
 import '../../features/auth/presentation/signup_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
@@ -51,6 +52,7 @@ abstract final class Routes {
   static const signin = '/signin';
   static const signup = '/signup';
   static const verify = '/verify';
+  static const resetPassword = '/reset-password';
 
   // Onboarding steps.
   static const obAge = '/onboarding/age';
@@ -113,6 +115,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.signin, builder: (_, _) => const SigninScreen()),
       GoRoute(path: Routes.signup, builder: (_, _) => const SignupScreen()),
       GoRoute(path: Routes.verify, builder: (_, _) => const OtpScreen()),
+      GoRoute(path: Routes.resetPassword, builder: (_, _) => const ResetPasswordScreen()),
       GoRoute(path: Routes.guestAda, builder: (_, _) => const GuestAdaPrompt()),
       GoRoute(path: Routes.guestStats, builder: (_, _) => const GuestStatsPrompt()),
       GoRoute(path: Routes.guestSave, builder: (_, _) => const GuestSavePrompt()),
