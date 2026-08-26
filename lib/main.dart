@@ -6,10 +6,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/env/env.dart';
+import 'core/error/global_error_handler.dart';
 import 'services/push_service.dart';
 import 'services/sound_settings_service.dart';
 
-Future<void> main() async {
+// Everything runs inside the guarded zone, including binding initialisation —
+// `runZonedGuarded` only catches errors raised in the zone it owns, and a
+// binding created outside it schedules its callbacks outside it too.
+Future<void> main() => runGuardedApp(_start);
+
+Future<void> _start() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Prism sound settings back the settings/picker providers synchronously.
   await SoundSettingsService.instance.init();

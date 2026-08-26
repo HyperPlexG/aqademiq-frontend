@@ -1,5 +1,6 @@
-import 'dart:math';
+import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -19,7 +20,6 @@ class AuthInterceptor extends Interceptor {
   }
 
   final Dio _bare;
-  final Random _rng = Random.secure();
 
   GoTrueClient get _auth => Supabase.instance.client.auth;
 
@@ -39,7 +39,7 @@ class AuthInterceptor extends Interceptor {
     if (method != 'GET' &&
         method != 'HEAD' &&
         !options.headers.containsKey('Idempotency-Key')) {
-      options.headers['Idempotency-Key'] = _idempotencyKey();
+      options.headers['Idempotency-Key'] = _idempotencyKey(options);
     }
     handler.next(options);
   }
@@ -96,13 +96,67 @@ class AuthInterceptor extends Interceptor {
     }
   }
 
-  String _idempotencyKey() {
-    const hex = '0123456789abcdef';
-    final b = StringBuffer();
-    for (var i = 0; i < 32; i++) {
-      b.write(hex[_rng.nextInt(16)]);
-      if (i == 7 || i == 11 || i == 15 || i == 19) b.write('-');
-    }
-    return b.toString();
+  String _idempotencyKey(RequestOptions options) =>
+      idempotencyKeyFor(options, at: DateTime.now());
+}
+
+/// Window within which two identical mutations are treated as one.
+///
+/// Short on purpose. Long enough to absorb a double-tap or a manual retry after
+/// a timeout; short enough that deliberately adding the same 25-minute block
+/// twice in a row still creates two.
+const kIdempotencyDedupeWindow = Duration(seconds: 5);
+
+/// An `Idempotency-Key` derived from the request itself.
+///
+/// A fresh random key per attempt made the header decorative: the backend
+/// dedupes by key, so two attempts at the *same* write arrived under two
+/// different keys and both ran. That is the exact case the header exists for — a
+/// request that timed out client-side but succeeded server-side, retried by
+/// hand, producing a second task. Hashing method + path + body means the retry
+/// presents the key the first attempt already claimed, and the backend replays
+/// its stored response instead of writing again.
+///
+/// The time bucket stops this being *too* sticky: without it the key would be
+/// stable forever, and the backend's 24h replay cache would refuse a genuinely
+/// repeated action for the rest of the day.
+///
+/// Known limitation: two taps straddling a bucket boundary land in different
+/// buckets and both go through. Widening the window would trade that away for
+/// the worse failure — refusing writes the user actually meant — so the boundary
+/// case is accepted rather than designed out.
+///
+/// Top-level rather than a method so it is reachable from a test; the enclosing
+/// interceptor touches `Supabase.instance`, which cannot be constructed in a
+/// unit test without initialising the whole SDK.
+String idempotencyKeyFor(RequestOptions options, {required DateTime at}) {
+  final bucket =
+      at.millisecondsSinceEpoch ~/ kIdempotencyDedupeWindow.inMilliseconds;
+  final body = options.data;
+  // Only encode what the server actually receives, and canonicalise it: a Map's
+  // iteration order follows insertion, so two structurally identical bodies
+  // built in a different order would otherwise hash differently and defeat the
+  // dedupe entirely.
+  final payload = body == null
+      ? ''
+      : body is String
+          ? body
+          : jsonEncode(_canonical(body));
+  final query = (options.queryParameters.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key)))
+      .map((e) => '${e.key}=${e.value}')
+      .join('&');
+  final material =
+      '${options.method.toUpperCase()}\n${options.path}\n$query\n$payload\n$bucket';
+  return sha256.convert(utf8.encode(material)).toString().substring(0, 32);
+}
+
+/// Recursively sort map keys so ordering cannot change the hash.
+Object? _canonical(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.map((k) => k.toString()).toList()..sort();
+    return {for (final k in keys) k: _canonical(value[k])};
   }
+  if (value is Iterable) return value.map(_canonical).toList();
+  return value;
 }
