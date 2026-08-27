@@ -5,6 +5,7 @@ import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_meta.dart';
 import '../../../data/models/feedback_post.dart';
 import '../../../data/repositories/feedback_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../settings/providers/profile_controller.dart';
 
 /// List / Board (kanban) view toggle for the feedback screen.
@@ -172,8 +173,13 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
           .read(feedbackRepositoryProvider)
           .setVote(post.id, voted: voted);
       // The notifier may have been recreated while the request was in flight
-      // (Riverpod 3 recreates on invalidate) — touching state then throws.
+      // (Riverpod 3 recreates on invalidate) — touching state then throws, and
+      // so does reading a provider off a disposed ref, which is why the haptic
+      // sits below this guard rather than above it.
       if (!ref.mounted) return;
+      // Lightest thing in Tier 2 — it is a small commitment. On the server's
+      // answer rather than the tap, so a vote that did not stick stays silent.
+      ref.read(hapticsProvider).voteCast();
       state = AsyncData([
         for (final p in state.value ?? previous)
           if (p.id == post.id)
@@ -210,7 +216,13 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
       createdAt: DateTime.now(),
     );
     final created = await ref.read(feedbackRepositoryProvider).create(draft);
-    if (ref.mounted) ref.invalidateSelf();
+    // After the post lands. The 403 / 429 / 400 paths throw out of here and are
+    // handled by the caller with a prompt or a message — a failed post is not
+    // one of Feedback's two budgeted events (§7).
+    if (ref.mounted) {
+      ref.read(hapticsProvider).suggestionPosted();
+      ref.invalidateSelf();
+    }
     return created;
   }
 }

@@ -57,6 +57,13 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
     ref.listen(focusControllerProvider, (prev, next) {
       if (prev?.status != FocusStatus.completed && next.status == FocusStatus.completed) {
         // A linked task is marked done when its session finishes (FOC-3).
+        //
+        // This goes straight to the repository, NOT through
+        // `DayTasksController.toggleDone` — and it must stay that way. The
+        // task-completed haptic lives in that controller, and routing this
+        // through it would fire two haptics for one user action: the session's
+        // own completion, and a task completion the user did not ask for.
+        // Spec §4.3 names this exact case as its sharpest.
         final t = ref.read(linkedTaskProvider);
         if (t != null && !t.done) {
           unawaited(ref.read(tasksRepositoryProvider).update(t.copyWith(done: true)));

@@ -11,6 +11,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/repositories/mood_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -37,7 +38,17 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
 
   int _selectedMood = 3;
 
-  void _selectMood(int idx) => setState(() => _selectedMood = idx);
+  /// Tier 3 — and one of the two exceptions where a haptic belongs to a widget
+  /// rather than a controller, because the detent *is* the interaction
+  /// (spec §6.3).
+  ///
+  /// Fires on an actual move, never on re-tapping the position already
+  /// selected, and passes the index so the tick can follow the melt ramp:
+  /// softer at "Rough", sharper at "Great" (§5.1).
+  void _selectMood(int idx) {
+    if (idx != _selectedMood) ref.read(hapticsProvider).moodRampStep(idx);
+    setState(() => _selectedMood = idx);
+  }
 
   Future<void> _setIntention() async {
     await ref.read(moodRepositoryProvider).log(
@@ -45,6 +56,8 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
           phase: MoodPhase.morning,
           mood: _selectedMood,
         );
+    // On commit, distinct from the ramp detents that preceded it.
+    ref.read(hapticsProvider).moodLogged();
     ref.invalidate(moodWeekProvider);
     if (mounted) context.go(Routes.plan);
   }
