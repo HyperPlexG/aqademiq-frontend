@@ -1,11 +1,12 @@
 # Haptics
 
 Implementation of **Aqademiq · Haptic feedback specification · v1 ("The Melt
-Ramp")** and its companion implementation guide.
+Ramp")** and its companion guide, [`docs/HAPTICS_IMPLEMENTATION.md`](docs/HAPTICS_IMPLEMENTATION.md).
 
 The spec says *what* and *why*; the guide says *where*. This file says **what
 was actually built**, which stage each file belongs to, and the six places the
-two documents disagreed or ran out of road.
+two documents disagreed or ran out of road. Read the guide first — nothing here
+repeats its reasoning either.
 
 ---
 
@@ -194,8 +195,11 @@ also commented at the code site.
 ```sh
 flutter test test/haptics_governor_test.dart
 flutter test test/haptics_focus_once_test.dart
+flutter test test/haptics_tab_change_test.dart
 flutter analyze
 ```
+
+Between them these cover every rule guide §5 lists.
 
 `haptics_governor_test.dart` asserts the rules that fail *silently*: the setting
 ladder, the reduce-motion clamp, focus-session suppression (including that
@@ -206,6 +210,11 @@ fling suppression.
 `FocusController.complete()` runs twice on the end-early path and not at all on
 the natural one, so a fake `HapticsService` proves exactly one event per
 session, never two and never none.
+
+`haptics_tab_change_test.dart` covers the one §5 rule that is not a governor
+rule — re-tapping the active tab is a real interaction that simply is not a
+*change*, so the guard sits in `AppShell._onTap` and needs a widget test to
+pin it.
 
 Widget tests do not need an override — `playHapticEvent` swallows platform
 errors, which covers a device with no motor, a desktop embedder, and a test with
