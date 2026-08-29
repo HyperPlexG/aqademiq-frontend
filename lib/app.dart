@@ -7,6 +7,7 @@ import 'core/theme/theme_controller.dart';
 import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
+import 'services/ambient/ambient_service.dart';
 import 'services/push_service.dart';
 import 'services/reminder_scheduler.dart';
 
@@ -28,12 +29,16 @@ class AqademiqApp extends ConsumerWidget {
     // and registers this device once signed in (no-op under mocks) — and the
     // reminder scheduler, which keeps the device's own notification schedule in
     // step with the task list.
+    // The ambient service belongs here for the same reason: a focus session
+    // keeps running with the app closed, and the lock screen, the Island and
+    // the widgets are that session drawn somewhere else.
     ref
       ..watch(revisionSyncProvider)
       ..watch(sessionResetProvider)
       ..watch(prismAudioControllerProvider)
       ..watch(pushServiceProvider)
-      ..watch(reminderSchedulerProvider);
+      ..watch(reminderSchedulerProvider)
+      ..watch(ambientServiceProvider);
 
     return MaterialApp.router(
       title: 'Aqademiq',
