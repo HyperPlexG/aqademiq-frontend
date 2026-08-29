@@ -26,6 +26,7 @@ class AmbientSession {
     required this.frozen,
     required this.meltStage,
     required this.remainingSec,
+    required this.durationSec,
     this.taskTitle,
     this.subjectLabel,
     this.subjectTint,
@@ -47,6 +48,10 @@ class AmbientSession {
   /// Seconds left, for the frozen case where the live clock must be replaced.
   final int remainingSec;
 
+  /// The whole planned length, so a surface can draw how much is spent without
+  /// doing arithmetic the app has already done.
+  final int durationSec;
+
   /// What the student sat down to do — the whole point of the expanded Island.
   final String? taskTitle;
 
@@ -66,6 +71,7 @@ class AmbientSession {
         'frozen': frozen,
         'meltStage': meltStage,
         'remainingSec': remainingSec,
+        'durationSec': durationSec,
         if (taskTitle != null) 'taskTitle': taskTitle,
         if (subjectLabel != null) 'subjectLabel': subjectLabel,
         if (subjectTint != null) 'subjectTint': subjectTint,
@@ -81,6 +87,7 @@ class AmbientSession {
       frozen: map['frozen'] as bool? ?? false,
       meltStage: map['meltStage'] as int? ?? 0,
       remainingSec: map['remainingSec'] as int? ?? 0,
+      durationSec: map['durationSec'] as int? ?? 0,
       taskTitle: map['taskTitle'] as String?,
       subjectLabel: map['subjectLabel'] as String?,
       subjectTint: map['subjectTint'] as String?,
@@ -106,6 +113,7 @@ class AmbientSession {
       frozen: session.isFrozen,
       meltStage: session.meltStage,
       remainingSec: session.remaining.inSeconds,
+      durationSec: session.durationMin * 60,
       taskTitle: taskTitle,
       subjectLabel: subjectLabel,
       subjectTint: subjectTint,

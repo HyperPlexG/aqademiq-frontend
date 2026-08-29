@@ -43,6 +43,16 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
+        <!-- The session card (services/ambient). A foreground service because
+             Android will otherwise kill the process mid-session and take Prism
+             and the timer with it — and because only a foreground service may
+             own the ongoing notification the countdown is drawn in. One
+             service, one notification: a separate keepalive would put two
+             entries in the shade for a single session. -->
+        <service
+            android:name=".AmbientSessionService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
         <!-- flutter_local_notifications: delivers a scheduled reminder when its
              alarm fires, and re-registers the pending schedule after a reboot
              or an app update. Both are required for zonedSchedule to survive. -->

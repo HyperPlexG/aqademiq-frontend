@@ -4,12 +4,19 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 /// Keeps the app process alive while a focus session runs with the screen
 /// off, so Prism audio and the client-side session timer keep going.
 ///
-/// * **Android** — a `mediaPlayback` foreground service with a quiet
-///   persistent notification (declared in `AndroidManifest.xml`).
-/// * **iOS** — nothing to do here: the `audio` `UIBackgroundMode` plus the
-///   playback `AVAudioSession` category (set in `AppDelegate.swift`) keep the
-///   app running while the soundscape plays.
+/// * **Android** — nothing to do here any more. `AmbientSessionService` is a
+///   `mediaPlayback` foreground service for the whole session, which holds the
+///   process up *and* owns the session card. Starting this one as well would
+///   put a second notification in the shade for a single session, since Android
+///   requires every foreground service to post its own.
+/// * **iOS** — nothing to do here either: the `audio` `UIBackgroundMode` plus
+///   the playback `AVAudioSession` category (set in `AppDelegate.swift`) keep
+///   the app running while the soundscape plays.
 /// * **Web/desktop** — no-op.
+///
+/// Kept as a seam rather than deleted: the platform channel is best-effort, so
+/// this is where a fallback keepalive would go if the ambient service ever
+/// turns out not to be reachable on some device.
 class FocusKeepaliveService {
   FocusKeepaliveService._();
 
@@ -17,8 +24,8 @@ class FocusKeepaliveService {
 
   bool _running = false;
 
-  bool get _supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  /// No platform still needs the separate keepalive service.
+  bool get _supported => false;
 
   /// Starts the foreground service (call when a focus session begins).
   Future<void> start() async {
