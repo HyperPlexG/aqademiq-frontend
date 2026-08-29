@@ -30,8 +30,22 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
+  /// Drives the lock screen, the Island and the widgets. Held for the life of
+  /// the app because a focus session outlives any screen.
+  private var ambient: AmbientPlugin?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    ambient = AmbientPlugin(messenger: engineBridge.applicationRegistrar.messenger())
+  }
+
+  /// A Freeze taken on the lock screen runs in the extension, which cannot
+  /// reach the session itself — it parks the press in the shared container.
+  /// This is where the app picks it up, so the press lands rather than being
+  /// quietly lost when the student opens the app again.
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    ambient?.drainPendingAction()
   }
 
   // Hand the APNs device token to Firebase Messaging explicitly. Under the new

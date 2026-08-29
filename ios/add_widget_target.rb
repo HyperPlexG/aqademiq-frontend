@@ -51,6 +51,29 @@ Dir.glob(File.join(ROOT, TARGET_NAME, '*.swift')).sort.each do |path|
   existing.add_file_references([ref])
 end
 
+# Two files belong to both halves.
+#
+# The app has to build the same `ActivityAttributes` it asks ActivityKit to
+# render, and the same date parsing the extension reads with — a second,
+# slightly different copy in Runner is exactly how a Live Activity ends up
+# failing to decode a session it was just handed.
+SHARED = %w[FocusActivityAttributes.swift AmbientState.swift].freeze
+SHARED.each do |name|
+  ref = group.files.find { |f| f.path == name }
+  next unless ref
+  already = app.source_build_phase.files_references.include?(ref)
+  app.source_build_phase.add_file_reference(ref) unless already
+end
+
+# The app's own half of the channel, which drives the Live Activity and drains
+# presses taken while it was not running.
+runner_group = project.main_group.find_subpath('Runner', true)
+%w[AmbientPlugin.swift].each do |name|
+  next unless File.exist?(File.join(ROOT, 'Runner', name))
+  ref = runner_group.files.find { |f| f.path == name } || runner_group.new_reference(name)
+  app.source_build_phase.add_file_reference(ref) unless app.source_build_phase.files_references.include?(ref)
+end
+
 # Assets, if the extension ever gets its own.
 assets = File.join(ROOT, TARGET_NAME, 'Assets.xcassets')
 if File.exist?(assets)

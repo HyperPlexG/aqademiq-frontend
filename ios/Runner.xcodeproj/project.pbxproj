@@ -7,25 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0A5B96D683F89679D6F0386A /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
-		21DF2741F263CF5795756CEC /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
+		15431EBCD2995C6075E8C509 /* AmbientWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BA01ED19694CF4833BAC04 /* AmbientWidgets.swift */; };
+		20DB1469D9E57A45EB73DC5B /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
 		27F639E286C203F37CFBEA88 /* AmbientWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		2B0BA84B6EA227809FA027C1 /* AmbientWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BA01ED19694CF4833BAC04 /* AmbientWidgets.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		447C4A307CAC6CE71AB410A8 /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB09A799A5BA3080E3C744 /* FocusLiveActivity.swift */; };
 		518AE02524526747B54807EC /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 004734AFE3AC492C3D078C23 /* Pods_Runner.framework */; };
+		615287A07212B307196C959B /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		8B8D4AC01EE389EF9523F98E /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F6CBD3F1A10FF6DB7A7D95CB /* Pods_RunnerTests.framework */; };
+		96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		B42038505CE8364B94C61A51 /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
+		BBC0DBE41562DB2B5E18045A /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
+		C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
 		C91EEB2E04F6E6471403A959 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
-		D3B1FD62560A071C5DA09475 /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB09A799A5BA3080E3C744 /* FocusLiveActivity.swift */; };
-		EE7B3CF621BFE4D2340B4468 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
-		F538B5BE56D1FD4A687938F0 /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
+		F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
 		FEEDA9AD000000000000C0C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -82,6 +85,7 @@
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		550699B9FE5E3FD68C938C10 /* AmbientState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientState.swift; sourceTree = "<group>"; };
+		5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientPlugin.swift; sourceTree = "<group>"; };
 		63BC88FC67DAA3E60A1A6B63 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -194,6 +198,7 @@
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -492,6 +497,9 @@
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
+				C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */,
+				F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */,
+				96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -499,12 +507,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B42038505CE8364B94C61A51 /* AdaShape.swift in Sources */,
-				21DF2741F263CF5795756CEC /* AmbientState.swift in Sources */,
-				2B0BA84B6EA227809FA027C1 /* AmbientWidgets.swift in Sources */,
-				EE7B3CF621BFE4D2340B4468 /* FocusActivityAttributes.swift in Sources */,
-				D3B1FD62560A071C5DA09475 /* FocusLiveActivity.swift in Sources */,
-				F538B5BE56D1FD4A687938F0 /* SessionIntent.swift in Sources */,
+				0A5B96D683F89679D6F0386A /* AdaShape.swift in Sources */,
+				615287A07212B307196C959B /* AmbientState.swift in Sources */,
+				15431EBCD2995C6075E8C509 /* AmbientWidgets.swift in Sources */,
+				BBC0DBE41562DB2B5E18045A /* FocusActivityAttributes.swift in Sources */,
+				447C4A307CAC6CE71AB410A8 /* FocusLiveActivity.swift in Sources */,
+				20DB1469D9E57A45EB73DC5B /* SessionIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
