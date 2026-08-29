@@ -63,6 +63,18 @@
             android:name=".AmbientSessionService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
+        <!-- "Start 5" from the notification shade — Android's version of the
+             Control Centre control and the Focus widget's button. -->
+        <service
+            android:name=".StartFiveTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_notification"
+            android:label="Focus"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
         <!-- flutter_local_notifications: delivers a scheduled reminder when its
              alarm fires, and re-registers the pending schedule after a reboot
              or an app update. Both are required for zonedSchedule to survive. -->

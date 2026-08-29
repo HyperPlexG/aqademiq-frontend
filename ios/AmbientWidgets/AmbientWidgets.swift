@@ -239,7 +239,27 @@ struct AmbientWidgetsBundle: WidgetBundle {
         NextTaskWidget()
         WeekWidget()
         FocusWidget()
+        accessories
         liveActivity
+        controls
+    }
+
+    /// Control Centre and the Action Button, from iOS 18. A `ControlWidget`
+    /// lives in the same bundle as the rest, just behind a newer floor.
+    @WidgetBundleBuilder
+    var controls: some Widget {
+        if #available(iOS 18.0, *) {
+            StartFiveControl()
+        }
+    }
+
+    /// The lock-screen family. Same data, smaller shapes.
+    @WidgetBundleBuilder
+    var accessories: some Widget {
+        if #available(iOS 16.0, *) {
+            FocusRingWidget()
+            NextInlineWidget()
+        }
     }
 
     /// The Live Activity only exists from 16.1; the widgets reach further back.
@@ -250,3 +270,4 @@ struct AmbientWidgetsBundle: WidgetBundle {
         }
     }
 }
+
