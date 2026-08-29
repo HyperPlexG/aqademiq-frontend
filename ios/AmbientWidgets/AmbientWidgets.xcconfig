@@ -1,0 +1,24 @@
+// Build settings for the widget extension.
+//
+// This deliberately includes ONLY Flutter's Generated.xcconfig, not
+// Flutter/Debug.xcconfig — that one also pulls in Pods-Runner, whose
+// OTHER_LDFLAGS link every Flutter plugin framework. An extension that
+// inherits those links against frameworks it does not embed and dies in dyld
+// before it runs a line of code:
+//
+//   Library not loaded: @rpath/flutter_foreground_task.framework/...
+//   (terminated at launch)
+//
+// The symptom is silent and total: no widgets in the gallery, and a Live
+// Activity that reports itself started but never draws, because the process
+// that would draw it cannot launch. The extension has no Flutter in it by
+// design — it reads a flat object out of the App Group and renders SwiftUI.
+//
+// What is wanted from Flutter is only the version, so the extension and the app
+// stay in lockstep (the App Store requires it, and iOS refuses to install a
+// mismatch with "Invalid placeholder attributes").
+#include "../Flutter/Generated.xcconfig"
+
+// Nothing from the app links into here.
+OTHER_LDFLAGS =
+FRAMEWORK_SEARCH_PATHS = $(inherited)

@@ -81,18 +81,24 @@ if File.exist?(assets)
   existing.resources_build_phase.add_file_reference(ref)
 end
 
-# Inherit Flutter's generated xcconfig, exactly as Runner does.
+# Give the extension its own xcconfig — NOT Runner's.
 #
-# Without this `$(FLUTTER_BUILD_NAME)` and `$(FLUTTER_BUILD_NUMBER)` are simply
-# undefined in the extension, so its CFBundleVersion and
-# CFBundleShortVersionString come out empty — and iOS rejects the install with
-# "Invalid placeholder attributes", which names neither the key nor the target.
-# Inheriting also keeps the two bundles' versions in lockstep for free, which
-# the App Store requires anyway.
+# It needs Flutter's version variables, or CFBundleVersion comes out empty and
+# iOS refuses the install with "Invalid placeholder attributes". But Runner's
+# `Flutter/Debug.xcconfig` also includes Pods-Runner, whose OTHER_LDFLAGS link
+# every Flutter plugin framework — and an extension that inherits those links
+# against frameworks it does not embed, then dies in dyld before running a line
+# of code ("Library not loaded: @rpath/flutter_foreground_task.framework/...").
+#
+# That failure is silent and total: no widgets in the gallery, and a Live
+# Activity that logs itself as started but never draws, because the process
+# that would draw it cannot launch. `AmbientWidgets.xcconfig` includes only
+# Generated.xcconfig, which is the half that is actually wanted.
+xcconfig_name = "#{TARGET_NAME}.xcconfig"
+xcconfig_ref = group.files.find { |f| f.path == xcconfig_name } ||
+               group.new_reference(xcconfig_name)
 existing.build_configurations.each do |config|
-  runner_config = app.build_configurations.find { |c| c.name == config.name }
-  base = runner_config&.base_configuration_reference
-  config.base_configuration_reference = base if base
+  config.base_configuration_reference = xcconfig_ref
 end
 
 existing.build_configurations.each do |config|
