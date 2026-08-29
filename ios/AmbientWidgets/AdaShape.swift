@@ -77,11 +77,33 @@ struct AdaShape: Shape {
     }
 }
 
+/// The palette, straight from the design tokens.
+///
+/// Melting and frost are not two tints of one thing — they are two states of
+/// matter, and they have to read as different from across a desk, which is why
+/// the fill, the stroke and the ink all move together.
+enum AdaPalette {
+    // Melting.
+    static let body = Color(red: 0.796, green: 0.737, blue: 0.992)      // #cbbcfd
+    static let stroke = Color(red: 0.353, green: 0.267, blue: 0.945)    // #5a44f1
+    static let ink = Color(red: 0.192, green: 0.137, blue: 0.486)       // #31237c
+
+    // Frost.
+    static let frostBody = Color(red: 0.843, green: 0.933, blue: 0.973) // #d7eef8
+    static let frostStroke = Color(red: 0.624, green: 0.839, blue: 0.937) // #9fd6ef
+    static let frostInk = Color(red: 0.247, green: 0.427, blue: 0.518)  // #3f6d84
+
+    static let accent = Color(red: 0.420, green: 0.361, blue: 0.941)    // #6b5cf0
+    static let frostLit = Color(red: 0.624, green: 0.839, blue: 0.937)  // #9fd6ef
+    static let drip = Color(red: 0.749, green: 0.902, blue: 0.961)      // #bfe6f5
+}
+
 /// Ada at a melt stage, with the face and the frost the state calls for.
 ///
-/// Sized down to 22pt in the minimal Island and masked to one flat colour in a
-/// status bar, so everything here has to survive losing colour and detail: the
-/// silhouette carries the meaning, the fills only decorate it.
+/// She has to survive 22pt in the minimal Island, a flat monochrome mask in the
+/// Android status bar, and Always-On dimming — so the silhouette carries the
+/// meaning and everything else only decorates it. The gloss, the cheeks and the
+/// shadow are the first things dropped as she gets smaller.
 struct AdaView: View {
     /// `0..<kMeltStages`, straight from the shared state.
     var stage: Int
@@ -89,44 +111,64 @@ struct AdaView: View {
     /// Frost, not a pause glyph: she stops mid-melt and changes state of matter.
     var frozen: Bool = false
 
-    /// Draw the face. Dropped at small sizes, where it is noise rather than
-    /// information.
+    /// Draw the face. Dropped at small sizes, where it is noise not information.
     var showsFace: Bool = true
 
-    private var melt: Double {
-        // Five stages across a whole session (kMeltStages in Dart).
-        Double(min(max(stage, 0), 4)) / 4
-    }
+    private var melt: Double { Double(min(max(stage, 0), 4)) / 4 }
 
-    private var body_: Color { frozen ? Color(red: 0.84, green: 0.93, blue: 0.97)
-                                      : Color(red: 0.82, green: 0.77, blue: 0.98) }
-    private var stroke: Color { frozen ? Color(red: 0.62, green: 0.84, blue: 0.94)
-                                       : Color(red: 0.42, green: 0.36, blue: 0.89) }
-    private var ink: Color { frozen ? Color(red: 0.25, green: 0.43, blue: 0.52)
-                                    : Color(red: 0.19, green: 0.14, blue: 0.49) }
+    private var fill: Color { frozen ? AdaPalette.frostBody : AdaPalette.body }
+    private var line: Color { frozen ? AdaPalette.frostStroke : AdaPalette.stroke }
+    private var ink: Color { frozen ? AdaPalette.frostInk : AdaPalette.ink }
 
     var body: some View {
         GeometryReader { geo in
             let side = min(geo.size.width, geo.size.height)
-            let unit = side / 60
+            let u = side / 60          // one unit of the 60x60 design space
+            let m = melt
 
             ZStack {
-                AdaShape(melt: melt)
-                    .fill(body_)
-                AdaShape(melt: melt)
-                    .stroke(stroke, lineWidth: max(1, (3.4 - 1.2 * melt) * unit))
+                // The puddle she is standing in — soft, and it spreads as she goes.
+                Ellipse()
+                    .fill(Color.black.opacity(0.13))
+                    .frame(width: (26 + 14 * m) * u, height: 4 * u)
+                    .position(x: 30 * u, y: (53 + 2 * m) * u)
+                    .blur(radius: 1.2 * u)
+
+                AdaShape(melt: m)
+                    .fill(
+                        // Ice is lit from above: a little brighter at the top.
+                        LinearGradient(
+                            colors: [fill.opacity(1), fill.opacity(0.82)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+
+                AdaShape(melt: m)
+                    .stroke(line, lineWidth: max(0.8, (3.4 - 1.2 * m) * u))
+
+                if showsFace && side >= 26 {
+                    // Inner sheen: a soft second body inset, so she reads as
+                    // translucent rather than as a flat sticker.
+                    AdaShape(melt: m)
+                        .fill(Color.white.opacity(0.22))
+                        .scaleEffect(0.86)
+                        .blur(radius: 0.6 * u)
+
+                    gloss(u: u, m: m)
+                }
 
                 if frozen {
-                    // Frost spurs. At 22pt these, not the hue, are what say
-                    // "held" — colour is the first thing an Always-On display
-                    // takes away.
+                    // At 22pt these, not the hue, are what say "held" — colour
+                    // is the first thing an Always-On display takes away.
                     FrostSpurs()
-                        .stroke(stroke, style: StrokeStyle(lineWidth: max(1, 1.5 * unit),
-                                                           lineCap: .round))
+                        .stroke(AdaPalette.frostStroke,
+                                style: StrokeStyle(lineWidth: max(0.9, 1.6 * u), lineCap: .round))
+                        .opacity(0.95)
                 }
 
                 if showsFace {
-                    face(unit: unit)
+                    face(u: u, m: m)
                 }
             }
             .frame(width: side, height: side)
@@ -134,59 +176,94 @@ struct AdaView: View {
         }
     }
 
-    /// Eyes and mouth, on the same interpolation as the painter: the eyes
-    /// shrink and converge as she goes, and the face is held until she is spent.
-    private func face(unit: CGFloat) -> some View {
-        let m = melt
+    /// The highlight that makes her ice rather than plastic: one bright bead and
+    /// a streak along the top edge, both fading as she loses volume.
+    private func gloss(u: CGFloat, m: Double) -> some View {
+        let tY = 8 + 15 * m
+        let fade = 1 - 0.55 * m
+        return ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.85 * fade))
+                .frame(width: 4.2 * u, height: 4.2 * u)
+                .position(x: 20 * u, y: (tY + 6) * u)
+            Circle()
+                .fill(Color.white.opacity(0.55 * fade))
+                .frame(width: 2.2 * u, height: 2.2 * u)
+                .position(x: 25.5 * u, y: (tY + 4.2) * u)
+        }
+        .frame(width: 60 * u, height: 60 * u)
+    }
+
+    /// Eyes and mouth on the painter's own interpolation: the eyes shrink and
+    /// converge as she goes, and the face is held until she is spent.
+    ///
+    /// Melting she is happy — closed, curved eyes and a smile. Frozen she is
+    /// merely held: open dots and a level mouth, no distress. Ada is never sad
+    /// about being paused.
+    private func face(u: CGFloat, m: Double) -> some View {
         let tY = 8 + 15 * m
         let bY = 50 + 2 * m
         let faceCY = (tY + bY) / 2 + 1
         let eyeY = faceCY - 2
         let eyeR = 2.7 - 0.5 * m
         let eyeDX = 6 - 1.2 * m
-        let mouthY = faceCY + 5
+        let mouthY = faceCY + 4.6
+        let w = max(0.9, 1.7 * u)
 
         return ZStack {
-            Circle()
-                .fill(ink)
-                .frame(width: eyeR * 2 * unit, height: eyeR * 2 * unit)
-                .position(x: (30 - eyeDX) * unit, y: eyeY * unit)
-            Circle()
-                .fill(ink)
-                .frame(width: eyeR * 2 * unit, height: eyeR * 2 * unit)
-                .position(x: (30 + eyeDX) * unit, y: eyeY * unit)
-
-            Path { path in
-                path.move(to: CGPoint(x: (30 - 4.5) * unit, y: mouthY * unit))
-                if frozen {
-                    // Held: a level line, not a smile.
-                    path.addLine(to: CGPoint(x: (30 + 4.5) * unit, y: mouthY * unit))
-                } else {
-                    path.addQuadCurve(
-                        to: CGPoint(x: (30 + 4.5) * unit, y: mouthY * unit),
-                        control: CGPoint(x: 30 * unit, y: (mouthY + 3.2) * unit)
+            if frozen {
+                Circle().fill(ink)
+                    .frame(width: eyeR * 1.7 * u, height: eyeR * 1.7 * u)
+                    .position(x: (30 - eyeDX) * u, y: eyeY * u)
+                Circle().fill(ink)
+                    .frame(width: eyeR * 1.7 * u, height: eyeR * 1.7 * u)
+                    .position(x: (30 + eyeDX) * u, y: eyeY * u)
+                // Level, not a frown.
+                Path { p in
+                    p.move(to: CGPoint(x: (30 - 4.4) * u, y: mouthY * u))
+                    p.addLine(to: CGPoint(x: (30 + 4.4) * u, y: mouthY * u))
+                }
+                .stroke(ink, style: StrokeStyle(lineWidth: w, lineCap: .round))
+            } else {
+                // Closed, happy eyes — two arcs, not dots.
+                ForEach([-1.0, 1.0], id: \.self) { side in
+                    Path { p in
+                        let cx = (30 + side * eyeDX) * u
+                        p.move(to: CGPoint(x: cx - eyeR * u, y: eyeY * u))
+                        p.addQuadCurve(
+                            to: CGPoint(x: cx + eyeR * u, y: eyeY * u),
+                            control: CGPoint(x: cx, y: (eyeY - eyeR * 1.9) * u)
+                        )
+                    }
+                    .stroke(ink, style: StrokeStyle(lineWidth: w, lineCap: .round))
+                }
+                Path { p in
+                    p.move(to: CGPoint(x: (30 - 4.4) * u, y: mouthY * u))
+                    p.addQuadCurve(
+                        to: CGPoint(x: (30 + 4.4) * u, y: mouthY * u),
+                        control: CGPoint(x: 30 * u, y: (mouthY + 3.6) * u)
                     )
                 }
+                .stroke(ink, style: StrokeStyle(lineWidth: w, lineCap: .round))
             }
-            .stroke(ink, style: StrokeStyle(lineWidth: max(1, 1.7 * unit), lineCap: .round))
         }
-        .frame(width: 60 * unit, height: 60 * unit)
+        .frame(width: 60 * u, height: 60 * u)
     }
 }
 
 /// The eight spurs that say frozen from across a desk.
 private struct FrostSpurs: Shape {
     func path(in rect: CGRect) -> Path {
-        let unit = min(rect.width, rect.height) / 60
+        let u = min(rect.width, rect.height) / 60
         func p(_ x: Double, _ y: Double) -> CGPoint {
-            CGPoint(x: rect.minX + x * unit, y: rect.minY + y * unit)
+            CGPoint(x: rect.minX + x * u, y: rect.minY + y * u)
         }
         var path = Path()
         let spurs: [(Double, Double, Double, Double)] = [
-            (30, 3, 30, 12), (30, 48, 30, 57),
-            (3, 30, 12, 30), (48, 30, 57, 30),
-            (11, 11, 17, 17), (49, 11, 43, 17),
-            (11, 49, 17, 43), (49, 49, 43, 43),
+            (30, 2.5, 30, 10), (30, 50, 30, 57.5),
+            (2.5, 30, 10, 30), (50, 30, 57.5, 30),
+            (10, 10, 15.5, 15.5), (50, 10, 44.5, 15.5),
+            (10, 50, 15.5, 44.5), (50, 50, 44.5, 44.5),
         ]
         for (x1, y1, x2, y2) in spurs {
             path.move(to: p(x1, y1))

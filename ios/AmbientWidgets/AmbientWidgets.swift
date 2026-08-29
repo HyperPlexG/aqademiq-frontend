@@ -56,20 +56,29 @@ struct NextTaskView: View {
             Spacer(minLength: 0)
             if let title = state.nextTaskTitle {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
                     .lineLimit(3)
-                Text([state.nextTaskTime, state.nextTaskSubject]
-                    .compactMap { $0 }
-                    .joined(separator: " · "))
-                    .font(.system(size: 10).monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                HStack(spacing: 5) {
+                    // The subject's own colour, so a glance says which class
+                    // this is before the words are read.
+                    Circle()
+                        .fill(Color(hex: state.nextTaskTint) ?? AdaPalette.accent)
+                        .frame(width: 5, height: 5)
+                    Text([state.nextTaskTime, state.nextTaskSubject]
+                        .compactMap { $0 }
+                        .joined(separator: " · "))
+                        .font(.system(size: 10.5).monospaced())
+                        .foregroundStyle(Color.widgetMeta)
+                        .lineLimit(1)
+                }
             } else {
                 // Nothing scheduled is not a failure, and never says so.
                 Text("Nothing scheduled")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.widgetMeta)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -114,19 +123,26 @@ struct WeekView: View {
             HStack(spacing: 5) {
                 ForEach(0..<7, id: \.self) { index in
                     let shown = index < state.weekDays.count && state.weekDays[index]
-                    VStack(spacing: 5) {
+                    VStack(spacing: 6) {
                         ZStack {
                             if shown {
+                                // A day you showed up wears Ada's face.
                                 AdaView(stage: 0, showsFace: true)
                             } else {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(Color.primary.opacity(0.22), lineWidth: 1)
+                                // A day you did not is an empty outline, never a
+                                // puddle: absence is not depletion.
+                                RoundedRectangle(cornerRadius: 5)
+                                    .stroke(Color.white.opacity(0.20), lineWidth: 1.2)
+                                    .padding(1)
                             }
                         }
-                        .frame(height: 20)
+                        .frame(width: 22, height: 22)
                         Text(Self.letters[index])
-                            .font(.system(size: 8, weight: index == todayIndex ? .bold : .regular))
-                            .foregroundStyle(index == todayIndex ? Color.adaAccent_ : .secondary)
+                            .font(.system(size: 8.5,
+                                          weight: index == todayIndex ? .bold : .medium)
+                                .monospaced())
+                            .foregroundStyle(index == todayIndex
+                                             ? AdaPalette.accent : Color.widgetMeta)
                     }
                 }
             }
@@ -167,31 +183,31 @@ struct FocusWidgetView: View {
             Spacer(minLength: 0)
             AdaView(stage: state.session?.meltStage ?? 0,
                     frozen: state.session?.frozen ?? false)
-                .frame(height: 46)
+                .frame(height: 52)
             Spacer(minLength: 0)
             if let session = state.session {
                 // A session is already running: show it rather than offering to
                 // start a second one.
                 Text(session.frozen ? "Frozen" : "In session")
                     .font(.system(size: 12.5, weight: .bold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(session.frozen ? AdaPalette.frostLit : Color.widgetMeta)
                     .frame(maxWidth: .infinity)
             } else if #available(iOS 17.0, *) {
                 Button(intent: StartFiveIntent()) {
                     Text("Start 5")
-                        .font(.system(size: 12.5, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
+                        .padding(.vertical, 10)
                 }
                 .buttonStyle(.plain)
-                .background(Color.adaAccent_, in: RoundedRectangle(cornerRadius: 10))
+                .background(AdaPalette.accent, in: RoundedRectangle(cornerRadius: 11))
                 .foregroundStyle(.white)
             } else {
                 Text("Start 5")
-                    .font(.system(size: 12.5, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 9)
-                    .background(Color.adaAccent_, in: RoundedRectangle(cornerRadius: 10))
+                    .padding(.vertical, 10)
+                    .background(AdaPalette.accent, in: RoundedRectangle(cornerRadius: 11))
                     .foregroundStyle(.white)
             }
         }
@@ -208,14 +224,31 @@ struct Label_: View {
 
     var body: some View {
         Text(text.uppercased())
-            .font(.system(size: 8.5, weight: .semibold).monospaced())
-            .tracking(1)
-            .foregroundStyle(.secondary)
+            .font(.system(size: 8.5, weight: .bold).monospaced())
+            .tracking(1.1)
+            .foregroundStyle(Color.widgetLabel)
     }
 }
 
 extension Color {
-    static let adaAccent_ = Color(red: 0.42, green: 0.36, blue: 0.94)
+    /// The design's widget surfaces. These are dark by intent, not by theme:
+    /// every mock in the spec sits on near-black, because that is where a
+    /// melting purple cube reads.
+    static let widgetBG = Color(red: 0.086, green: 0.082, blue: 0.110)   // #16151c
+    static let widgetLabel = Color(red: 0.435, green: 0.424, blue: 0.490) // #6f6c7d
+    static let widgetMeta = Color(red: 0.545, green: 0.529, blue: 0.596)  // #8b8798
+
+    /// Parse `#RRGGBB` as written by the app into the shared state.
+    init?(hex: String?) {
+        guard var raw = hex?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
+        if raw.hasPrefix("#") { raw.removeFirst() }
+        guard raw.count == 6, let value = Int(raw, radix: 16) else { return nil }
+        self.init(
+            red: Double((value >> 16) & 0xFF) / 255,
+            green: Double((value >> 8) & 0xFF) / 255,
+            blue: Double(value & 0xFF) / 255
+        )
+    }
 }
 
 extension View {
@@ -224,9 +257,9 @@ extension View {
     @ViewBuilder
     func containerBackgroundIfAvailable() -> some View {
         if #available(iOS 17.0, *) {
-            self.padding(14).containerBackground(.fill.tertiary, for: .widget)
+            self.padding(14).containerBackground(for: .widget) { Color.widgetBG }
         } else {
-            self.padding(14)
+            self.padding(14).background(Color.widgetBG)
         }
     }
 }

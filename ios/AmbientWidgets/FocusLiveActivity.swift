@@ -30,11 +30,13 @@ struct FocusLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.center) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(context.attributes.taskTitle)
-                            .font(.system(size: 12.5, weight: .semibold))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
                             .lineLimit(1)
                         Text(subtitle(for: context))
-                            .font(.system(size: 9.5, weight: .medium).monospaced())
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 9.5, weight: .bold).monospaced())
+                            .tracking(0.9)
+                            .foregroundStyle(.white.opacity(0.5))
                             .lineLimit(1)
                     }
                 }
@@ -123,31 +125,39 @@ struct LockScreenCard: View {
 
     var body: some View {
         HStack(spacing: 13) {
+            // The ring is the rail, curled up: one number read twice — Ada's
+            // volume, and the ring closing around her. No second bar anywhere
+            // on this card, and no percentage caption.
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.14), lineWidth: 4)
+                    .stroke(Color.white.opacity(0.13), lineWidth: 4.5)
                 Circle()
-                    .trim(from: 0, to: max(0.001, 1 - context.state.spent))
+                    .trim(from: 0, to: max(0.004, 1 - context.state.spent))
                     .stroke(
-                        context.state.frozen ? Color.frostLit : Color.drip,
-                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                        context.state.frozen
+                            ? AnyShapeStyle(Color.frostLit.opacity(0.75))
+                            : AnyShapeStyle(AngularGradient(
+                                colors: [.drip, tint, .drip],
+                                center: .center)),
+                        style: StrokeStyle(lineWidth: 4.5, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
                 AdaView(stage: context.state.meltStage, frozen: context.state.frozen)
-                    .padding(9)
+                    .padding(8)
             }
-            .frame(width: 58, height: 58)
+            .frame(width: 60, height: 60)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(header)
-                    .font(.system(size: 9, weight: .semibold).monospaced())
-                    .foregroundStyle(.white.opacity(0.55))
+                    .font(.system(size: 9, weight: .bold).monospaced())
+                    .tracking(1.2)
+                    .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
                 Text(context.attributes.taskTitle)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
-                TimeReadout(state: context.state, size: 27, weight: .bold)
+                TimeReadout(state: context.state, size: 30, weight: .bold)
             }
 
             Spacer(minLength: 0)
@@ -165,6 +175,11 @@ struct LockScreenCard: View {
     private var header: String {
         let state = context.state.frozen ? "Frozen" : (context.state.prismMode ?? "Focus")
         return "AQADEMIQ · \(state.uppercased())"
+    }
+
+    /// The subject's own colour, falling back to the accent.
+    private var tint: Color {
+        Color(hex: context.attributes.subjectTint) ?? .adaAccent
     }
 }
 
@@ -257,8 +272,8 @@ struct FreezeButton: View {
 }
 
 extension Color {
-    static let adaAccent = Color(red: 0.42, green: 0.36, blue: 0.94)
-    static let frostLit = Color(red: 0.62, green: 0.84, blue: 0.94)
-    static let drip = Color(red: 0.75, green: 0.90, blue: 0.96)
+    static let adaAccent = AdaPalette.accent
+    static let frostLit = AdaPalette.frostLit
+    static let drip = AdaPalette.drip
 }
 #endif
