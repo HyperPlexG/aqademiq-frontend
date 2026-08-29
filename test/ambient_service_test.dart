@@ -14,6 +14,15 @@ class _RecordingChannel {
   final List<String> calls = [];
   final List<Map<Object?, Object?>?> payloads = [];
 
+  /// Just the live-session traffic.
+  ///
+  /// `publish` writes the glanceable half (next task, the week) whenever its
+  /// own providers resolve, which is asynchronous and unrelated to the session.
+  /// Counting it against the session's push budget would make these tests fail
+  /// on timing rather than on behaviour.
+  List<String> get sessionCalls =>
+      calls.where((c) => c != 'publish').toList();
+
   void install() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(AmbientBridge.channel, (call) async {
@@ -60,8 +69,8 @@ void main() {
     await controller.start();
     await settle();
 
-    expect(channel.calls, ['startSession']);
-    final payload = channel.payloads.single!;
+    expect(channel.sessionCalls, ['startSession']);
+    final payload = channel.payloads.first!;
     expect(payload['endsAt'], isA<String>());
     expect(payload['frozen'], isFalse);
     expect(payload['meltStage'], 0);
@@ -78,8 +87,8 @@ void main() {
     controller.pause();
     await settle();
 
-    expect(channel.calls, ['updateSession']);
-    expect(channel.payloads.single!['frozen'], isTrue);
+    expect(channel.sessionCalls, ['updateSession']);
+    expect(channel.payloads.last!['frozen'], isTrue);
   });
 
   test('stands down when the session ends — the Island is not ours to hold',
@@ -93,7 +102,7 @@ void main() {
     await controller.complete();
     await settle();
 
-    expect(channel.calls, contains('endSession'));
+    expect(channel.sessionCalls, contains('endSession'));
   });
 
   test('a second passing is not worth a push', () async {
@@ -111,7 +120,7 @@ void main() {
     }
     await settle();
 
-    expect(channel.calls, isEmpty);
+    expect(channel.sessionCalls, isEmpty);
   });
 
   test('crossing a melt stage is', () async {
@@ -126,7 +135,7 @@ void main() {
         container.read(focusControllerProvider).copyWith(elapsedSec: 301);
     await settle();
 
-    expect(channel.calls, ['updateSession']);
+    expect(channel.sessionCalls, ['updateSession']);
     expect(channel.payloads.last!['meltStage'], 1);
   });
 
@@ -146,7 +155,10 @@ void main() {
 
     // One start plus one per stage boundary crossed. The clock itself is drawn
     // by the OS and costs nothing, which is the entire point.
-    expect(channel.calls.length, lessThanOrEqualTo(kMeltStages + 1));
-    expect(channel.calls.first, 'startSession');
+    //
+    // Only the session calls are counted: `publish` writes the glanceable data
+    // (next task, the week) on its own schedule and is not part of this budget.
+    expect(channel.sessionCalls.length, lessThanOrEqualTo(kMeltStages + 1));
+    expect(channel.sessionCalls, contains('startSession'));
   });
 }
