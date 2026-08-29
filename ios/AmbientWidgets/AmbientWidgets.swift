@@ -235,39 +235,32 @@ extension View {
 
 @main
 struct AmbientWidgetsBundle: WidgetBundle {
+    /// Everything declared flat and unconditionally.
+    ///
+    /// The extension's own deployment floor is 16.1, so the widgets and the
+    /// Live Activity need no availability checks — and they must not have any.
+    /// Wrapping an `ActivityConfiguration` in a `@WidgetBundleBuilder`
+    /// conditional type-erases it: the bundle still compiles, the widgets still
+    /// appear, and the Live Activity silently never registers, so the app can
+    /// start an activity that nothing is ever able to draw.
+    ///
+    /// Only the Control Centre control is genuinely newer, and it is the one
+    /// thing still behind a check.
     var body: some Widget {
         NextTaskWidget()
         WeekWidget()
         FocusWidget()
-        accessories
-        liveActivity
+        FocusRingWidget()
+        NextInlineWidget()
+        FocusLiveActivity()
         controls
     }
 
-    /// Control Centre and the Action Button, from iOS 18. A `ControlWidget`
-    /// lives in the same bundle as the rest, just behind a newer floor.
+    /// Control Centre and the Action Button, from iOS 18 — a real gate.
     @WidgetBundleBuilder
     var controls: some Widget {
         if #available(iOS 18.0, *) {
             StartFiveControl()
         }
     }
-
-    /// The lock-screen family. Same data, smaller shapes.
-    @WidgetBundleBuilder
-    var accessories: some Widget {
-        if #available(iOS 16.0, *) {
-            FocusRingWidget()
-            NextInlineWidget()
-        }
-    }
-
-    /// The Live Activity only exists from 16.1; the widgets reach further back.
-    @WidgetBundleBuilder
-    var liveActivity: some Widget {
-        if #available(iOS 16.1, *) {
-            FocusLiveActivity()
-        }
-    }
 }
-
