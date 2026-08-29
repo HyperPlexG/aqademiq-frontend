@@ -86,18 +86,41 @@ class FocusController extends Notifier<FocusSession> {
           taskId: state.taskId,
           prismMode: state.prismMode,
         );
-    state = session.copyWith(status: FocusStatus.running, elapsedSec: 0);
+    // `endsAt` is anchored to the local clock rather than the server's
+    // `startedAt`: the 1s timer below also starts now, and the ambient surfaces
+    // count down from `endsAt` while the app counts `elapsedSec` up. Anchoring
+    // both to the same instant is what stops the two clocks drifting apart.
+    final now = DateTime.now();
+    state = session.copyWith(
+      status: FocusStatus.running,
+      elapsedSec: 0,
+      startedAt: session.startedAt ?? now,
+      endsAt: now.add(Duration(minutes: session.durationMin)),
+      frozenAt: null,
+    );
     _startTimer();
   }
 
   void pause() {
     _timer?.cancel();
-    state = state.copyWith(status: FocusStatus.paused);
+    // Stamping the freeze instant is what lets `resume` tell held time from
+    // spent time; `endsAt` is deliberately left stale until then.
+    state = state.copyWith(status: FocusStatus.paused, frozenAt: DateTime.now());
     _persistCheckpoint(paused: true);
   }
 
   void resume() {
-    state = state.copyWith(status: FocusStatus.running);
+    // Held time is not spent time: push the end out by the whole freeze so the
+    // countdown resumes where it stopped rather than where it would have been.
+    final frozenAt = state.frozenAt;
+    final endsAt = state.endsAt;
+    state = state.copyWith(
+      status: FocusStatus.running,
+      endsAt: (frozenAt != null && endsAt != null)
+          ? endsAt.add(DateTime.now().difference(frozenAt))
+          : endsAt,
+      frozenAt: null,
+    );
     _startTimer();
     _persistCheckpoint(paused: false);
   }
@@ -119,6 +142,9 @@ class FocusController extends Notifier<FocusSession> {
       status: FocusStatus.completed,
       completedAt: DateTime.now(),
       endMood: mood,
+      // A finished session is not a held one — leaving the freeze stamp set
+      // would make `remaining` keep reporting from the moment it was frozen.
+      frozenAt: null,
     );
     if (state.id.isNotEmpty) {
       await ref
