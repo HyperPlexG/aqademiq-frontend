@@ -50,6 +50,7 @@ class AmbientBridge {
           defaultTargetPlatform == TargetPlatform.iOS);
 
   void Function(AmbientAction action)? _onAction;
+  void Function(String route)? _onRoute;
 
   /// Register the single handler for presses that happen out there.
   ///
@@ -58,18 +59,35 @@ class AmbientBridge {
   /// that can change it.
   void setActionHandler(void Function(AmbientAction action) handler) {
     _onAction = handler;
+    _install();
+  }
+
+  /// Register where a tapped widget should land.
+  ///
+  /// Widgets are glanced at, then opened: tapping one is a request to go
+  /// somewhere, and the destination is decided here rather than by the surface.
+  void setRouteHandler(void Function(String route) handler) {
+    _onRoute = handler;
+    _install();
+  }
+
+  void _install() {
     if (!_supported) return;
     channel.setMethodCallHandler((call) async {
-      if (call.method != 'action') return null;
-      final name = call.arguments as String?;
-      final action = switch (name) {
-        'freeze' => AmbientAction.freeze,
-        'resume' => AmbientAction.resume,
-        'end' => AmbientAction.end,
-        'startFive' => AmbientAction.startFive,
-        _ => null,
-      };
-      if (action != null) _onAction?.call(action);
+      switch (call.method) {
+        case 'action':
+          final action = switch (call.arguments as String?) {
+            'freeze' => AmbientAction.freeze,
+            'resume' => AmbientAction.resume,
+            'end' => AmbientAction.end,
+            'startFive' => AmbientAction.startFive,
+            _ => null,
+          };
+          if (action != null) _onAction?.call(action);
+        case 'route':
+          final route = call.arguments as String?;
+          if (route != null && route.isNotEmpty) _onRoute?.call(route);
+      }
       return null;
     });
   }

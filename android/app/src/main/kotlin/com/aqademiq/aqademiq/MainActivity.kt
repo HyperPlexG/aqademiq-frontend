@@ -1,5 +1,6 @@
 package com.aqademiq.aqademiq
 
+import android.content.Intent
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +20,16 @@ class MainActivity : FlutterActivity() {
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, AmbientBridge.CHANNEL),
             applicationContext,
         )
+        // A widget tapped while the app was closed brought us here, so the link
+        // is already on the launch intent and would otherwise be missed.
+        AmbientBridge.routeFrom(intent)
+    }
+
+    /** A widget tapped while the app was already open (singleTop). */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        AmbientBridge.routeFrom(intent)
     }
 
     override fun onDestroy() {

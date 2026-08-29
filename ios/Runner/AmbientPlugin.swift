@@ -72,6 +72,20 @@ final class AmbientPlugin: NSObject {
         }
     }
 
+    /// A tapped widget, handed to Dart as intent rather than as a route.
+    ///
+    /// Returns false for anything that is not ours, so the Google Sign-In
+    /// scheme sharing this callback still reaches its own handler.
+    @discardableResult
+    func handle(url: URL) -> Bool {
+        guard url.scheme == "aqademiq" else { return false }
+        // aqademiq://focus/start5 → "focus/start5"
+        let route = ((url.host ?? "") + url.path).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !route.isEmpty else { return false }
+        channel.invokeMethod("route", arguments: route)
+        return true
+    }
+
     /// Replay a press taken on a surface while the app was not listening.
     ///
     /// Called on every foreground: the intents behind Freeze and Start 5 run in

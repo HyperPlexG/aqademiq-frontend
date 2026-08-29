@@ -136,6 +136,23 @@ object AmbientBridge {
         }
     }
 
+    /**
+     * A tapped widget, handed to Dart as intent rather than as a route.
+     *
+     * `aqademiq://focus/start5` becomes `focus/start5`; the app decides where
+     * that lands, so renaming a route cannot break a widget already sitting on
+     * someone's home screen.
+     */
+    fun routeFrom(intent: Intent?) {
+        val uri = intent?.data ?: return
+        if (uri.scheme != "aqademiq") return
+        val route = ((uri.host ?: "") + (uri.path ?: "")).trim('/')
+        if (route.isEmpty()) return
+        channel?.let { live ->
+            Handler(Looper.getMainLooper()).post { live.invokeMethod("route", route) }
+        }
+    }
+
     private fun drainPendingAction(context: Context) {
         val store = prefs(context)
         val pending = store.getString(KEY_PENDING_ACTION, null) ?: return

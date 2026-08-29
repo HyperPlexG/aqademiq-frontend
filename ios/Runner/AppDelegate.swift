@@ -48,6 +48,19 @@ import UIKit
     ambient?.drainPendingAction()
   }
 
+  /// A tapped widget arrives here as `aqademiq://…`.
+  ///
+  /// Anything else — Google Sign-In's reversed client id shares this callback —
+  /// falls through to `super` untouched.
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if ambient?.handle(url: url) == true { return true }
+    return super.application(app, open: url, options: options)
+  }
+
   // Hand the APNs device token to Firebase Messaging explicitly. Under the new
   // implicit-engine AppDelegate lifecycle, Firebase's swizzled hook doesn't
   // reliably fire, so the FCM SDK was left without an APNs token on iOS:

@@ -39,6 +39,20 @@
 				<string>com.googleusercontent.apps.233194050188-27sijfj5tsrnd9efqitt00hi0mh4svt5</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- Where a tapped widget lands. The surfaces speak in intent
+			     (aqademiq://focus, ://plan, ://stats) rather than in route
+			     strings, so renaming a route cannot break a widget already
+			     sitting on someone's home screen. -->
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.r13.aqademiq.ambient</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>aqademiq</string>
+			</array>
+		</dict>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
