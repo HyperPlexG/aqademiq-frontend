@@ -81,6 +81,20 @@ if File.exist?(assets)
   existing.resources_build_phase.add_file_reference(ref)
 end
 
+# Inherit Flutter's generated xcconfig, exactly as Runner does.
+#
+# Without this `$(FLUTTER_BUILD_NAME)` and `$(FLUTTER_BUILD_NUMBER)` are simply
+# undefined in the extension, so its CFBundleVersion and
+# CFBundleShortVersionString come out empty — and iOS rejects the install with
+# "Invalid placeholder attributes", which names neither the key nor the target.
+# Inheriting also keeps the two bundles' versions in lockstep for free, which
+# the App Store requires anyway.
+existing.build_configurations.each do |config|
+  runner_config = app.build_configurations.find { |c| c.name == config.name }
+  base = runner_config&.base_configuration_reference
+  config.base_configuration_reference = base if base
+end
+
 existing.build_configurations.each do |config|
   s = config.build_settings
   s['PRODUCT_NAME'] = '$(TARGET_NAME)'
