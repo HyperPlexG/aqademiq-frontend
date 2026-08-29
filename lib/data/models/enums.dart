@@ -21,13 +21,20 @@ enum MoodPhase { morning, evening, adhoc }
 enum AdaRole { user, ada }
 
 /// Lifecycle of a feedback-board suggestion (the board's columns).
+///
+/// These five MUST stay identical to the `key` column of `feedback_statuses`
+/// in the backend. They drifted once — this enum still carried an older
+/// vocabulary (open / completed / acknowledged / exists_already) long after the
+/// board shipped with under_review / planned / in_progress / shipped / declined
+/// — and because [FeedbackStatusX.fromWire] silently falls back, three live
+/// statuses collapsed into one value. The filter then queried a key the server
+/// has never heard of, so a board with five shipped posts reported none.
 enum FeedbackStatus {
-  open,
+  underReview,
   planned,
   inProgress,
-  completed,
-  acknowledged,
-  existsAlready,
+  shipped,
+  declined,
 }
 
 /// What kind of feedback a board post is.
@@ -46,20 +53,29 @@ extension DayPartX on DayPart {
 }
 
 extension FeedbackStatusX on FeedbackStatus {
-  /// Wire/string form used by the API and fixtures.
+  /// Wire/string form used by the API and fixtures — the `feedback_statuses.key`
+  /// the server filters on, so a wrong value here silently returns nothing.
   String get wire => switch (this) {
+        FeedbackStatus.underReview => 'under_review',
         FeedbackStatus.inProgress => 'in_progress',
-        FeedbackStatus.existsAlready => 'exists_already',
         _ => name,
       };
 
+  /// Every key the backend defines is mapped explicitly.
+  ///
+  /// The fallback is the dangerous part and is deliberately the same value the
+  /// database defaults to. It exists so an unrecognised key still renders, but
+  /// it is also how this broke before: several real statuses landed on one enum
+  /// value, which made the filter pills compare equal to each other and light up
+  /// together. If the backend gains a status, add it here — a new key silently
+  /// folding into `underReview` will look exactly like that bug again.
   static FeedbackStatus fromWire(String? value) => switch (value) {
+        'under_review' => FeedbackStatus.underReview,
         'planned' => FeedbackStatus.planned,
         'in_progress' => FeedbackStatus.inProgress,
-        'completed' => FeedbackStatus.completed,
-        'acknowledged' => FeedbackStatus.acknowledged,
-        'exists_already' => FeedbackStatus.existsAlready,
-        _ => FeedbackStatus.open,
+        'shipped' => FeedbackStatus.shipped,
+        'declined' => FeedbackStatus.declined,
+        _ => FeedbackStatus.underReview,
       };
 }
 

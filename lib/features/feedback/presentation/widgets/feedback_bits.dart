@@ -9,24 +9,25 @@ import '../../../../data/models/feedback_post.dart';
 
 /// Board-column / badge styling for each [FeedbackStatus].
 extension FeedbackStatusUi on FeedbackStatus {
+  /// Wording matches `feedback_statuses.label` on the server, so a post's badge
+  /// reads the same as the admin console that set it.
   String get label => switch (this) {
-        FeedbackStatus.open => 'Open',
+        FeedbackStatus.underReview => 'Under review',
         FeedbackStatus.planned => 'Planned',
         FeedbackStatus.inProgress => 'In progress',
-        FeedbackStatus.completed => 'Completed',
-        FeedbackStatus.acknowledged => 'Acknowledged',
-        FeedbackStatus.existsAlready => 'Exists already',
+        FeedbackStatus.shipped => 'Shipped',
+        FeedbackStatus.declined => 'Declined',
       };
 
-  /// Status accent — semantic tokens where one exists, prototype study-tag
-  /// palette literals otherwise (README §3).
+  /// Status accent — semantic tokens chosen to match `feedback_statuses.color`
+  /// on the server (#777777, #6b5cf0, #e8a430, #2a9d6b, #c0c0c0) so the app and
+  /// the board agree on what each state looks like.
   Color color(AppColors colors) => switch (this) {
-        FeedbackStatus.open => colors.textMed,
+        FeedbackStatus.underReview => colors.textMed,
         FeedbackStatus.planned => colors.accent,
         FeedbackStatus.inProgress => colors.warn,
-        FeedbackStatus.completed => colors.success,
-        FeedbackStatus.acknowledged => const Color(0xFF5CBBFF),
-        FeedbackStatus.existsAlready => const Color(0xFFC0497B),
+        FeedbackStatus.shipped => colors.success,
+        FeedbackStatus.declined => colors.textDim,
       };
 }
 

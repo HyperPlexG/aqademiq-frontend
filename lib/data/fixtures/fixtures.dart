@@ -231,7 +231,7 @@ abstract final class Fixtures {
           title: 'Add a Pomodoro focus mode',
           body:
               'Classic 25/5 cycles with a long break every 4 rounds inside the focus timer.',
-          status: 'exists_already',
+          status: 'declined',
           votes: 55,
           author: 'Hana',
           createdAt: today.subtract(const Duration(days: 21)),
@@ -242,7 +242,7 @@ abstract final class Fixtures {
           title: 'Sort subjects by next deadline',
           body:
               'The subject list should be able to order itself by whatever is due soonest.',
-          status: 'completed',
+          status: 'shipped',
           votes: 64,
           commentCount: 1,
           author: 'Leo',
@@ -254,7 +254,7 @@ abstract final class Fixtures {
           title: 'Keep the focus timer visible with anytime tasks',
           body:
               'Make the focus timer accessible while an anytime activity is running — right now starting one hides the other.',
-          status: 'acknowledged',
+          status: 'under_review',
           votes: 71,
           author: 'Ines',
           createdAt: today.subtract(const Duration(days: 14)),
@@ -275,7 +275,9 @@ abstract final class Fixtures {
           title: 'Timeline feels cramped on small phones',
           body:
               'On a 5.4" screen the planned rows overlap their time labels. A compact density option would help.',
-          status: 'acknowledged',
+          // A second shipped post, so mock mode can exercise the Shipped filter
+          // with more than one result — the case that was reporting empty.
+          status: 'shipped',
           category: 'improvement',
           votes: 27,
           author: 'Grace',
