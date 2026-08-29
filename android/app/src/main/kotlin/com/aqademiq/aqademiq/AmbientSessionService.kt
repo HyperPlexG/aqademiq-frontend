@@ -10,6 +10,8 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -118,11 +120,29 @@ class AmbientSessionService : Service() {
             prismMode?.takeIf { it.isNotBlank() },
         ).joinToString(" · ")
 
+        val meltStage = intent.getIntExtra(EXTRA_MELT_STAGE, 0).coerceIn(0, 4)
+        val title = taskTitle?.takeIf { it.isNotBlank() } ?: "Focus session"
+
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notification)
-            .setContentTitle(taskTitle?.takeIf { it.isNotBlank() } ?: "Focus session")
+            .setContentTitle(title)
             .setContentText(subtitle)
             .setContentIntent(openApp())
+            // The spec's own card rather than Android's default template:
+            // Ada at her melt stage, the task, "MELTING · DEEP WORK", the
+            // countdown, and the puddle rail.
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomContentView(
+                buildCard(
+                    title = title,
+                    subtitle = subtitle,
+                    frozen = frozen,
+                    endsAt = endsAt,
+                    remainingSec = remainingSec,
+                    durationSec = durationSec,
+                    meltStage = meltStage,
+                ),
+            )
             // Ongoing, so it cannot be swiped away mid-session by accident.
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -151,13 +171,6 @@ class AmbientSessionService : Service() {
             builder.setShowWhen(true)
         }
 
-        // The puddle rail: what Ada loses, the bar gains.
-        if (durationSec > 0) {
-            val spent = (durationSec - remainingSec).coerceIn(0, durationSec)
-            val percent = (spent.toFloat() / durationSec * 100f).roundToInt()
-            builder.setProgress(100, percent.coerceIn(0, 100), false)
-        }
-
         if (frozen) {
             builder.addAction(0, "Resume", actionIntent(ACTION_RESUME))
         } else {
@@ -166,6 +179,77 @@ class AmbientSessionService : Service() {
         builder.addAction(0, "End", actionIntent(ACTION_END))
 
         return builder.build()
+    }
+
+    /**
+     * The card itself.
+     *
+     * The Chronometer is why this is a custom layout at all: given the end
+     * instant and `countDown`, the system ticks it with the app asleep. A
+     * TextView here would mean waking up every second to move a clock the OS
+     * will move for free.
+     */
+    private fun buildCard(
+        title: String,
+        subtitle: String,
+        frozen: Boolean,
+        endsAt: Long,
+        remainingSec: Int,
+        durationSec: Int,
+        meltStage: Int,
+    ): RemoteViews {
+        val views = RemoteViews(packageName, R.layout.notification_focus)
+        views.setTextViewText(R.id.task, title)
+        views.setTextViewText(R.id.subtitle, subtitle.uppercase())
+        views.setImageViewResource(R.id.ada, adaDrawable(meltStage, frozen))
+
+        if (frozen) {
+            // A system countdown cannot be paused, so a held session shows
+            // static text — otherwise the shade keeps counting down a session
+            // that is not running, which is worse than showing no card at all.
+            views.setViewVisibility(R.id.time, android.view.View.GONE)
+            views.setViewVisibility(R.id.time_static, android.view.View.VISIBLE)
+            views.setTextViewText(R.id.time_static, formatRemaining(remainingSec))
+        } else {
+            views.setViewVisibility(R.id.time_static, android.view.View.GONE)
+            views.setViewVisibility(R.id.time, android.view.View.VISIBLE)
+            // Chronometer counts against elapsed-realtime, not wall clock.
+            val base = SystemClock.elapsedRealtime() + (endsAt - System.currentTimeMillis())
+            views.setChronometer(R.id.time, base, null, true)
+            views.setChronometerCountDown(R.id.time, true)
+        }
+
+        if (durationSec > 0) {
+            val spent = (durationSec - remainingSec).coerceIn(0, durationSec)
+            views.setProgressBar(
+                R.id.rail,
+                100,
+                (spent.toFloat() / durationSec * 100f).roundToInt().coerceIn(0, 100),
+                false,
+            )
+        } else {
+            views.setViewVisibility(R.id.rail, android.view.View.GONE)
+        }
+        return views
+    }
+
+    /** One Ada, generated from the painter's geometry (tool/generate_ada_android.py). */
+    private fun adaDrawable(stage: Int, frozen: Boolean): Int = if (frozen) {
+        when (stage) {
+            0 -> R.drawable.ada_frost_0
+            1 -> R.drawable.ada_frost_1
+            2 -> R.drawable.ada_frost_2
+            3 -> R.drawable.ada_frost_3
+            else -> R.drawable.ada_frost_4
+        }
+    } else {
+        when (stage) {
+            0 -> R.drawable.ada_stage_0
+            1 -> R.drawable.ada_stage_1
+            2 -> R.drawable.ada_stage_2
+            3 -> R.drawable.ada_stage_3
+            else -> R.drawable.ada_stage_4
+        }
     }
 
     private fun formatRemaining(totalSec: Int): String {

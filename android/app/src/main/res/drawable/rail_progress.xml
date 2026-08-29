@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The puddle rail: what Ada loses, the bar gains. Drip → frost, on a track
+     that is barely there, so the filled part is the only thing read. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp" />
+            <solid android:color="#1AFFFFFF" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="3dp" />
+                <gradient
+                    android:startColor="#BFE6F5"
+                    android:endColor="#9FD6EF"
+                    android:angle="0" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

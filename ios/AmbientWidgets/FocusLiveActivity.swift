@@ -19,34 +19,48 @@ struct FocusLiveActivity: Widget {
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded — a long press. The task title is the point.
-                DynamicIslandExpandedRegion(.leading) {
-                    AdaView(stage: context.state.meltStage, frozen: context.state.frozen)
-                        .frame(width: 42, height: 42)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    TimeReadout(state: context.state, size: 25, weight: .bold)
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.taskTitle)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                        Text(subtitle(for: context))
-                            .font(.system(size: 9.5, weight: .bold).monospaced())
-                            .tracking(0.9)
-                            .foregroundStyle(.white.opacity(0.5))
-                            .lineLimit(1)
-                    }
-                }
+                // Expanded — a long press. The task title is the point: a
+                // student who long-presses at minute forty has usually
+                // forgotten what they sat down to do.
+                //
+                // Everything lives in .bottom as one composed card rather than
+                // spread across leading/trailing, because those regions are
+                // narrow and wrap the title long before the space runs out.
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 10) {
-                        PuddleRail(spent: context.state.spent, frozen: context.state.frozen)
+                    VStack(spacing: 13) {
+                        HStack(spacing: 13) {
+                            AdaView(stage: context.state.meltStage,
+                                    frozen: context.state.frozen)
+                                .frame(width: 52, height: 52)
+
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(context.attributes.taskTitle)
+                                    .font(.system(size: 17, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                Text(subtitle(for: context))
+                                    .font(.system(size: 12, weight: .regular))
+                                    .tracking(0.4)
+                                    .foregroundStyle(.white.opacity(0.55))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                            }
+
+                            Spacer(minLength: 4)
+
+                            TimeReadout(state: context.state, size: 38, weight: .bold)
+                                .layoutPriority(1)
+                        }
+
+                        PuddleRail(spent: context.state.spent,
+                                   frozen: context.state.frozen)
+
                         if #available(iOS 17.0, *) {
                             SessionControls(frozen: context.state.frozen)
                         }
                     }
+                    .padding(.top, 2)
                 }
             } compactLeading: {
                 // Ada leads, the clock trails. She is the only element that
@@ -203,10 +217,10 @@ struct PuddleRail: View {
                                 startPoint: .leading,
                                 endPoint: .trailing))
                     )
-                    .frame(width: max(4, geo.size.width * min(max(spent, 0), 1)))
+                    .frame(width: max(8, geo.size.width * min(max(spent, 0), 1)))
             }
         }
-        .frame(height: 7)
+        .frame(height: 8)
     }
 }
 
@@ -221,29 +235,35 @@ struct SessionControls: View {
             if frozen {
                 Button(intent: ResumeSessionIntent()) {
                     hold(label: "Resume", icon: "play.fill")
+                        .foregroundStyle(Color.frostLit)
                 }
-                .tint(Color.frostLit.opacity(0.19))
+                .tint(Color.frostLit.opacity(0.16))
             } else {
                 Button(intent: FreezeSessionIntent()) {
                     hold(label: "Freeze", icon: "snowflake")
+                        .foregroundStyle(Color.frostLit)
                 }
-                .tint(Color.frostLit.opacity(0.19))
+                .tint(Color.frostLit.opacity(0.16))
             }
 
             Button(intent: EndSessionIntent()) {
                 Text("End")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 16, weight: .semibold))
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 9)
+                    .foregroundStyle(.white.opacity(0.65))
             }
             .tint(Color.white.opacity(0.07))
         }
         .buttonStyle(.bordered)
+        .controlSize(.large)
     }
 
     private func hold(label: String, icon: String) -> some View {
         Label(label, systemImage: icon)
-            .font(.system(size: 12, weight: .bold))
+            .font(.system(size: 16, weight: .semibold))
             .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
     }
 }
 
