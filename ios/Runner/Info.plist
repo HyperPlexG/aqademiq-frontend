@@ -79,6 +79,15 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Without this ActivityKit refuses every request with "Target does not
+	     include NSSupportsLiveActivities plist key" — the session is fine, the
+	     lock screen and the Dynamic Island simply never appear. -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<!-- Lets a Freeze taken on the lock screen update the activity without the
+	     app being brought to the foreground. -->
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

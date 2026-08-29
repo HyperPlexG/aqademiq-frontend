@@ -156,10 +156,17 @@ final class AmbientPlugin: NSObject {
         // Never two. A session that restarts replaces the activity rather than
         // stacking a second one in the Island.
         endActivity()
-        guard
-            ActivityAuthorizationInfo().areActivitiesEnabled,
-            let state = contentState(args)
-        else { return }
+        // Silence here would be indistinguishable from a bug: an activity that
+        // never appears looks identical whether the user turned Live Activities
+        // off, the payload was malformed, or the code is wrong. Say which.
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            NSLog("Ambient: Live Activities are switched off for this app — nothing to show.")
+            return
+        }
+        guard let state = contentState(args) else {
+            NSLog("Ambient: session payload had no usable end instant — not starting an activity.")
+            return
+        }
 
         let attributes = FocusActivityAttributes(
             taskTitle: args["taskTitle"] as? String ?? "Focus session",
@@ -174,6 +181,7 @@ final class AmbientPlugin: NSObject {
                 pushType: nil
             )
             currentActivityID = activity.id
+            NSLog("Ambient: Live Activity started (\(activity.id)).")
         } catch {
             // A device that will not host an activity is not a session that has
             // gone wrong; the app carries on and the widgets still update.
