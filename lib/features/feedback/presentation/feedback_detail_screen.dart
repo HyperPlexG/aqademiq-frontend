@@ -53,7 +53,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
     if (text.isEmpty || _sending || _locked) return;
     // Guests may read but not comment — prompt sign-up at the point of action.
     if (ref.read(isGuestProvider)) {
-      unawaited(showCreateAccountPrompt(context, reason: 'comment'));
+      unawaited(showCreateAccountPrompt(context, ref, reason: 'comment'));
       return;
     }
     setState(() => _sending = true);
@@ -174,7 +174,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
     if (isGuest) {
       return GestureDetector(
         onTap: () =>
-            unawaited(showCreateAccountPrompt(context, reason: 'comment')),
+            unawaited(showCreateAccountPrompt(context, ref, reason: 'comment')),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 13),
@@ -338,6 +338,7 @@ class _PostBody extends ConsumerWidget {
                   unawaited(
                     showCreateAccountPrompt(
                       context,
+                      ref,
                       reason: 'vote on suggestions',
                     ),
                   );

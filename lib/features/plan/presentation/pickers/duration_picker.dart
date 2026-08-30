@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 
 /// Duration presets shown in the picker grid, paired with the minute value
 /// each cell commits when tapped (`plan-pick-duration`).
@@ -235,20 +237,25 @@ Future<int?> _showCustomDuration(BuildContext context) {
   );
 }
 
-class _CustomDurationDialog extends StatefulWidget {
+class _CustomDurationDialog extends ConsumerStatefulWidget {
   const _CustomDurationDialog();
 
   @override
-  State<_CustomDurationDialog> createState() => _CustomDurationDialogState();
+  ConsumerState<_CustomDurationDialog> createState() =>
+      _CustomDurationDialogState();
 }
 
-class _CustomDurationDialogState extends State<_CustomDurationDialog> {
+class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
   static const _min = 5;
   static const _max = 120;
   int _minutes = 50;
 
-  void _setMinutes(int value) {
-    setState(() => _minutes = value.clamp(_min, _max));
+  /// [detent] is true only for the slider — see the note in
+  /// `focus_duration_dialog.dart`; Pickers get one event (§7) and this is it.
+  void _setMinutes(int value, {bool detent = false}) {
+    final next = value.clamp(_min, _max);
+    if (detent && next != _minutes) ref.read(hapticsProvider).sliderStop();
+    setState(() => _minutes = next);
   }
 
   @override
@@ -344,8 +351,10 @@ class _CustomDurationDialogState extends State<_CustomDurationDialog> {
                 padding: const EdgeInsets.only(bottom: 14),
                 child: _DurationSlider(
                   fraction: fraction,
-                  onChanged: (value) =>
-                      _setMinutes((_min + value * (_max - _min)).round()),
+                  onChanged: (value) => _setMinutes(
+                    (_min + value * (_max - _min)).round(),
+                    detent: true,
+                  ),
                 ),
               ),
               Row(

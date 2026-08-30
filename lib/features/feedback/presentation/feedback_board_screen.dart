@@ -73,7 +73,7 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
   /// may proceed.
   bool _requireAccount(String reason) {
     if (!ref.read(isGuestProvider)) return true;
-    unawaited(showCreateAccountPrompt(context, reason: reason));
+    unawaited(showCreateAccountPrompt(context, ref, reason: reason));
     return false;
   }
 
@@ -110,7 +110,7 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
         // 403 (guest) → prompt sign-up and stop; 429 (daily limit) → tell them
         // and stop. Otherwise keep the draft and let them retry.
         if (e is AuthFailure) {
-          unawaited(showCreateAccountPrompt(context, reason: 'post a suggestion'));
+          unawaited(showCreateAccountPrompt(context, ref, reason: 'post a suggestion'));
           return;
         }
         if (e is ServerFailure && e.statusCode == 429) {

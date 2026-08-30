@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/primary_button.dart';
 
 /// Presents the time-of-day picker (`plan-pick-time`) as a bottom sheet.
@@ -396,7 +398,12 @@ class _SpecificTimeDialogState extends State<_SpecificTimeDialog> {
 
 /// A scrollable wheel column (prototype `TimeWheelCol`): the centered value is
 /// large, neighbours dimmed. Reports the selected index as the wheel settles.
-class _TimeWheel extends StatefulWidget {
+///
+/// Consumer-backed for the detent tick only. Spec Finding 03: this is a
+/// `ListWheelScrollView`, not a `CupertinoPicker`, and only the latter
+/// self-haptics — so the wheels have been silent exactly where iOS users hold
+/// the strongest expectation.
+class _TimeWheel extends ConsumerStatefulWidget {
   const _TimeWheel({
     required this.count,
     required this.initialIndex,
@@ -410,10 +417,10 @@ class _TimeWheel extends StatefulWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  State<_TimeWheel> createState() => _TimeWheelState();
+  ConsumerState<_TimeWheel> createState() => _TimeWheelState();
 }
 
-class _TimeWheelState extends State<_TimeWheel> {
+class _TimeWheelState extends ConsumerState<_TimeWheel> {
   late final FixedExtentScrollController _controller =
       FixedExtentScrollController(initialItem: widget.initialIndex);
   late int _selected = widget.initialIndex;
@@ -435,6 +442,10 @@ class _TimeWheelState extends State<_TimeWheel> {
         perspective: 0.004,
         physics: const FixedExtentScrollPhysics(),
         onSelectedItemChanged: (i) {
+          // Uniform tick per item. A fast fling would rattle, so the governor
+          // suppresses runs of rapid detents (§4.4) rather than this widget
+          // trying to guess at scroll velocity.
+          ref.read(hapticsProvider).wheelItem();
           setState(() => _selected = i);
           widget.onChanged(i);
         },

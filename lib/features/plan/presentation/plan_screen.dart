@@ -20,6 +20,7 @@ import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
@@ -92,6 +93,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       repeat: repeat,
     );
     await ref.read(tasksRepositoryProvider).create(task);
+    // Second creation path (quick add) alongside `add_task_screen._save`. Same
+    // Tier 2 event, not a new one — the state change is identical, so it costs
+    // nothing against Plan's budget of 4.
+    ref.read(hapticsProvider).taskCreated();
     ref.invalidate(dayTasksProvider);
   }
 
@@ -117,6 +122,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 date: ref.read(selectedDateProvider),
                 mood: result.mood,
               );
+          // On commit, and only after it lands — distinct from the ramp detents
+          // that preceded it inside the sheet.
+          ref.read(hapticsProvider).moodLogged();
           ref.invalidate(moodWeekProvider);
           ref.invalidate(streakProvider);
         }
@@ -298,6 +306,11 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _overflow(Task t) async {
+    // Spec Finding 04 — the only long-press in the app, and until now it was
+    // functionally broken: nothing told the user the gesture had registered.
+    // First thing in the handler, before any await, so the tick lands with the
+    // press rather than with the sheet.
+    ref.read(hapticsProvider).longPressTick();
     final tag = resolveStudyTag(ref.read(tagsByIdProvider).values, t.tagId);
     final color = tag != null ? hexColor(tag.color) : context.colors.accent;
     final action = await showTaskOverflowSheet(

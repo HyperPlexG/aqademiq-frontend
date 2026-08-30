@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 
 const _monthNames = <String>[
@@ -342,7 +344,10 @@ class _WheelBodyState extends State<_WheelBody> {
 }
 
 /// A scrollable wheel column: centred value large, neighbours dimmed.
-class _Wheel extends StatefulWidget {
+///
+/// Consumer-backed for the detent tick only — see spec Finding 03; a
+/// `ListWheelScrollView` does not self-haptic the way a `CupertinoPicker` does.
+class _Wheel extends ConsumerStatefulWidget {
   const _Wheel({
     required this.count,
     required this.initialIndex,
@@ -356,10 +361,10 @@ class _Wheel extends StatefulWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  State<_Wheel> createState() => _WheelState();
+  ConsumerState<_Wheel> createState() => _WheelState();
 }
 
-class _WheelState extends State<_Wheel> {
+class _WheelState extends ConsumerState<_Wheel> {
   late final FixedExtentScrollController _controller =
       FixedExtentScrollController(initialItem: widget.initialIndex.clamp(0, widget.count - 1));
   late int _selected = widget.initialIndex.clamp(0, widget.count - 1);
@@ -379,6 +384,7 @@ class _WheelState extends State<_Wheel> {
       perspective: 0.004,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (i) {
+        ref.read(hapticsProvider).wheelItem();
         setState(() => _selected = i);
         widget.onChanged(i);
       },
