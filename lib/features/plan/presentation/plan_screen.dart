@@ -92,7 +92,23 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       durationMin: 30,
       repeat: repeat,
     );
-    await ref.read(tasksRepositoryProvider).create(task);
+    // Quick add is the OTHER creation path, and until now it was the one that
+    // failed in silence: `add_task_screen._save` has always caught and shown a
+    // snackbar, while this awaited the create bare. A throw here escaped into
+    // the void — the sheet had already closed, no task appeared, and nothing
+    // said why. "I added a task and it just didn't add" is what that looks like
+    // from the outside, and it is indistinguishable from the app ignoring the
+    // tap. Both paths now report the same way.
+    try {
+      await ref.read(tasksRepositoryProvider).create(task);
+    } on Object {
+      ref.read(hapticsProvider).saveFailed();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't add task. Try again.")),
+      );
+      return;
+    }
     // Second creation path (quick add) alongside `add_task_screen._save`. Same
     // Tier 2 event, not a new one — the state change is identical, so it costs
     // nothing against Plan's budget of 4.

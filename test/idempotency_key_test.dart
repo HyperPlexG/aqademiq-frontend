@@ -97,6 +97,35 @@ void main() {
     expect(a, isNot(b));
   });
 
+  test('the dedupe window stays narrow enough not to swallow real writes', () {
+    // Widening this is not free. The backend now honours the header for real
+    // (it was a no-op until Upstash was configured), so a false positive means
+    // a write the user asked for is answered with an older response and never
+    // happens — which looks exactly like the app ignoring them. The window only
+    // has to cover the accidental case: a double-tap, which lands inside a
+    // second. Five seconds was wide enough to swallow someone deliberately
+    // adding two identically-named blocks back to back.
+    expect(kIdempotencyDedupeWindow.inSeconds, lessThanOrEqualTo(2));
+  });
+
+  test('a deliberate repeat just outside the window creates a second write', () {
+    final a = idempotencyKeyFor(req('POST', '/tasks', data: {'title': 'Revise'}), at: _t0);
+    final b = idempotencyKeyFor(
+      req('POST', '/tasks', data: {'title': 'Revise'}),
+      at: _t0.add(const Duration(seconds: 3)),
+    );
+    expect(a, isNot(b));
+  });
+
+  test('a double-tap inside the window is still collapsed', () {
+    final a = idempotencyKeyFor(req('POST', '/tasks', data: {'title': 'Revise'}), at: _t0);
+    final b = idempotencyKeyFor(
+      req('POST', '/tasks', data: {'title': 'Revise'}),
+      at: _t0.add(const Duration(milliseconds: 400)),
+    );
+    expect(a, b);
+  });
+
   test('a null body is handled without throwing', () {
     // Plenty of mutations carry no body at all (POST /tasks/:id/complete).
     final a = idempotencyKeyFor(req('POST', '/tasks/1/complete'), at: _t0);

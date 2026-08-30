@@ -41,6 +41,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     final colors = context.colors;
     final mode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileControllerProvider);
+    final isGuest = ref.watch(isGuestProvider);
 
     return SettingsScaffold(
       title: 'Settings',
@@ -108,36 +109,58 @@ class SettingsHomeScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         const GroupLabel('Account'),
-        SetGroup(
-          children: [
-            SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
-            SettingsRow(
-              label: 'Sign out',
-              icon: Icons.logout,
-              showChevron: true,
-              onTap: () async {
-                await ref.read(authRepositoryProvider).signOut();
-                if (context.mounted) context.go(Routes.welcome);
-              },
-            ),
-            SettingsRow(
-              label: 'Delete account',
-              icon: Icons.delete_outline,
-              danger: true,
-              showChevron: true,
-              last: true,
-              onTap: () async {
-                final confirmed = await showDeleteAccountDialog(context);
-                if (confirmed != true) return;
-                await ref.read(authRepositoryProvider).deleteAccount();
-                // Tier 4, on the confirm rather than the tap that opened the
-                // dialog. Deliberately unpleasant — this one is irreversible.
-                ref.read(hapticsProvider).destructiveConfirmed();
-                if (context.mounted) context.go(Routes.welcome);
-              },
-            ),
-          ],
-        ),
+        // A guest has no account, and every row in the signed-in version of this
+        // group is wrong for them — one of them destructively so.
+        //
+        // "Sign out" is the dangerous one. A guest IS their anonymous Supabase
+        // session; there are no credentials to sign back in with. Signing out
+        // does not log them out of anything, it abandons the only handle on
+        // their tasks, subjects and streaks, permanently and with no warning.
+        // The row that should be here instead is the one offering to keep that
+        // data, which is exactly what onboarding does.
+        if (isGuest)
+          SetGroup(
+            children: [
+              SettingsRow(
+                label: 'Create account & save progress',
+                icon: Icons.person_add_alt,
+                showChevron: true,
+                last: true,
+                onTap: () => context.go(Routes.obAge),
+              ),
+            ],
+          )
+        else
+          SetGroup(
+            children: [
+              SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
+              SettingsRow(
+                label: 'Sign out',
+                icon: Icons.logout,
+                showChevron: true,
+                onTap: () async {
+                  await ref.read(authRepositoryProvider).signOut();
+                  if (context.mounted) context.go(Routes.welcome);
+                },
+              ),
+              SettingsRow(
+                label: 'Delete account',
+                icon: Icons.delete_outline,
+                danger: true,
+                showChevron: true,
+                last: true,
+                onTap: () async {
+                  final confirmed = await showDeleteAccountDialog(context);
+                  if (confirmed != true) return;
+                  await ref.read(authRepositoryProvider).deleteAccount();
+                  // Tier 4, on the confirm rather than the tap that opened the
+                  // dialog. Deliberately unpleasant — this one is irreversible.
+                  ref.read(hapticsProvider).destructiveConfirmed();
+                  if (context.mounted) context.go(Routes.welcome);
+                },
+              ),
+            ],
+          ),
         const SizedBox(height: 20),
         const GroupLabel('About'),
         SetGroup(
