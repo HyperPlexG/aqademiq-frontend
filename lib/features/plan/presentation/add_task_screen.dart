@@ -15,6 +15,7 @@ import '../../../data/models/task.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../services/reminder_scheduler.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -188,12 +189,18 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           // Non-fatal.
         }
       }
+      // Tier 2, and only for a creation. An edit is not a new task, and Plan's
+      // budget of 4 (§7) has no room for "task edited" — nor should it.
+      if (existing == null) ref.read(hapticsProvider).taskCreated();
       ref.invalidate(dayTasksProvider);
       // Arm the device's reminders for the task the user just saved, without
       // waiting for the next resume.
       unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
       if (mounted) context.pop();
     } on Object {
+      // Tier 4. The user explicitly submitted this and it did not land; the
+      // snackbar is easy to miss and the form looks unchanged.
+      ref.read(hapticsProvider).saveFailed();
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(

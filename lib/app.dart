@@ -7,6 +7,7 @@ import 'core/theme/theme_controller.dart';
 import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
+import 'features/stats/providers/streak_milestone_provider.dart';
 import 'services/push_service.dart';
 import 'services/reminder_scheduler.dart';
 
@@ -28,12 +29,16 @@ class AqademiqApp extends ConsumerWidget {
     // and registers this device once signed in (no-op under mocks) — and the
     // reminder scheduler, which keeps the device's own notification schedule in
     // step with the task list.
+    // The streak-milestone watcher rides along here for the same reason: the
+    // crossing happens wherever a mood is logged, not on the screen that
+    // displays the number (spec §4.5).
     ref
       ..watch(revisionSyncProvider)
       ..watch(sessionResetProvider)
       ..watch(prismAudioControllerProvider)
       ..watch(pushServiceProvider)
-      ..watch(reminderSchedulerProvider);
+      ..watch(reminderSchedulerProvider)
+      ..watch(streakMilestoneProvider);
 
     return MaterialApp.router(
       title: 'Aqademiq',

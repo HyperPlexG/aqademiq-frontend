@@ -15,6 +15,7 @@ import '../../../data/models/mood_log.dart';
 import '../../../data/models/user_stats.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/profile_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -257,6 +258,8 @@ class _MoodCard extends ConsumerWidget {
           note: result.note,
           writeReflection: true,
         );
+    // The sheet's own ramp detents already fired inside it; this is the commit.
+    ref.read(hapticsProvider).moodLogged();
     ref
       ..invalidate(moodWeekProvider)
       ..invalidate(streakProvider);

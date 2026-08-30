@@ -15,6 +15,7 @@ import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/tag.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/tags_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../providers/prism_settings_provider.dart';
 import '../providers/profile_controller.dart';
@@ -129,6 +130,9 @@ class SettingsHomeScreen extends ConsumerWidget {
                 final confirmed = await showDeleteAccountDialog(context);
                 if (confirmed != true) return;
                 await ref.read(authRepositoryProvider).deleteAccount();
+                // Tier 4, on the confirm rather than the tap that opened the
+                // dialog. Deliberately unpleasant — this one is irreversible.
+                ref.read(hapticsProvider).destructiveConfirmed();
                 if (context.mounted) context.go(Routes.welcome);
               },
             ),

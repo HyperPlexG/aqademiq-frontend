@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/env/env.dart';
 import '../../../core/error/failure.dart';
 import '../../../data/auth/auth_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 
 /// Human-readable message for an auth error, whether it's a Supabase
 /// [AuthException] (the SDK's errors), a domain [Failure], or anything else.
@@ -92,8 +93,20 @@ class AuthController extends AsyncNotifier<void> {
             password: password,
           ));
 
-  Future<bool> verify(String code) =>
-      _run(() => ref.read(authRepositoryProvider).verifyOtp(code));
+  /// Confirm the pending OTP.
+  ///
+  /// Tier 1 `guestUpgraded` fires only on the signup / link-guest branch — this
+  /// is the moment a guest's anxiety about losing their data resolves. A
+  /// *recovery* OTP is the same call and the same code path but a different
+  /// event entirely (someone resetting a password), so it earns nothing. The
+  /// pending type has to be read **before** the call: `verifyOtp` deliberately
+  /// leaves it alone so the verify screen can still tell which flow it finished.
+  Future<bool> verify(String code) async {
+    final recovery = ref.read(authRepositoryProvider).isRecoveryPending;
+    final ok = await _run(() => ref.read(authRepositoryProvider).verifyOtp(code));
+    if (ok && !recovery) ref.read(hapticsProvider).guestUpgraded();
+    return ok;
+  }
 
   /// Resend the pending signup/link OTP.
   Future<bool> resend() =>
@@ -268,6 +281,12 @@ class AuthController extends AsyncNotifier<void> {
     state = const AsyncLoading();
     try {
       state = await AsyncValue.guard(action);
+      // Tier 4, and the second half of Auth's budget of 2 (§7). Everything that
+      // funnels through here — guest, sign-in, sign-up, verify, reset — is
+      // something the user explicitly submitted, which is exactly the line
+      // spec §3 draws for `saveFailed`. Nothing on this screen refetches in the
+      // background, so there is no way for it to fire unbidden.
+      if (state.hasError) ref.read(hapticsProvider).saveFailed();
       return !state.hasError;
     } finally {
       // AsyncValue.guard catches errors, but not a call that never returns.
