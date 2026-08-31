@@ -19,9 +19,16 @@ extension DioJson on Dio {
     }
   }
 
-  Future<Map<String, dynamic>> postMap(String path, [Object? body]) async {
+  /// [options] overrides per-request Dio settings — in practice the receive
+  /// timeout, for the few endpoints that legitimately run longer than the
+  /// client-wide default.
+  Future<Map<String, dynamic>> postMap(
+    String path, [
+    Object? body,
+    Options? options,
+  ]) async {
     try {
-      final r = await post<Map<String, dynamic>>(path, data: body);
+      final r = await post<Map<String, dynamic>>(path, data: body, options: options);
       return r.data ?? const {};
     } on Object catch (e, st) {
       throw mapDioError(e, st);
