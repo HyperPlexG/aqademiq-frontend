@@ -178,6 +178,12 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                 : _MessageList(
                     messages: chat.messages,
                     typing: chat.typing,
+                    error: chat.error,
+                    onRetry: () => unawaited(
+                      ref.read(adaChatProvider.notifier).retryLast(),
+                    ),
+                    onDismissError:
+                        ref.read(adaChatProvider.notifier).clearError,
                     onApplyPlan: _applyPlan,
                     actionsByMessage: chat.actionsByMessage,
                     decidingIds: chat.decidingActionIds,
@@ -353,6 +359,9 @@ class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.messages,
     required this.typing,
+    required this.error,
+    required this.onRetry,
+    required this.onDismissError,
     required this.onApplyPlan,
     required this.actionsByMessage,
     required this.decidingIds,
@@ -361,6 +370,14 @@ class _MessageList extends StatelessWidget {
   });
   final List<AdaMessage> messages;
   final bool typing;
+
+  /// Why the last turn failed, or null. Rendered in the transcript rather than
+  /// as a snackbar: a snackbar for a minute-long request is gone before the
+  /// user looks back at the screen, and this is the answer to "what happened
+  /// to my message".
+  final String? error;
+  final VoidCallback onRetry;
+  final VoidCallback onDismissError;
   final ValueChanged<String> onApplyPlan;
   final Map<String, List<AdaAction>> actionsByMessage;
   final Set<String> decidingIds;
@@ -382,6 +399,12 @@ class _MessageList extends StatelessWidget {
             onReject: onReject,
           ),
         if (typing) const _TypingBubble(),
+        if (error != null)
+          _ErrorBubble(
+            message: error!,
+            onRetry: onRetry,
+            onDismiss: onDismissError,
+          ),
       ],
     );
   }
@@ -916,6 +939,103 @@ class _TypingBubbleState extends State<_TypingBubble>
                     ),
                   ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A failed turn, said out loud in the transcript.
+///
+/// Sits where Ada's reply would have been, because that is where the user is
+/// looking when they wonder what happened to their message. A snackbar would be
+/// wrong here twice over: an Ada turn can take a minute, so the snackbar is long
+/// gone by the time anyone looks back, and it carries no way to retry.
+class _ErrorBubble extends StatelessWidget {
+  const _ErrorBubble({
+    required this.message,
+    required this.onRetry,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Icon(Icons.error_outline, size: 17, color: colors.danger),
+          ),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              decoration: BoxDecoration(
+                // Tinted rather than solid danger: this is information, not an
+                // alarm, and the chat should not turn red because a request
+                // timed out.
+                color: colors.danger.alpha8(0x14),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(3),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message,
+                    style: AppText.sans(size: 12.5, height: 1.4, color: colors.text),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: onRetry,
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Retry',
+                          style: AppText.sans(
+                            size: 12,
+                            weight: FontWeight.w800,
+                            color: colors.accent,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onDismiss,
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Dismiss',
+                          style: AppText.sans(size: 12, color: colors.textMed),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

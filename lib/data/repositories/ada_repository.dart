@@ -2,6 +2,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/env/env.dart';
+import '../../core/error/failure.dart';
 import '../../core/network/dio_client.dart';
 import '../adapters/adapters.dart';
 import '../models/ada_action.dart';
@@ -80,6 +81,7 @@ class AdaChatState {
     this.pendingAttachments = const [],
     this.actionsByMessage = const {},
     this.decidingActionIds = const {},
+    this.error,
   });
 
   final List<AdaMessage> messages;
@@ -97,6 +99,16 @@ class AdaChatState {
   /// Actions with a decision in flight — their card shows a spinner.
   final Set<String> decidingActionIds;
 
+  /// Why the last turn failed, in words meant for the person waiting.
+  ///
+  /// Null when nothing is wrong. This exists because the failure used to be
+  /// swallowed whole: the catch cleared `typing` and returned, so the thinking
+  /// indicator simply stopped and no reply ever arrived. Ada looked like she had
+  /// ignored the message. A turn can fail for reasons the user can act on —
+  /// they are offline, the daily limit is spent, the providers are busy — and
+  /// each deserves a different response from them.
+  final String? error;
+
   bool get isEmpty => messages.isEmpty;
 
   /// Every change still waiting on the user, across the whole conversation.
@@ -113,6 +125,8 @@ class AdaChatState {
     List<AdaAttachmentRef>? pendingAttachments,
     Map<String, List<AdaAction>>? actionsByMessage,
     Set<String>? decidingActionIds,
+    String? error,
+    bool clearError = false,
   }) =>
       AdaChatState(
         messages: messages ?? this.messages,
@@ -121,7 +135,40 @@ class AdaChatState {
         pendingAttachments: pendingAttachments ?? this.pendingAttachments,
         actionsByMessage: actionsByMessage ?? this.actionsByMessage,
         decidingActionIds: decidingActionIds ?? this.decidingActionIds,
+        // `error ?? this.error` could never clear it, so clearing is explicit.
+        error: clearError ? null : (error ?? this.error),
       );
+}
+
+/// A failed Ada turn, in words the person waiting can act on.
+///
+/// The distinctions are the point. "Something went wrong" is true of all of
+/// these and useful for none — being offline, having spent the day's allowance,
+/// and the model pool being busy each call for a different response, and only
+/// one of them is worth retrying immediately.
+String adaErrorMessage(Object error) {
+  if (error is NetworkFailure) {
+    return "Can't reach Ada — check your connection and try again.";
+  }
+  if (error is AuthFailure) {
+    return 'Your session expired. Sign in again to keep chatting.';
+  }
+  if (error is ServerFailure) {
+    // 429 is the daily cap or the rate limiter. Telling someone to retry now
+    // would be a lie: the answer is to come back later.
+    if (error.statusCode == 429) {
+      return error.message.isNotEmpty
+          ? error.message
+          : "Ada has hit today's limit. She'll be back tomorrow.";
+    }
+    if (error.statusCode == 503) {
+      return 'Ada is busy right now. Give it a moment and try again.';
+    }
+    // The server's own message beats a generic one — it is the layer that knows
+    // what was actually wrong.
+    if (error.message.isNotEmpty) return error.message;
+  }
+  return "Ada couldn't finish that. Tap retry to try again.";
 }
 
 final adaChatProvider =
@@ -154,6 +201,7 @@ class AdaChatController extends Notifier<AdaChatState> {
       messages: [...state.messages, userMsg],
       typing: true,
       pendingAttachments: const [],
+      clearError: true,
     );
     try {
       final reply = await ref.read(adaRepositoryProvider).reply(
@@ -162,13 +210,43 @@ class AdaChatController extends Notifier<AdaChatState> {
             attachments: attachments,
           );
       _appendTurn(reply, typing: false);
-    } on Object catch (_) {
-      // Restore staged files so the user can retry without re-uploading.
+    } on Object catch (e) {
+      // Say what happened. This used to be `catch (_)` with no message at all:
+      // the thinking indicator stopped and no reply arrived, which is
+      // indistinguishable from Ada ignoring the message — and left the user
+      // with nothing to act on when the cause was something they could fix.
       state = state.copyWith(
         typing: false,
+        // Restore staged files so a retry costs no re-upload.
         pendingAttachments: attachments,
+        error: adaErrorMessage(e),
       );
     }
+  }
+
+  /// Dismiss the error banner without resending.
+  void clearError() => state = state.copyWith(clearError: true);
+
+  /// Resend the last user message after a failure.
+  ///
+  /// Drops the failed user bubble first so a retry does not stack a second copy
+  /// of the same question in the transcript.
+  Future<void> retryLast() async {
+    final last = state.messages.lastWhere(
+      (m) => m.role == AdaRole.user,
+      orElse: () => const AdaMessage(id: '', role: AdaRole.user, text: ''),
+    );
+    if (last.text.isEmpty) return;
+    // send() picks the staged files back up from state — the failure handler
+    // already restored them, so they ride along without a re-upload.
+    state = state.copyWith(
+      messages: [
+        for (final m in state.messages)
+          if (m.id != last.id) m,
+      ],
+      clearError: true,
+    );
+    await send(last.text);
   }
 
   void clear() => state = const AdaChatState();
