@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -813,18 +814,72 @@ class _DecideAllBar extends StatelessWidget {
   }
 }
 
-class _TypingBubble extends StatelessWidget {
+/// "Ada is thinking", with the wait made visible.
+///
+/// An Ada turn is several provider calls and can legitimately run past a
+/// minute when it opens an attachment. A static line for that long reads as a
+/// hang — the thing you look at to decide whether the app is still alive. A
+/// loop that keeps moving answers that question without claiming progress it
+/// cannot measure, which a spinner or a percentage would.
+class _TypingBubble extends StatefulWidget {
   const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
+  /// Slow enough to read as breathing rather than loading. A fast pulse on a
+  /// 60-second wait is agitating; this one is meant to be ignorable.
+  late final AnimationController _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
+  /// One dot's position in the travelling wave, 0 at rest and 1 at the peak.
+  /// [phase] staggers each dot so the crest moves left to right.
+  double _lift(double t, double phase) {
+    final local = (t - phase) % 1.0;
+    // The crest occupies the first 45% of the cycle; the rest is the pause that
+    // stops three dots looking like a stutter.
+    if (local > 0.45) return 0;
+    return math.sin((local / 0.45) * math.pi);
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // Honour the OS "reduce motion" setting. Vestibular triggers aside, this is
+    // the one widget on screen during a long wait, so a user who has asked for
+    // stillness should not be given the most persistent movement in the app.
+    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(padding: EdgeInsets.only(top: 2), child: AdaMascot(size: 22)),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: still
+                ? const AdaMascot(size: 22)
+                : AnimatedBuilder(
+                    animation: _wave,
+                    builder: (context, child) => Transform.scale(
+                      // Barely there — enough to read as alive, not as a pulse.
+                      scale: 1 + 0.05 * _lift(_wave.value, 0),
+                      child: child,
+                    ),
+                    child: const AdaMascot(size: 22),
+                  ),
+          ),
           const SizedBox(width: 7),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -837,9 +892,58 @@ class _TypingBubble extends StatelessWidget {
                 bottomRight: Radius.circular(12),
               ),
             ),
-            child: Text('Ada is thinking…', style: AppText.sans(size: 12, color: colors.textMed)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Ada is thinking',
+                  style: AppText.sans(size: 12, color: colors.textMed),
+                ),
+                const SizedBox(width: 6),
+                if (still)
+                  Text('…', style: AppText.sans(size: 12, color: colors.textMed))
+                else
+                  AnimatedBuilder(
+                    animation: _wave,
+                    builder: (context, _) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < 3; i++) ...[
+                          if (i > 0) const SizedBox(width: 4),
+                          _Dot(lift: _lift(_wave.value, i * 0.16), color: colors.accent),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One dot of the thinking indicator. [lift] is 0 at rest, 1 at the crest.
+class _Dot extends StatelessWidget {
+  const _Dot({required this.lift, required this.color});
+
+  final double lift;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(0, -2.5 * lift),
+      child: Container(
+        width: 5,
+        height: 5,
+        decoration: BoxDecoration(
+          // Never fully transparent: a dot that vanishes makes the row change
+          // width to the eye, which reads as jitter rather than rhythm.
+          color: color.withValues(alpha: 0.35 + 0.65 * lift),
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }
