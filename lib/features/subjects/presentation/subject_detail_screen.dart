@@ -10,6 +10,8 @@ import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
+import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import 'sheets/add_file_sheet.dart';
 import 'widgets/subject_form_sheet.dart';
@@ -41,12 +43,39 @@ class SubjectDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final byId = ref.watch(subjectsByIdProvider).value ?? const <String, Subject>{};
+    final subjectsAsync = ref.watch(subjectsByIdProvider);
+    final byId = subjectsAsync.value ?? const <String, Subject>{};
     final subject = byId[id];
     if (subject == null) {
+      // Only claim the subject is gone once the list actually loaded — a failed
+      // fetch gets a retry instead of a wrong "it was deleted" story.
+      final Widget body;
+      if (!subjectsAsync.hasValue && subjectsAsync.isLoading) {
+        body = Center(child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5));
+      } else if (subjectsAsync.hasError) {
+        body = EmptyState(
+          title: "Couldn't load your subjects",
+          subtitle: 'Give it another go.',
+          expr: AdaExpr.meh,
+          sweat: true,
+          ctaLabel: 'Try again',
+          ctaIcon: Icons.refresh,
+          onCta: () => ref.invalidate(subjectsProvider),
+        );
+      } else {
+        body = EmptyState(
+          title: 'Uhh... this subject melted away',
+          subtitle: "Deleted, or the link's gone stale.",
+          expr: AdaExpr.sad,
+          sweat: true,
+          ctaLabel: 'Back to subjects',
+          ctaIcon: Icons.arrow_back,
+          onCta: () => context.pop(),
+        );
+      }
       return Scaffold(
         backgroundColor: colors.bg,
-        body: Center(child: Text('Subject not found', style: AppText.sans(size: 13, color: colors.textMed))),
+        body: SafeArea(child: Center(child: SingleChildScrollView(child: body))),
       );
     }
     final color = hexColor(subject.color);
@@ -131,11 +160,31 @@ class SubjectDetailScreen extends ConsumerWidget {
               ...filesAsync.when(
                 data: (list) => list.isEmpty
                     ? [
+                        // Same recipe as the Subjects-tab missing-syllabus
+                        // banner: tinted row, tiny Ada, accent action.
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'No materials yet — add your syllabus or notes.',
-                            style: AppText.sans(size: 11.5, color: colors.textMed),
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(color: colors.accentSoft, borderRadius: BorderRadius.circular(AppRadius.rowInput)),
+                            child: Row(
+                              children: [
+                                const AdaMascot(size: 26, expr: AdaExpr.focused),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Text(
+                                    'Drop in your syllabus or notes so I can plan smarter.',
+                                    style: AppText.sans(size: 10.5, height: 1.4, color: colors.text),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () => showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Text('Add →', style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.accent)),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ]

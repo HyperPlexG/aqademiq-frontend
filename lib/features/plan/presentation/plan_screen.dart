@@ -19,7 +19,9 @@ import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
 import '../plan_time.dart';
@@ -178,10 +180,14 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                     tagsById: tagsById,
                     onToggleDone: _toggleDone,
                     onAddBucket: _addToBucket,
+                    onAdd: _add,
                   );
                 }
                 if (tasks.isEmpty) {
-                  return _OtherDayEmpty(onAdd: _add);
+                  return _OtherDayEmpty(
+                    onAdd: _add,
+                    isToday: AppDate.sameDay(selected, AppDate.today()),
+                  );
                 }
                 return _PlanTimeline(
                   tasks: tasks,
@@ -191,6 +197,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   expandedId: expandedId,
                   onToggleAnytime: () => setState(() => _anytimeOpen = !_anytimeOpen),
                   onTogglePlanned: () => setState(() => _plannedOpen = !_plannedOpen),
+                  onAdd: _add,
                   onToggleDone: _toggleDone,
                   onExpand: (t) => ref.read(expandedTaskProvider.notifier).toggle(t.id),
                   onLater: _later,
@@ -298,6 +305,7 @@ class _PlanTimeline extends StatelessWidget {
     required this.expandedId,
     required this.onToggleAnytime,
     required this.onTogglePlanned,
+    required this.onAdd,
     required this.onToggleDone,
     required this.onExpand,
     required this.onLater,
@@ -312,6 +320,7 @@ class _PlanTimeline extends StatelessWidget {
   final String? expandedId;
   final VoidCallback onToggleAnytime;
   final VoidCallback onTogglePlanned;
+  final VoidCallback onAdd;
   final ValueChanged<Task> onToggleDone;
   final ValueChanged<Task> onExpand;
   final ValueChanged<Task> onLater;
@@ -328,6 +337,9 @@ class _PlanTimeline extends StatelessWidget {
       padding: EdgeInsets.zero,
       children: [
         CollapseHead(label: 'ANYTIME', count: anytime.length, open: anytimeOpen, icon: Icons.schedule, onTap: onToggleAnytime),
+        // Empty section under an open head: same AddRow affordance as
+        // plan-otherday, so a "(0)" head is never followed by dead space.
+        if (anytimeOpen && anytime.isEmpty) AddRow(onTap: onAdd),
         if (anytimeOpen)
           for (final t in anytime)
             Padding(
@@ -346,6 +358,8 @@ class _PlanTimeline extends StatelessWidget {
             ),
         const SizedBox(height: 8),
         CollapseHead(label: 'PLANNED', count: planned.length, open: plannedOpen, onTap: onTogglePlanned),
+        if (plannedOpen && planned.isEmpty)
+          AddRow(label: 'Add a planned task', onTap: onAdd),
         if (plannedOpen)
           for (final t in planned) ...[
             Padding(
@@ -435,17 +449,36 @@ class _PlanListGrouped extends ConsumerWidget {
     required this.tagsById,
     required this.onToggleDone,
     required this.onAddBucket,
+    required this.onAdd,
   });
 
   final List<Task> tasks;
   final Map<String, Tag> tagsById;
   final ValueChanged<Task> onToggleDone;
   final ValueChanged<DayPart> onAddBucket;
+  final VoidCallback onAdd;
 
   static const List<DayPart> _order = [DayPart.anytime, DayPart.morning, DayPart.afternoon, DayPart.evening];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // With zero tasks every bucket head hides, which used to leave a fully
+    // blank pane — greet instead, with the quick-add as the way back in.
+    if (tasks.isEmpty) {
+      return Center(
+        child: SingleChildScrollView(
+          child: EmptyState(
+            title: 'Uhh... nothing here yet',
+            subtitle: "Add a task and I'll slot it in.",
+            expr: AdaExpr.smile,
+            cheeks: true,
+            ctaLabel: 'Add a task',
+            onCta: onAdd,
+          ),
+        ),
+      );
+    }
+
     final colors = context.colors;
     final collapsed = ref.watch(collapsedGroupsProvider);
     final meta = <DayPart, (IconData, String, Color?)>{
@@ -491,16 +524,25 @@ class _PlanListGrouped extends ConsumerWidget {
 }
 
 /// plan-otherday: a day with empty buckets + an add affordance (Today pill is in
-/// the header when not viewing today).
+/// the header when not viewing today). When the empty day is *today* — the tab's
+/// first impression — Ada greets above the bucket scaffold.
 class _OtherDayEmpty extends StatelessWidget {
-  const _OtherDayEmpty({required this.onAdd});
+  const _OtherDayEmpty({required this.onAdd, this.isToday = false});
   final VoidCallback onAdd;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
+        if (isToday)
+          const EmptyState.compact(
+            title: 'Clean slate!',
+            subtitle: 'Add one small thing to get rolling.',
+            sparkles: true,
+            cheeks: true,
+          ),
         const CollapseHead(label: 'ANYTIME', count: 0, open: true, icon: Icons.schedule),
         AddRow(onTap: onAdd),
         const SizedBox(height: 8),

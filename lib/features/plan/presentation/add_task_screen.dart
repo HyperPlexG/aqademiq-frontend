@@ -191,8 +191,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final tags = ref.watch(tagsProvider).value ?? const <Tag>[];
-    final subjects = ref.watch(subjectsProvider).value ?? const [];
+    final tagsAsync = ref.watch(tagsProvider);
+    final tags = tagsAsync.value ?? const <Tag>[];
+    final subjectsAsync = ref.watch(subjectsProvider);
+    final subjects = subjectsAsync.value ?? const [];
     // Highlight the chosen tag; if none picked yet, pre-highlight the first so a
     // task is never saved untagged (which would show as "Other").
     final effectiveTag =
@@ -217,47 +219,73 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                     const SizedBox(height: 6),
                     _Section(
                       label: "Tag · what's this for?",
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final t in tags)
-                            TagChip(
-                              label: t.label,
-                              color: hexColor(t.color),
-                              active: effectiveTag == t.id,
-                              onTap: _saving ? null : () => setState(() => _tag = t.id),
+                          // Fresh accounts land here tagless; say so instead of
+                          // showing a lone dashed chip (skip while loading).
+                          if (tagsAsync.hasValue && tags.isEmpty) ...[
+                            Text(
+                              'No tags yet — tap "+ New".',
+                              style: AppText.sans(size: 11.5, color: colors.textDim),
                             ),
-                          TagChip(
-                            label: '+ New',
-                            color: colors.accent,
-                            dashed: true,
-                            onTap: _saving ? null : _addTag,
+                            const SizedBox(height: 7),
+                          ],
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final t in tags)
+                                TagChip(
+                                  label: t.label,
+                                  color: hexColor(t.color),
+                                  active: effectiveTag == t.id,
+                                  onTap: _saving ? null : () => setState(() => _tag = t.id),
+                                ),
+                              TagChip(
+                                label: '+ New',
+                                color: colors.accent,
+                                dashed: true,
+                                onTap: _saving ? null : _addTag,
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                     _Section(
                       label: 'Subject · link it (optional)',
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          for (final s in subjects)
-                            TagChip(
-                              label: (s.code != null && s.code!.trim().isNotEmpty)
-                                  ? s.code!
-                                  : s.name,
-                              color: hexColor(s.color),
-                              active: _subject == s.id,
-                              onTap: _saving
-                                  ? null
-                                  : () => setState(() => _subject = s.id),
+                          if (subjectsAsync.hasValue && subjects.isEmpty) ...[
+                            Text(
+                              "No subjects yet — they'll show up here.",
+                              style: AppText.sans(size: 11.5, color: colors.textDim),
                             ),
-                          TagChip(
-                            label: 'None',
-                            active: _subject.isEmpty,
-                            onTap: _saving ? null : () => setState(() => _subject = ''),
+                            const SizedBox(height: 7),
+                          ],
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              for (final s in subjects)
+                                TagChip(
+                                  label: (s.code != null && s.code!.trim().isNotEmpty)
+                                      ? s.code!
+                                      : s.name,
+                                  color: hexColor(s.color),
+                                  active: _subject == s.id,
+                                  onTap: _saving
+                                      ? null
+                                      : () => setState(() => _subject = s.id),
+                                ),
+                              TagChip(
+                                label: 'None',
+                                active: _subject.isEmpty,
+                                onTap: _saving ? null : () => setState(() => _subject = ''),
+                              ),
+                            ],
                           ),
                         ],
                       ),

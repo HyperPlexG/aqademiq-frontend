@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/ada_memory.dart';
 import '../../../data/repositories/ada_memory_repository.dart';
+import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/settings_row.dart';
 import 'widgets/settings_scaffold.dart';
@@ -157,7 +158,8 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          Icon(Icons.psychology_outlined, size: 34, color: colors.textDim),
+          // Ada herself, not a generic brain icon — this screen is about her.
+          const AdaMascot(size: 56, expr: AdaExpr.neutral),
           const SizedBox(height: 12),
           Text(
             "Ada hasn't picked anything up yet",

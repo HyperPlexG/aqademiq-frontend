@@ -45,6 +45,26 @@ class _EditSemestersBody extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (semesters.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Center(
+              child: Column(
+                children: [
+                  Text(
+                    'Nothing to edit yet',
+                    style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.text),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Add a term and your subjects will file under it.',
+                    textAlign: TextAlign.center,
+                    style: AppText.sans(size: 11, height: 1.5, color: colors.textMed),
+                  ),
+                ],
+              ),
+            ),
+          ),
         for (var i = 0; i < semesters.length; i++)
           Padding(
             padding: EdgeInsets.only(

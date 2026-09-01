@@ -77,17 +77,26 @@ class _SubjectMenuPopover extends ConsumerWidget {
                     ),
                   ),
                 ),
-                for (final sem in semesters)
-                  _SemesterRow(
-                    label: sem.name,
-                    on: sem.id == selectedId,
-                    onTap: () {
-                      ref
-                          .read(selectedSemesterProvider.notifier)
-                          .select(sem.id);
-                      Navigator.of(context).pop();
-                    },
-                  ),
+                if (semesters.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 2, 18, 9),
+                    child: Text(
+                      'No semesters yet — add one below',
+                      style: AppText.sans(size: 11, color: colors.textDim),
+                    ),
+                  )
+                else
+                  for (final sem in semesters)
+                    _SemesterRow(
+                      label: sem.name,
+                      on: sem.id == selectedId,
+                      onTap: () {
+                        ref
+                            .read(selectedSemesterProvider.notifier)
+                            .select(sem.id);
+                        Navigator.of(context).pop();
+                      },
+                    ),
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(vertical: 6),

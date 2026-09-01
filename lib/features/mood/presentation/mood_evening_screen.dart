@@ -80,7 +80,8 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final logs = ref.watch(moodWeekProvider).value ?? const <MoodLog>[];
+    final logsAsync = ref.watch(moodWeekProvider);
+    final logs = logsAsync.value ?? const <MoodLog>[];
     final today = AppDate.today();
     final monday = today.subtract(Duration(days: today.weekday - 1));
     return Scaffold(
@@ -187,6 +188,15 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                           ),
                       ],
                     ),
+                    // First check-in of the week: say what the hollow circles
+                    // become (hasValue so the hint doesn't flash during load).
+                    if (logsAsync.hasValue && logs.isEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your week fills in as you check in. Tonight counts!',
+                        style: AppText.sans(size: 10.5, color: colors.textDim),
+                      ),
+                    ],
                   ],
                 ),
               ),

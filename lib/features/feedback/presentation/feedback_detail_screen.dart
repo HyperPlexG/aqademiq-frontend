@@ -8,6 +8,8 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/feedback_post.dart';
+import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
 import 'widgets/feedback_bits.dart';
@@ -147,10 +149,20 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
                   ),
                 ),
                 data: (_) => post == null
+                    // Also reached when the post isn't in the loaded page, so
+                    // the copy stays agnostic about deletion.
                     ? Center(
-                        child: Text(
-                          'This suggestion is gone.',
-                          style: AppText.sans(size: 13, color: colors.textMed),
+                        child: SingleChildScrollView(
+                          child: EmptyState(
+                            title: 'This suggestion is gone',
+                            subtitle: "Removed, or the link's gone stale.",
+                            expr: AdaExpr.sad,
+                            sweat: true,
+                            ctaLabel: 'Back to the board',
+                            ctaIcon: Icons.arrow_back,
+                            onCta: () =>
+                                unawaited(Navigator.of(context).maybePop()),
+                          ),
                         ),
                       )
                     : _PostBody(post: post),
@@ -402,12 +414,15 @@ class _PostBody extends ConsumerWidget {
             ),
           ),
           data: (comments) => comments.isEmpty
-              ? Text(
-                  'No comments yet — start the discussion.',
-                  style: AppText.sans(
-                    size: 11.5,
-                    height: 1.5,
-                    color: colors.textMed,
+              // No CTA: the composer is pinned right below (and guests see the
+              // sign-up bar there instead).
+              ? const Center(
+                  child: EmptyState.compact(
+                    title: 'No comments yet',
+                    subtitle: 'Start the discussion.',
+                    expr: AdaExpr.smile,
+                    cheeks: true,
+                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   ),
                 )
               : Column(

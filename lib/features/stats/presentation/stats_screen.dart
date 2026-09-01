@@ -93,7 +93,13 @@ class _Body extends ConsumerWidget {
                 children: [
                   Text('Keep it frozen, ${name.split(' ').first}', style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
                   const SizedBox(height: 2),
-                  Text(streak == 1 ? '1-day streak' : '$streak-day streak', style: AppText.sans(size: 10.5, color: colors.textMed)),
+                  // "0-day streak" is a deflating opener — invite instead.
+                  Text(
+                    streak == 0
+                        ? 'Start your streak — log today'
+                        : (streak == 1 ? '1-day streak' : '$streak-day streak'),
+                    style: AppText.sans(size: 10.5, color: colors.textMed),
+                  ),
                 ],
               ),
             ),
