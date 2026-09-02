@@ -58,6 +58,10 @@ dependencies:
   # scheduler builds TZDateTimes in the device's own IANA zone.
   timezone: ^0.10.1
   url_launcher: ^6.3.2
+  # Ice Breakers tutorials. The six ship inside the bundle (~2.8 MB total after
+  # tool/build_ice_breakers.sh), so playback needs no network and works in a
+  # lecture with no signal — which is where a student actually watches these.
+  video_player: ^2.9.2
 
 dev_dependencies:
   build_runner: ^2.15.0
@@ -85,6 +89,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/ice_breakers/
     - assets/images/
     - assets/audio/stems/focus_mode/pads/
     - assets/audio/stems/focus_mode/textures/

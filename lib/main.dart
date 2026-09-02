@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
 import 'services/haptics/haptic_settings_service.dart';
+import 'services/ice_breakers_service.dart';
 import 'services/push_service.dart';
 import 'services/sound_settings_service.dart';
 
@@ -23,6 +24,7 @@ Future<void> _start() async {
   // Same deal for the haptics level: the governor reads it on every event and
   // must not have to wait on a future to know whether it may fire.
   await HapticSettingsService.instance.init();
+  await IceBreakersService.instance.init();
 
   // Live builds use Supabase Auth (identity) + Firebase (FCM push). Mock builds
   // skip both so the app runs entirely offline on fixtures.
