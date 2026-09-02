@@ -97,7 +97,7 @@ class IceBreakersCard extends ConsumerWidget {
 
 /// One row: play affordance, title, `01 · Plan`, and the runtime.
 ///
-/// The runtime is on every row on purpose — "45s" does more to earn a tap than
+/// The runtime is on every row on purpose — "23s" does more to earn a tap than
 /// any thumbnail could, and it is the honest answer to the only question a
 /// student has about a tutorial when they are avoiding work.
 class IceBreakerRow extends ConsumerWidget {

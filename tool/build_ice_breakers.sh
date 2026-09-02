@@ -66,7 +66,14 @@ for entry in "${SOURCES[@]}"; do
 
   bytes=$(stat -f%z "$out" 2>/dev/null || stat -c%s "$out")
   total=$((total + bytes))
-  printf '  %s  %6s KB\n' "$(basename "$out")" "$((bytes / 1024))"
+
+  # Printed because the runtime badges in lib/features/ice_breakers/
+  # ice_breaker.dart are written constants — the label has to be on screen
+  # before anyone taps, so it cannot be read from the file at runtime. Recut a
+  # video and the number here is what its `seconds:` should be rounded to.
+  secs=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
+  printf '  %s  %6s KB  %5.1fs\n' "$(basename "$out")" "$((bytes / 1024))" "$secs"
 done
 
 printf '\n%d videos, %d KB total in %s\n' "${#SOURCES[@]}" "$((total / 1024))" "$OUT"
+printf 'Check the seconds above against `seconds:` in ice_breaker.dart.\n'

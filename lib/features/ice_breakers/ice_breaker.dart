@@ -32,13 +32,18 @@ class IceBreaker {
   /// under the title so the student knows which surface they are about to see.
   final String where;
 
-  /// Runtime badge, in seconds.
+  /// Runtime badge, in seconds — the real length of the file, rounded.
   ///
-  /// These are the figures from the design frames rather than the exact
-  /// duration of the file. A runtime does more to earn a tap than any
-  /// thumbnail, so it is content, not metadata — and it is deliberately not
-  /// read from the asset, which would make the label drift every time a video
-  /// is reshot a second shorter.
+  /// The design frames carried rounder guesses (45s, 40s) that overstated
+  /// three of the six by roughly double. A runtime does more to earn a tap
+  /// than any thumbnail could, which is exactly why it has to be true: a
+  /// student who is already avoiding work and gets told 40s for a 17s clip
+  /// learns not to believe the next number.
+  ///
+  /// Still a written constant rather than something read from the asset. The
+  /// player would only know the duration after loading the video, and the
+  /// label has to be on screen before anyone taps. Re-measure with ffprobe and
+  /// update here whenever a video is recut.
   final int seconds;
 
   /// The one line naming the pain, in the student's own words.
@@ -71,7 +76,7 @@ const List<IceBreaker> kIceBreakers = [
     number: '02',
     title: 'Too Big? Break It Down',
     where: 'Task',
-    seconds: 45,
+    seconds: 23,
     blurb: '"Study for midterm" is not a task, it is a wall. '
         'Microtasks are the door through it.',
     asset: 'assets/ice_breakers/02-too-big-break-it-down.mp4',
@@ -81,7 +86,7 @@ const List<IceBreaker> kIceBreakers = [
     number: '03',
     title: 'Five Minutes, Not Twenty-Five',
     where: 'Focus',
-    seconds: 40,
+    seconds: 20,
     blurb: "Twenty-five minutes is a promise you'll break. "
         "Five isn't. Set the timer low on purpose.",
     asset: 'assets/ice_breakers/03-five-minutes-not-twenty-five.mp4',
@@ -101,7 +106,7 @@ const List<IceBreaker> kIceBreakers = [
     number: '05',
     title: 'Push It To Tomorrow',
     where: 'Plan · reschedule',
-    seconds: 20,
+    seconds: 21,
     blurb: "One task left undone shouldn't be enough to abandon the "
         'whole planner.',
     asset: 'assets/ice_breakers/05-push-it-to-tomorrow.mp4',
@@ -111,7 +116,7 @@ const List<IceBreaker> kIceBreakers = [
     number: '06',
     title: 'Start A Session From A Task',
     where: 'Plan → Focus',
-    seconds: 40,
+    seconds: 17,
     blurb: 'The gap between having a plan and actually starting is where '
         'the day dies.',
     asset: 'assets/ice_breakers/06-start-a-session-from-a-task.mp4',
