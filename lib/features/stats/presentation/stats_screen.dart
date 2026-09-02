@@ -23,6 +23,8 @@ import '../../../shared/widgets/share_sheet.dart';
 import '../../ice_breakers/presentation/ice_breakers_card.dart';
 import '../../plan/presentation/sheets/log_mood_sheet.dart';
 import '../../plan/providers/plan_providers.dart';
+import '../../report/report_copy.dart';
+import '../../report/report_optout.dart';
 import '../../settings/presentation/sheets/rate_sheet.dart';
 import '../../settings/providers/profile_controller.dart';
 
@@ -52,8 +54,15 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final name = ref.watch(profileControllerProvider).name;
-    final streak = ref.watch(streakProvider).value ?? stats.streakDays;
-    final completed = ref.watch(weeklyCompletedProvider).value ?? stats.tasksCompletedThisWeek;
+    // `streakProvider` is still read app-wide by `streakMilestoneProvider` for
+    // the Tier 1 haptic; it is simply no longer *shown*. A day count that can
+    // reset to zero overnight is a target by another name, and it sat directly
+    // above a report whose entire design forbids one.
+    final onBoard = stats.totalActiveDays;
+    // No fallback to `stats.tasksCompletedLifetime`. That is a lifetime total,
+    // and using it while the weekly provider loads put a lifetime number under
+    // a "this week" label — which is what the label bug actually was.
+    final completed = ref.watch(weeklyCompletedProvider).value ?? 0;
     final moods = ref.watch(moodWeekProvider).value ?? stats.weekMoods;
 
     return ListView(
@@ -95,15 +104,21 @@ class _Body extends ConsumerWidget {
                 children: [
                   Text('Keep it frozen, ${name.split(' ').first}', style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
                   const SizedBox(height: 2),
-                  Text(streak == 1 ? '1-day streak' : '$streak-day streak', style: AppText.sans(size: 10.5, color: colors.textMed)),
+                  Text(onBoard == 1 ? '1 day on the board' : '$onBoard days on the board', style: AppText.sans(size: 10.5, color: colors.textMed)),
                 ],
               ),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        _StatsCard(streak: streak, completed: completed),
+        _StatsCard(onBoard: onBoard, completed: completed),
         const SizedBox(height: 8),
+        // Turned off means gone, not greyed. A disabled row that still names
+        // the thing you declined is a re-prompt with extra steps.
+        if (ref.watch(weeklyReportEnabledProvider)) ...[
+          const _CoreEntry(),
+          const SizedBox(height: 8),
+        ],
         _MoodCard(moods: moods),
         const SizedBox(height: 16),
         const _LinksCard(),
@@ -134,8 +149,8 @@ class _CircleIcon extends StatelessWidget {
 }
 
 class _StatsCard extends StatelessWidget {
-  const _StatsCard({required this.streak, required this.completed});
-  final int streak;
+  const _StatsCard({required this.onBoard, required this.completed});
+  final int onBoard;
   final int completed;
 
   @override
@@ -145,9 +160,14 @@ class _StatsCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: Row(
         children: [
-          Expanded(child: _StatCol(value: '$streak', label: 'DAY STREAK', sub: '$streak/7 days', progress: (streak / 7).clamp(0, 1))),
-          Container(width: 1, height: 64, color: colors.border),
-          Expanded(child: _StatCol(value: '$completed', label: 'COMPLETED', sub: '$completed/12 tasks', progress: (completed / 12).clamp(0, 1))),
+          // Both columns used to carry an `x of y` sub-label and a progress bar
+          // filling toward it — 7 days and 12 tasks, neither of which the
+          // student ever chose. A bar that is not full is a bar you are short
+          // of, and there is no version of "5/7" that reads as a description
+          // rather than a shortfall.
+          Expanded(child: _StatCol(value: '$onBoard', label: 'DAYS ON THE BOARD')),
+          Container(width: 1, height: 56, color: colors.border),
+          Expanded(child: _StatCol(value: '$completed', label: 'DONE THIS WEEK')),
         ],
       ),
     );
@@ -155,11 +175,9 @@ class _StatsCard extends StatelessWidget {
 }
 
 class _StatCol extends StatelessWidget {
-  const _StatCol({required this.value, required this.label, required this.sub, required this.progress});
+  const _StatCol({required this.value, required this.label});
   final String value;
   final String label;
-  final String sub;
-  final double progress;
 
   @override
   Widget build(BuildContext context) {
@@ -169,26 +187,61 @@ class _StatCol extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(value, style: AppText.numeral(size: 26, color: colors.text)),
-              const SizedBox(width: 6),
-              Text(label, style: AppText.sans(size: 8.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.1, 8.5), color: colors.textDim)),
-            ],
+          // Stacked rather than inline: without the progress bar under them
+          // these labels carry the column, and "DAYS ON THE BOARD" beside a
+          // 26pt numeral in half a card overflows on a narrow phone.
+          Text(value, style: AppText.numeral(size: 28, color: colors.text)),
+          const SizedBox(height: 5),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.sans(size: 8.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.1, 8.5), color: colors.textDim),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The way into the weekly report.
+///
+/// It waits here identically every week, with the same frost dot, whatever the
+/// week held. Nothing pushes it: a notification that fires on good weeks and
+/// stays quiet on bad ones turns its own absence into a verdict on the
+/// lock screen, and this feature is never allowed to deliver one of those.
+class _CoreEntry extends StatelessWidget {
+  const _CoreEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(15, 14, 14, 14),
+      onTap: () => unawaited(context.push(Routes.weeklyReport)),
+      child: Row(
+        children: [
           Container(
-            height: 4,
-            margin: const EdgeInsets.fromLTRB(0, 7, 0, 4),
-            decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(2)),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(decoration: BoxDecoration(color: colors.accent, borderRadius: BorderRadius.circular(2))),
+            width: 26,
+            height: 34,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(9),
+              color: colors.accent.withValues(alpha: 0.10),
+              border: Border.all(color: colors.accent.withValues(alpha: 0.28)),
             ),
           ),
-          Text(sub, style: AppText.sans(size: 9, color: colors.textDim)),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(ReportCopy.entryTitle, style: AppText.sans(size: 13.5, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
+                const SizedBox(height: 3),
+                Text(ReportCopy.entrySub, style: AppText.sans(size: 10.5, color: colors.textMed)),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 18, color: colors.textDim),
         ],
       ),
     );

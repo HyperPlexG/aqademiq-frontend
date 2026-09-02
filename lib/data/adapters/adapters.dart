@@ -7,6 +7,7 @@ import '../dtos/subject_dto.dart';
 import '../dtos/tag_dto.dart';
 import '../dtos/task_dto.dart';
 import '../dtos/user_stats_dto.dart';
+import '../dtos/weekly_report_dto.dart';
 import '../models/ada_message.dart';
 import '../models/app_user.dart';
 import '../models/enums.dart';
@@ -18,6 +19,7 @@ import '../models/subject.dart';
 import '../models/tag.dart';
 import '../models/task.dart';
 import '../models/user_stats.dart';
+import '../models/weekly_report.dart';
 
 /// The single seam (README §7, seam 2) that maps raw API DTOs onto the immutable
 /// UI models widgets consume. When the NestJS schema drifts, this file changes —
@@ -37,6 +39,7 @@ extension TaskDtoX on TaskDto {
         tagId: tagId,
         date: date,
         note: note,
+        subjectId: subjectId,
         dayPart: DayPartX.fromWire(timeOfDay),
         startTime: startTime,
         durationMin: durationMin,
@@ -58,6 +61,7 @@ extension TaskX on Task {
         tagId: tagId,
         date: date,
         note: note,
+        subjectId: subjectId,
         timeOfDay: dayPart?.wire,
         startTime: startTime,
         durationMin: durationMin,
@@ -202,8 +206,9 @@ extension AppUserDtoX on AppUserDto {
 extension UserStatsDtoX on UserStatsDto {
   UserStats toModel() => UserStats(
         streakDays: streakDays,
-        focusMinutesThisWeek: focusMinutesThisWeek,
-        tasksCompletedThisWeek: tasksCompletedThisWeek,
+        focusMinutesLifetime: focusMinutesLifetime,
+        tasksCompletedLifetime: tasksCompletedLifetime,
+        totalActiveDays: totalActiveDays,
         weekMoods: weekMoods.map((m) => m.toModel()).toList(),
       );
 }
@@ -278,4 +283,82 @@ extension FeedbackMetaDtoX on FeedbackMetaDto {
             .map((c) => FeedbackCategoryMeta(key: c.key, label: c.label))
             .toList(growable: false),
       );
+}
+
+/// The weekly report. Mostly a widening of wire strings into types, with one
+/// real decision: `date` arrives as `yyyy-MM-dd` and is parsed as a *local*
+/// calendar day. The report is about days the student lived through, so a
+/// UTC parse would shift the whole core by a band for anyone west of Greenwich.
+DateTime _reportDay(String ymd) =>
+    DateTime.tryParse(ymd)?.toLocal() ?? DateTime.now();
+
+extension WeeklyReportDtoX on WeeklyReportDto {
+  WeeklyReport toModel() => WeeklyReport(
+        weekStart: _reportDay(weekStart),
+        weekEnd: _reportDay(weekEnd),
+        days: days.map((d) => d.toModel()).toList(growable: false),
+        shape: WeekShape.fromWire(shape),
+        activeDays: activeDays,
+        daysOnBoard: daysOnBoard,
+        subjects: subjects.map((s) => s.toModel()).toList(growable: false),
+        subjectBasis: SubjectBasis.fromWire(subjectBasis),
+        unattributedFocusMinutes: unattributedFocusMinutes,
+        unattributedTasksCompleted: unattributedTasksCompleted,
+        moment: moment?.toModel(),
+        recovery: recovery?.toModel(),
+        longestSession: longestSession?.toModel(),
+        heldMinutes: heldMinutes,
+        prismMix: prismMix.map((p) => p.toModel()).toList(growable: false),
+        rhythmWeekdays: rhythmWeekdays,
+        focusMinutes: focusMinutes,
+        focusSessions: focusSessions,
+        tasksCompleted: tasksCompleted,
+      );
+}
+
+extension WeeklyReportDayDtoX on WeeklyReportDayDto {
+  ReportDay toModel() => ReportDay(
+        date: _reportDay(date),
+        weekday: weekday,
+        moodIndex: moodIndex,
+        hasActivity: hasActivity,
+        tasksCompleted: tasksCompleted,
+        focusMinutes: focusMinutes,
+        focusSessions: focusSessions,
+      );
+}
+
+extension ReportSubjectDtoX on ReportSubjectDto {
+  ReportSubject toModel() => ReportSubject(
+        id: subjectId,
+        name: name,
+        colorHex: color,
+        focusMinutes: focusMinutes,
+        tasksCompleted: tasksCompleted,
+        share: share,
+      );
+}
+
+extension ReportMomentDtoX on ReportMomentDto {
+  ReportMoment toModel() =>
+      ReportMoment(date: _reportDay(date), title: title, subjectId: subjectId);
+}
+
+extension ReportRecoveryDtoX on ReportRecoveryDto {
+  ReportRecovery toModel() => ReportRecovery(
+        sessions: sessions,
+        beforeAvg: beforeAvg,
+        afterAvg: afterAvg,
+        lift: lift,
+      );
+}
+
+extension ReportLongestDtoX on ReportLongestDto {
+  ReportLongest toModel() =>
+      ReportLongest(minutes: minutes, date: _reportDay(date), taskTitle: taskTitle);
+}
+
+extension ReportPrismSliceDtoX on ReportPrismSliceDto {
+  ReportPrismSlice toModel() =>
+      ReportPrismSlice(presetId: presetId, name: name, sessions: sessions, share: share);
 }

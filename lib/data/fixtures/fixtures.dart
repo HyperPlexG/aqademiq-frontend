@@ -147,8 +147,9 @@ abstract final class Fixtures {
 
   static UserStatsDto stats() => UserStatsDto(
         streakDays: 5,
-        focusMinutesThisWeek: 220,
-        tasksCompletedThisWeek: 12,
+        focusMinutesLifetime: 220,
+        tasksCompletedLifetime: 12,
+        totalActiveDays: 23,
         weekMoods: weekMoods,
       );
 

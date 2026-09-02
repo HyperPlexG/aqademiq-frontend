@@ -86,6 +86,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _timeOfDay = existing.startTime != null
           ? AppDate.time12h(existing.startTime!)
           : PlanTime.dayPartLabel(existing.dayPart ?? DayPart.anytime);
+      // Now that the picker actually persists, editing has to show the saved
+      // subject — otherwise opening a task and saving it would silently clear
+      // one, which is a worse bug than the picker doing nothing at all.
+      _subject = existing.subjectId ?? '';
       _date = existing.date;
       _durationMin = existing.durationMin ?? 30;
       _repeat = existing.repeat;
@@ -140,6 +144,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final tagId = _tag.isNotEmpty
         ? _tag
         : (tags.isNotEmpty ? tags.first.id : _tag);
+    // `_subject` is empty for the picker's own "no subject" option, which is
+    // now a real choice rather than a shrug the wire never heard about.
+    final subjectId = _subject.isEmpty ? null : _subject;
     final resolved = PlanTime.resolve(_timeOfDay, date);
     final startTime = resolved.startTime;
     final dayPart = resolved.dayPart;
@@ -153,6 +160,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           title: title,
           note: note,
           tagId: tagId,
+          subjectId: subjectId,
           date: date,
           dayPart: dayPart,
           startTime: startTime,
@@ -165,6 +173,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           title: title,
           note: note,
           tagId: tagId,
+          subjectId: subjectId,
           date: date,
           dayPart: dayPart,
           startTime: startTime,

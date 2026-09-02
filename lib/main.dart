@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
+import 'features/report/report_optout.dart';
 import 'services/haptics/haptic_settings_service.dart';
 import 'services/ice_breakers_service.dart';
 import 'services/push_service.dart';
@@ -25,6 +26,10 @@ Future<void> _start() async {
   // must not have to wait on a future to know whether it may fire.
   await HapticSettingsService.instance.init();
   await IceBreakersService.instance.init();
+  // Read synchronously during build by the Stats tab, so it has to be warm
+  // before the first frame or the entry point flashes in for a student who
+  // has already turned the report off.
+  await ReportSettingsService.instance.init();
 
   // Live builds use Supabase Auth (identity) + Firebase (FCM push). Mock builds
   // skip both so the app runs entirely offline on fixtures.

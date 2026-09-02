@@ -55,8 +55,12 @@ class ApiProfileSource implements ProfileSource {
     final j = await _dio.getMap('/me/stats');
     return UserStatsDto(
       streakDays: (j['current_streak'] as num?)?.toInt() ?? 0,
-      focusMinutesThisWeek: (j['focus_minutes'] as num?)?.toInt() ?? 0,
-      tasksCompletedThisWeek: (j['completed_tasks'] as num?)?.toInt() ?? 0,
+      // `focus_minutes` and `completed_tasks` are lifetime sums on the server.
+      // The names here say so now; they used to say "this week".
+      focusMinutesLifetime: (j['focus_minutes'] as num?)?.toInt() ?? 0,
+      tasksCompletedLifetime: (j['completed_tasks'] as num?)?.toInt() ?? 0,
+      // Was dropped on the floor. It is the count the Stats screen shows.
+      totalActiveDays: (j['total_active_days'] as num?)?.toInt() ?? 0,
     );
   }
 

@@ -34,6 +34,7 @@ import '../../features/onboarding/presentation/ob_study_screen.dart';
 import '../../features/onboarding/presentation/ob_syllabus_screen.dart';
 import '../../features/plan/presentation/add_task_screen.dart';
 import '../../features/plan/presentation/plan_screen.dart';
+import '../../features/report/presentation/weekly_report_screen.dart';
 import '../../features/settings/presentation/settings_email_screen.dart';
 import '../../features/settings/presentation/settings_home_screen.dart';
 import '../../features/settings/presentation/settings_memories_screen.dart';
@@ -96,6 +97,11 @@ abstract final class Routes {
   static String iceBreaker(String id) => '/ice-breakers/$id';
 
   static const settingsFeedback = '/settings/feedback';
+
+  /// The weekly report. Deliberately has no `:week` parameter — §6 of the
+  /// design forbids browsing back through past weeks, and a route that cannot
+  /// name another week cannot be talked into showing one.
+  static const weeklyReport = '/report/week';
   static String feedbackPost(String id) => '/settings/feedback/post/$id';
 
   // Mood check-ins (full-screen, time/system-triggered).
@@ -166,6 +172,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ],
     ),
     GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
+      GoRoute(path: Routes.weeklyReport, builder: (_, _) => const WeeklyReportScreen()),
       GoRoute(
         path: '/settings/feedback/post/:id',
         builder: (_, state) => FeedbackDetailScreen(id: state.pathParameters['id']!),
