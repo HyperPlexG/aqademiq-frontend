@@ -17,6 +17,8 @@ import '../../features/feedback/presentation/feedback_board_screen.dart';
 import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/focus/presentation/focus_end_screen.dart';
 import '../../features/focus/presentation/timer_screen.dart';
+import '../../features/ice_breakers/presentation/ice_breaker_screen.dart';
+import '../../features/ice_breakers/presentation/ice_breakers_screen.dart';
 import '../../features/mood/presentation/mood_evening_screen.dart';
 import '../../features/mood/presentation/mood_morning_screen.dart';
 import '../../features/onboarding/presentation/ada_loading_screen.dart';
@@ -87,6 +89,12 @@ abstract final class Routes {
   static const settingsEmail = '/settings/email';
 
   // Feedback board (full-screen, pushed over the shell).
+  // Ice Breakers — the tutorial shelf. Full-screen and pushed, not a tab, so
+  // it covers the bottom nav the way the feedback board does. Deep-linkable to
+  // one video so the empty-planner CTA can open exactly the right one.
+  static const iceBreakers = '/ice-breakers';
+  static String iceBreaker(String id) => '/ice-breakers/$id';
+
   static const settingsFeedback = '/settings/feedback';
   static String feedbackPost(String id) => '/settings/feedback/post/$id';
 
@@ -144,7 +152,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.settingsSounds, builder: (_, _) => const PrismSettingsScreen()),
       GoRoute(path: Routes.settingsMemories, builder: (_, _) => const SettingsMemoriesScreen()),
       GoRoute(path: Routes.settingsEmail, builder: (_, _) => const EmailSettingsScreen()),
-      GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
+      GoRoute(
+      path: Routes.iceBreakers,
+      builder: (_, _) => const IceBreakersScreen(),
+      routes: [
+        // Nested so a back gesture from a video lands on the section rather
+        // than wherever the student happened to open it from.
+        GoRoute(
+          path: ':id',
+          builder: (_, state) =>
+              IceBreakerScreen(id: state.pathParameters['id'] ?? ''),
+        ),
+      ],
+    ),
+    GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
       GoRoute(
         path: '/settings/feedback/post/:id',
         builder: (_, state) => FeedbackDetailScreen(id: state.pathParameters['id']!),

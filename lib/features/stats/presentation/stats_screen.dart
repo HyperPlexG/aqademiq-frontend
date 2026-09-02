@@ -20,6 +20,7 @@ import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/share_sheet.dart';
+import '../../ice_breakers/presentation/ice_breakers_card.dart';
 import '../../plan/presentation/sheets/log_mood_sheet.dart';
 import '../../plan/providers/plan_providers.dart';
 import '../../settings/presentation/sheets/rate_sheet.dart';
@@ -106,6 +107,10 @@ class _Body extends ConsumerWidget {
         _MoodCard(moods: moods),
         const SizedBox(height: 16),
         const _LinksCard(),
+        const SizedBox(height: 16),
+        // Directly above the share hero, and permanent — the student who most
+        // needs the tutorials is the one who has not found them.
+        const IceBreakersCard(),
         const SizedBox(height: 16),
         _InviteHero(onTap: () => unawaited(showShareSheet(context))),
       ],
