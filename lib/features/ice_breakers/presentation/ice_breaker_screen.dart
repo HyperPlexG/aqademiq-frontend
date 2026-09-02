@@ -47,9 +47,14 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
       await controller.initialize();
       controller.addListener(_onTick);
       // Autoplay is right *here* and wrong on the shelf: opening this screen is
-      // already the student saying yes. Looping, because a 20-second clip is
-      // often watched twice and re-tapping play is friction for nothing.
-      await controller.setLooping(true);
+      // already the student saying yes.
+      //
+      // Deliberately not looping. A looping clip wraps its position back to
+      // zero the instant it ends, so the end is only ever visible between two
+      // listener ticks — the watched flag then depends on winning a race, and
+      // usually loses. Stopping on the last frame makes the end unmissable, and
+      // a finished tutorial that sits still is better behaviour anyway.
+      await controller.setLooping(false);
       await controller.play();
       if (mounted) setState(() => _ready = true);
     } on Object {
@@ -69,11 +74,30 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
     final position = controller.value.position;
     final duration = controller.value.duration;
     if (duration <= Duration.zero) return;
-    // Slightly short of the end: the last frame is not always reported.
-    if (position >= duration - const Duration(milliseconds: 350)) {
-      _marked = true;
-      unawaited(ref.read(iceBreakersProvider.notifier).markWatched(widget.id));
-    }
+    // Slightly short of the end: the final frame is not always reported, and
+    // playback stops a few milliseconds early often enough to matter.
+    final ended = position >= duration - const Duration(milliseconds: 400);
+    if (!ended) return;
+    _marked = true;
+    unawaited(ref.read(iceBreakersProvider.notifier).markWatched(widget.id));
+    if (mounted) setState(() {});
+  }
+
+  /// Watch it again from the top.
+  Future<void> _replay() async {
+    final controller = _controller;
+    if (controller == null) return;
+    await controller.seekTo(Duration.zero);
+    await controller.play();
+    if (mounted) setState(() {});
+  }
+
+  bool get _finished {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return false;
+    final value = controller.value;
+    return value.duration > Duration.zero &&
+        value.position >= value.duration - const Duration(milliseconds: 400);
   }
 
   @override
@@ -143,6 +167,8 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
                                 controller: _controller,
                                 ready: _ready,
                                 failed: _failed,
+                                finished: _finished,
+                                onReplay: _replay,
                               ),
                               const SizedBox(height: 16),
                               Row(
@@ -209,11 +235,15 @@ class _Stage extends StatelessWidget {
     required this.controller,
     required this.ready,
     required this.failed,
+    required this.finished,
+    required this.onReplay,
   });
 
   final VideoPlayerController? controller;
   final bool ready;
   final bool failed;
+  final bool finished;
+  final Future<void> Function() onReplay;
 
   @override
   Widget build(BuildContext context) {
@@ -252,16 +282,38 @@ class _Stage extends StatelessWidget {
               );
             }
             return GestureDetector(
-              onTap: () => player.value.isPlaying
-                  ? player.pause()
-                  : player.play(),
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: player.value.size.width,
-                  height: player.value.size.height,
-                  child: VideoPlayer(player),
-                ),
+              onTap: () {
+                if (finished) {
+                  unawaited(onReplay());
+                } else if (player.value.isPlaying) {
+                  unawaited(player.pause());
+                } else {
+                  unawaited(player.play());
+                }
+              },
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: player.value.size.width,
+                      height: player.value.size.height,
+                      child: VideoPlayer(player),
+                    ),
+                  ),
+                  if (finished)
+                    ColoredBox(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      child: const Center(
+                        child: Icon(
+                          Icons.replay,
+                          size: 40,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             );
           },

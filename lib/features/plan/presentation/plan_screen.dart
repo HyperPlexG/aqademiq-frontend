@@ -21,6 +21,7 @@ import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
@@ -580,6 +581,7 @@ class _OtherDayEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -588,7 +590,74 @@ class _OtherDayEmpty extends StatelessWidget {
         const SizedBox(height: 8),
         const CollapseHead(label: 'PLANNED', count: 0, open: true),
         AddRow(label: 'Add a planned task', onTap: onAdd),
+        const SizedBox(height: 30),
+        // The second door.
+        //
+        // The add-rows above stay exactly as they were: creating a task is the
+        // primary action and watching must never replace it. What was missing
+        // is somewhere to go for the student who does not yet know what a good
+        // task even looks like — for whom "add one" is the whole problem, not
+        // the answer. So this sits underneath, secondary, and never instead.
+        // Centred explicitly: a ListView stretches its children to the full
+        // width, and AdaMascot scales to whatever it is given — unconstrained
+        // she renders about five times her intended size and the copy lands on
+        // top of her.
+        const Center(child: AdaMascot()),
+        const SizedBox(height: 14),
+        Center(
+          child: Text(
+            'Nothing planned yet',
+            style: AppText.sans(
+              size: 22,
+              weight: FontWeight.w800,
+              color: colors.text,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: _ShowMeHowButton(),
+        ),
       ],
+    );
+  }
+}
+
+/// Opens the Ice Breakers section rather than one video: which one is right
+/// depends on how far along the student is, and the section already knows.
+class _ShowMeHowButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => unawaited(context.push(Routes.iceBreakers)),
+      child: Container(
+        height: 62,
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: colors.cardShadow,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.play_circle_outline, size: 24, color: colors.accent),
+            const SizedBox(width: 12),
+            Text(
+              'Show me how',
+              style: AppText.sans(
+                size: 19,
+                weight: FontWeight.w800,
+                color: colors.text,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.chevron_right, size: 19, color: colors.textDim),
+          ],
+        ),
+      ),
     );
   }
 }

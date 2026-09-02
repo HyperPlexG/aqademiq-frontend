@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../ice_breakers/presentation/ice_breakers_card.dart';
 
 /// FRAME `guest-stats` — gated Stats prompt: a blurred fake stats preview behind
 /// a bottom sheet inviting the guest to set up their profile.
@@ -58,28 +59,47 @@ class _StatsPreview extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Expanded(
-          child: IgnorePointer(
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
-              child: const Opacity(
-                opacity: 0.5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: _StatCard(label: 'DAY STREAK')),
-                        SizedBox(width: 8),
-                        Expanded(child: _StatCard(label: 'FOCUS HRS')),
-                      ],
+          child: SingleChildScrollView(
+            // Room for the setup sheet that floats over the bottom.
+            padding: const EdgeInsets.only(bottom: 220),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                IgnorePointer(
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 3.5, sigmaY: 3.5),
+                    child: const Opacity(
+                      opacity: 0.5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: _StatCard(label: 'DAY STREAK')),
+                              SizedBox(width: 8),
+                              Expanded(child: _StatCard(label: 'FOCUS HRS')),
+                            ],
+                          ),
+                          SizedBox(height: 10),
+                          _WeeklyFocusCard(),
+                          SizedBox(height: 10),
+                          _MoodTrendsCard(),
+                        ],
+                      ),
                     ),
-                    SizedBox(height: 10),
-                    _WeeklyFocusCard(),
-                    SizedBox(height: 10),
-                    _MoodTrendsCard(),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                // Sharp, tappable, outside the blur — the same trick the page
+                // title above uses.
+                //
+                // Everything else on this screen is a locked preview of what an
+                // account would buy. The tutorials are the exception: a guest is
+                // precisely the person who has not worked out how any of this
+                // works, so putting the one thing that explains it behind the
+                // signup wall would be the wrong way round.
+                const IceBreakersCard(),
+              ],
             ),
           ),
         ),
