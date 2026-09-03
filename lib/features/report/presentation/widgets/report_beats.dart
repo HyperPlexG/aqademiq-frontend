@@ -184,8 +184,9 @@ class BeatCore extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Name the first open day rather than explaining gaps in the abstract —
-    // and say nothing at all when the week has none.
-    final firstGap = report.days.where((d) => !d.hasActivity).toList();
+    // and say nothing at all when the week has none. `isGap` excludes days that
+    // have not happened: Friday is not a gap on a Thursday.
+    final firstGap = report.days.where((d) => d.isGap).toList();
     final caption = firstGap.isEmpty
         ? ReportCopy.coreCaption
         : '${ReportCopy.coreCaption} ${ReportCopy.gapCaption(weekdayName(firstGap.first.weekday))}';

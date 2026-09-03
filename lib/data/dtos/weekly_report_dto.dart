@@ -20,6 +20,7 @@ class WeeklyReportDayDto {
     required this.weekday,
     this.moodIndex,
     this.hasActivity = false,
+    this.isFuture = false,
     this.tasksCompleted = 0,
     this.focusMinutes = 0,
     this.focusSessions = 0,
@@ -31,6 +32,7 @@ class WeeklyReportDayDto {
         weekday: (j['weekday'] as num?)?.toInt() ?? 1,
         moodIndex: (j['mood_index'] as num?)?.toInt(),
         hasActivity: j['has_activity'] as bool? ?? false,
+        isFuture: j['is_future'] as bool? ?? false,
         tasksCompleted: (j['tasks_completed'] as num?)?.toInt() ?? 0,
         focusMinutes: (j['focus_minutes'] as num?)?.toInt() ?? 0,
         focusSessions: (j['focus_sessions'] as num?)?.toInt() ?? 0,
@@ -44,6 +46,9 @@ class WeeklyReportDayDto {
   /// 0–4 on the shipped mood ramp, or null when nothing was logged.
   final int? moodIndex;
   final bool hasActivity;
+
+  /// A day later in the week than today. Not active, and not a gap either.
+  final bool isFuture;
   final int tasksCompleted;
   final int focusMinutes;
   final int focusSessions;
@@ -163,6 +168,7 @@ class WeeklyReportDto {
     // 'empty' only ever arrives because the server explicitly said so.
     this.shape = 'scattered',
     this.activeDays = 0,
+    this.elapsedDays = 7,
     this.daysOnBoard = 0,
     this.subjects = const [],
     this.subjectBasis = 'focus_minutes',
@@ -202,6 +208,7 @@ class WeeklyReportDto {
       days: list('days', WeeklyReportDayDto.fromJson),
       shape: j['shape'] as String? ?? 'scattered',
       activeDays: (j['active_days'] as num?)?.toInt() ?? 0,
+      elapsedDays: (j['elapsed_days'] as num?)?.toInt() ?? 7,
       daysOnBoard: (j['days_on_board'] as num?)?.toInt() ?? 0,
       subjects: list('subjects', ReportSubjectDto.fromJson),
       subjectBasis: j['subject_basis'] as String? ?? 'focus_minutes',
@@ -225,10 +232,16 @@ class WeeklyReportDto {
   final String weekEnd;
   final List<WeeklyReportDayDto> days;
   final String shape;
+  /// Days **this week** that carried work. This is the hero numeral: a weekly
+  /// report whose headline is a lifetime total is not a weekly report, and a
+  /// figure above 7 in a seven-band core reads as a mistake because it is one.
   final int activeDays;
 
-  /// Lifetime days on the board. The hero numeral, and the only count here that
-  /// cannot go down.
+  /// Days the week has had so far — 4 on a Thursday, 7 once it is over.
+  final int elapsedDays;
+
+  /// Lifetime days on the board. Kept because it is the only count here that
+  /// cannot go down; deliberately not headlined anywhere.
   final int daysOnBoard;
   final List<ReportSubjectDto> subjects;
 

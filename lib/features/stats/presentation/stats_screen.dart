@@ -61,7 +61,12 @@ class _Body extends ConsumerWidget {
     // the Tier 1 haptic; it is simply no longer *shown*. A day count that can
     // reset to zero overnight is a target by another name, and it sat directly
     // above a report whose entire design forbids one.
-    final onBoard = stats.totalActiveDays;
+    // This week, not lifetime. A "16" sitting next to "10 done this week" reads
+    // as a mistake, because on a weekly panel it is one — and 16 cannot be a
+    // number of days in a seven-day week. `totalActiveDays` is still fetched
+    // and is still what the report's lifetime figures rest on; it is simply not
+    // what a weekly panel headlines.
+    final onBoard = ref.watch(weeklyReportProvider).value?.activeDays ?? 0;
     // No fallback to `stats.tasksCompletedLifetime`. That is a lifetime total,
     // and using it while the weekly provider loads put a lifetime number under
     // a "this week" label — which is what the label bug actually was.
@@ -107,7 +112,7 @@ class _Body extends ConsumerWidget {
                 children: [
                   Text('Keep it frozen, ${name.split(' ').first}', style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
                   const SizedBox(height: 2),
-                  Text(onBoard == 1 ? '1 day on the board' : '$onBoard days on the board', style: AppText.sans(size: 10.5, color: colors.textMed)),
+                  Text(onBoard == 1 ? '1 day on the board this week' : '$onBoard days on the board this week', style: AppText.sans(size: 10.5, color: colors.textMed)),
                 ],
               ),
             ),
@@ -168,7 +173,7 @@ class _StatsCard extends StatelessWidget {
           // student ever chose. A bar that is not full is a bar you are short
           // of, and there is no version of "5/7" that reads as a description
           // rather than a shortfall.
-          Expanded(child: _StatCol(value: '$onBoard', label: 'DAYS ON THE BOARD')),
+          Expanded(child: _StatCol(value: '$onBoard', label: 'DAYS THIS WEEK')),
           Container(width: 1, height: 56, color: colors.border),
           Expanded(child: _StatCol(value: '$completed', label: 'DONE THIS WEEK')),
         ],
@@ -387,7 +392,14 @@ class _MoodCard extends ConsumerWidget {
               for (var i = 0; i < 7; i++)
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => unawaited(_editDay(context, ref, monday.add(Duration(days: i)))),
+                  // A day later than today is not tappable. It used to be, so on
+                  // a Thursday you could log how Saturday went — and because the
+                  // weekly report draws its bands from these rows, that put a
+                  // tinted band on a day that had not happened. The real
+                  // Saturday check-in then silently overwrote it.
+                  onTap: i > todayIndex
+                      ? null
+                      : () => unawaited(_editDay(context, ref, monday.add(Duration(days: i)))),
                   child: Column(
                     children: [
                       SizedBox(
@@ -396,7 +408,16 @@ class _MoodCard extends ConsumerWidget {
                         child: Center(child: _moodSlot(colors, monday, i, todayIndex)),
                       ),
                       const SizedBox(height: 3),
-                      Text(_days[i], style: AppText.sans(size: 9, weight: FontWeight.w700, color: i == todayIndex ? colors.accent : colors.textDim)),
+                      Text(
+                        _days[i],
+                        style: AppText.sans(
+                          size: 9,
+                          weight: FontWeight.w700,
+                          color: i == todayIndex
+                              ? colors.accent
+                              : (i > todayIndex ? colors.textDim.withValues(alpha: 0.45) : colors.textDim),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -431,6 +452,19 @@ class _MoodCard extends ConsumerWidget {
       return AdaMascot(size: 24, toneIndex: mood, melt: (4 - mood) / 4, bubbles: 0);
     }
     final isToday = i == todayIndex;
+    // A day that has not happened is drawn faintly and without a border: the
+    // dashed/outlined slot reads as "waiting for you", and a slot that waits
+    // for Saturday on a Thursday is asking for something impossible.
+    if (i > todayIndex) {
+      return Container(
+        width: 21,
+        height: 21,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: colors.textDim.withValues(alpha: 0.14),
+        ),
+      );
+    }
     return Container(
       width: 21,
       height: 21,

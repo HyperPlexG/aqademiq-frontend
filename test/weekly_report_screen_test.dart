@@ -24,10 +24,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 final _monday = DateTime(2026, 8, 31);
 
-ReportDay _day(int i, {bool active = true, int? mood, int mins = 30}) => ReportDay(
+ReportDay _day(int i, {bool active = true, int? mood, int mins = 30, bool future = false}) => ReportDay(
       date: _monday.add(Duration(days: i)),
       weekday: i + 1,
       hasActivity: active,
+      isFuture: future,
       moodIndex: mood,
       tasksCompleted: active ? 2 : 0,
       focusMinutes: active ? mins : 0,
@@ -38,16 +39,18 @@ WeeklyReport _full() => WeeklyReport(
       weekStart: _monday,
       weekEnd: _monday.add(const Duration(days: 6)),
       shape: WeekShape.clustered,
+      // Mid-week, which is the state the report is in five days out of seven.
       activeDays: 5,
+      elapsedDays: 6,
       daysOnBoard: 23,
       days: [
         _day(0, mood: 1),
         _day(1, mood: 3),
         _day(2), // happened, no check-in
-        _day(3, active: false),
+        _day(3, active: false), // happened, nothing on it: a real gap
         _day(4, mood: 4, mins: 90),
         _day(5, mood: 2),
-        _day(6, active: false),
+        _day(6, active: false, future: true), // has not happened
       ],
       subjects: const [
         ReportSubject(id: 's1', name: 'Machine Learning', colorHex: '#6B5CF0', focusMinutes: 130, share: 0.5),
@@ -71,7 +74,6 @@ WeeklyReport _empty() => WeeklyReport(
       weekStart: _monday,
       weekEnd: _monday.add(const Duration(days: 6)),
       shape: WeekShape.empty,
-      daysOnBoard: 4,
       days: [for (var i = 0; i < 7; i++) _day(i, active: false)],
     );
 
@@ -152,7 +154,7 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('“${ReportCopy.shape(WeekShape.clustered)}”'), findsOneWidget);
     // The numeral is a later beat. Story first, evidence second.
-    expect(find.text('23'), findsNothing);
+    expect(find.text('5'), findsNothing);
   });
 
   testWidgets('every page of a full week renders without overflowing', (tester) async {
@@ -182,7 +184,7 @@ void main() {
     await _pump(tester, _full());
     var found = false;
     await _walk(tester, (i) async {
-      if (find.text('23').evaluate().isNotEmpty) {
+      if (find.text('5').evaluate().isNotEmpty) {
         found = true;
         expect(find.text(ReportCopy.heroLabel), findsOneWidget);
       }
@@ -294,6 +296,34 @@ void main() {
     await _pump(tester, _full());
     await _walk(tester, (i) async {
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'page $i had no way out');
+    });
+  });
+
+  testWidgets('the hero numeral is the week, never a lifetime total', (tester) async {
+    // The bug this replaced put 16 — a lifetime count — above a seven-band core.
+    await _pump(tester, _full());
+    var sawNumeral = false;
+    await _walk(tester, (i) async {
+      for (final t in tester.widgetList<Text>(find.byType(Text))) {
+        if (t.data == '5' && find.text(ReportCopy.heroLabel).evaluate().isNotEmpty) sawNumeral = true;
+        // 23 is the lifetime figure in the fixture. It must appear nowhere.
+        expect(t.data, isNot('23'), reason: 'page $i showed the lifetime total');
+      }
+    });
+    expect(sawNumeral, isTrue, reason: 'the weekly count never appeared');
+  });
+
+  testWidgets('a day that has not happened is never named as a gap', (tester) async {
+    // Sunday is the future day in the fixture; Thursday is the real gap. Only
+    // Thursday may be explained, or the report tells someone on Saturday that
+    // they have already missed Sunday.
+    await _pump(tester, _full());
+    await _walk(tester, (i) async {
+      expect(
+        find.textContaining(ReportCopy.gapCaption('Sunday')),
+        findsNothing,
+        reason: 'page $i called a future day a gap',
+      );
     });
   });
 }

@@ -72,6 +72,7 @@ class ReportDay {
     required this.date,
     required this.weekday,
     required this.hasActivity,
+    this.isFuture = false,
     this.moodIndex,
     this.tasksCompleted = 0,
     this.focusMinutes = 0,
@@ -88,6 +89,11 @@ class ReportDay {
 
   /// Whether anything at all happened — tasks, focus, or a check-in.
   final bool hasActivity;
+
+  /// A day later in the week than today. It has not happened, so it is neither
+  /// active nor a gap: drawing it as "nothing logged" would tell someone on
+  /// Thursday that they had already missed Friday, Saturday and Sunday.
+  final bool isFuture;
   final int tasksCompleted;
   final int focusMinutes;
   final int focusSessions;
@@ -95,6 +101,10 @@ class ReportDay {
   /// A day that happened but carries no mood. The band is drawn, but it cannot
   /// be tinted, because there is no mood to tint it with.
   bool get isUntinted => hasActivity && moodIndex == null;
+
+  /// A day that has happened and carries nothing. The only state the report is
+  /// allowed to draw as an open band.
+  bool get isGap => !hasActivity && !isFuture;
 }
 
 class ReportSubject {
@@ -176,6 +186,7 @@ class WeeklyReport {
     required this.days,
     required this.shape,
     this.activeDays = 0,
+    this.elapsedDays = 7,
     this.daysOnBoard = 0,
     this.subjects = const [],
     this.subjectBasis = SubjectBasis.focusMinutes,
@@ -198,9 +209,15 @@ class WeeklyReport {
   /// Always seven, Monday first.
   final List<ReportDay> days;
   final WeekShape shape;
+
+  /// The hero numeral: days **this week** that carried work.
   final int activeDays;
 
-  /// The hero numeral. Lifetime, and it only ever goes up.
+  /// Days the week has had so far — 4 on a Thursday, 7 once it is over.
+  final int elapsedDays;
+
+  /// Lifetime days on the board. Not headlined anywhere; kept because it is the
+  /// only count here that cannot go down.
   final int daysOnBoard;
   final List<ReportSubject> subjects;
   final SubjectBasis subjectBasis;

@@ -30,18 +30,22 @@ enum PlanMenuResult {
 Future<PlanMenuResult?> showPlanMenu(
   BuildContext context, {
   PlanViewMode currentGrouping = PlanViewMode.timeline,
+  bool canLogMood = true,
 }) {
   return showDialog<PlanMenuResult>(
     context: context,
     barrierColor: const Color(0x2E140F1C),
-    builder: (_) => _PlanMenuPopover(currentGrouping: currentGrouping),
+    builder: (_) => _PlanMenuPopover(currentGrouping: currentGrouping, canLogMood: canLogMood),
   );
 }
 
 class _PlanMenuPopover extends StatefulWidget {
-  const _PlanMenuPopover({required this.currentGrouping});
+  const _PlanMenuPopover({required this.currentGrouping, required this.canLogMood});
 
   final PlanViewMode currentGrouping;
+
+  /// False while the planner is showing a day that has not happened yet.
+  final bool canLogMood;
 
   @override
   State<_PlanMenuPopover> createState() => _PlanMenuPopoverState();
@@ -83,12 +87,18 @@ class _PlanMenuPopoverState extends State<_PlanMenuPopover> {
                   onTap: () =>
                       Navigator.of(context).pop(PlanMenuResult.reschedule),
                 ),
-                _MenuRow(
-                  icon: Icons.favorite_border,
-                  label: 'Log mood',
-                  onTap: () =>
-                      Navigator.of(context).pop(PlanMenuResult.logMood),
-                ),
+                // Hidden while the planner is showing a future day. This
+                // logs against the *selected* date, so on a Thursday viewing
+                // Saturday it wrote a Saturday mood — a day that has not
+                // happened, which then draws a tinted band in the weekly
+                // report and is silently overwritten by the real check-in.
+                if (widget.canLogMood)
+                  _MenuRow(
+                    icon: Icons.favorite_border,
+                    label: 'Log mood',
+                    onTap: () =>
+                        Navigator.of(context).pop(PlanMenuResult.logMood),
+                  ),
                 _GroupingHeader(
                   open: _groupingOpen,
                   onTap: () =>

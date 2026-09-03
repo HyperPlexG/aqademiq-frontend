@@ -23,46 +23,54 @@ class MockWeeklyReportSource implements WeeklyReportSource {
     final monday = mondayOf(inWeek ?? DateTime.now());
     String d(int i) => ymd(monday.add(Duration(days: i)));
 
-    // A deliberately *ordinary* week: a quiet start, a run that held, one day
-    // with nothing logged, and a weekend that tapers. Mock mode has to exercise
-    // the two cases the design turns on — an untinted band (Wednesday: work
-    // happened, no mood logged) and a genuinely empty one (Thursday) — because
-    // those are the ones that are easy to draw wrong and impossible to notice
-    // on a fixture where every day is full.
+    // A deliberately *mid-week* fixture, because that is the state the report is
+    // in for five days out of seven and the one with the most ways to be wrong.
+    // Today is treated as Thursday: Monday to Thursday have happened, and
+    // Friday to Sunday have not.
+    //
+    // The three band states the design turns on are all present, which is the
+    // point of the fixture — on a week where every day is full, none of them is
+    // visible and all three are easy to break:
+    //   Mon/Tue/Fri…  tinted   — a mood was logged
+    //   Wed           untinted — work happened, no check-in
+    //   Thu           open     — today, and nothing on it yet
+    //   Fri/Sat/Sun   not yet  — must never draw as "nothing logged"
+    const elapsed = 4;
     return mockDelay(
       WeeklyReportDto(
         weekStart: d(0),
         weekEnd: d(6),
         shape: 'clustered',
-        activeDays: 5,
+        activeDays: 3,
+        elapsedDays: elapsed,
         daysOnBoard: 23,
         days: [
           WeeklyReportDayDto(date: d(0), weekday: 1, moodIndex: 1, hasActivity: true, tasksCompleted: 1, focusMinutes: 25, focusSessions: 1),
           WeeklyReportDayDto(date: d(1), weekday: 2, moodIndex: 3, hasActivity: true, tasksCompleted: 3, focusMinutes: 75, focusSessions: 2),
           WeeklyReportDayDto(date: d(2), weekday: 3, hasActivity: true, tasksCompleted: 2, focusMinutes: 50, focusSessions: 2),
           WeeklyReportDayDto(date: d(3), weekday: 4),
-          WeeklyReportDayDto(date: d(4), weekday: 5, moodIndex: 4, hasActivity: true, tasksCompleted: 2, focusMinutes: 90, focusSessions: 3),
-          WeeklyReportDayDto(date: d(5), weekday: 6, moodIndex: 2, hasActivity: true, tasksCompleted: 1, focusMinutes: 30, focusSessions: 1),
-          WeeklyReportDayDto(date: d(6), weekday: 7),
+          WeeklyReportDayDto(date: d(4), weekday: 5, isFuture: true),
+          WeeklyReportDayDto(date: d(5), weekday: 6, isFuture: true),
+          WeeklyReportDayDto(date: d(6), weekday: 7, isFuture: true),
         ],
         subjects: const [
-          ReportSubjectDto(subjectId: 's1', name: 'Machine Learning', color: '#6B5CF0', focusMinutes: 130, tasksCompleted: 4, share: 0.48),
-          ReportSubjectDto(subjectId: 's2', name: 'Linear Algebra', color: '#2A9D6B', focusMinutes: 85, tasksCompleted: 3, share: 0.31),
-          ReportSubjectDto(subjectId: 's3', name: 'Thermodynamics', color: '#E85476', focusMinutes: 35, tasksCompleted: 1, share: 0.13),
+          ReportSubjectDto(subjectId: 's1', name: 'Machine Learning', color: '#6B5CF0', focusMinutes: 90, tasksCompleted: 4, share: 0.6),
+          ReportSubjectDto(subjectId: 's2', name: 'Linear Algebra', color: '#2A9D6B', focusMinutes: 40, tasksCompleted: 2, share: 0.27),
+          ReportSubjectDto(subjectId: 's3', name: 'Thermodynamics', color: '#E85476', focusMinutes: 20, tasksCompleted: 1, share: 0.13),
         ],
         moment: ReportMomentDto(date: d(2), title: 'Finish the reading you moved twice', subjectId: 's1'),
         recovery: const ReportRecoveryDto(sessions: 4, beforeAvg: 2.25, afterAvg: 3.5, lift: 1.25),
-        longestSession: ReportLongestDto(minutes: 52, date: d(4), taskTitle: 'Problem set 4'),
+        longestSession: ReportLongestDto(minutes: 52, date: d(1), taskTitle: 'Problem set 4'),
         heldMinutes: 18,
         prismMix: const [
           ReportPrismSliceDto(presetId: 'p1', name: 'Rain', sessions: 5, share: 0.56),
-          ReportPrismSliceDto(presetId: 'p2', name: 'Deep Hum', sessions: 3, share: 0.33),
-          ReportPrismSliceDto(presetId: 'p3', name: 'Library', sessions: 1, share: 0.11),
+          ReportPrismSliceDto(presetId: 'p2', name: 'Deep Work', sessions: 3, share: 0.33),
+          ReportPrismSliceDto(presetId: 'p3', name: 'Forest', sessions: 1, share: 0.11),
         ],
         rhythmWeekdays: const [2, 3, 5],
-        focusMinutes: 270,
-        focusSessions: 9,
-        tasksCompleted: 9,
+        focusMinutes: 150,
+        focusSessions: 5,
+        tasksCompleted: 6,
       ),
     );
   }

@@ -21,16 +21,17 @@ const _full = <String, dynamic>{
   'week_start': '2026-08-31',
   'week_end': '2026-09-06',
   'shape': 'clustered',
-  'active_days': 4,
+  'active_days': 3,
+  'elapsed_days': 4,
   'days_on_board': 23,
   'days': [
     {'date': '2026-08-31', 'weekday': 1, 'mood_index': 1, 'has_activity': true, 'tasks_completed': 1, 'focus_minutes': 25, 'focus_sessions': 1},
     {'date': '2026-09-01', 'weekday': 2, 'mood_index': 0, 'has_activity': true, 'tasks_completed': 2, 'focus_minutes': 50, 'focus_sessions': 2},
     {'date': '2026-09-02', 'weekday': 3, 'mood_index': null, 'has_activity': true, 'tasks_completed': 1, 'focus_minutes': 30, 'focus_sessions': 1},
     {'date': '2026-09-03', 'weekday': 4, 'has_activity': false},
-    {'date': '2026-09-04', 'weekday': 5, 'mood_index': 4, 'has_activity': true, 'tasks_completed': 3, 'focus_minutes': 90, 'focus_sessions': 3},
-    {'date': '2026-09-05', 'weekday': 6, 'has_activity': false},
-    {'date': '2026-09-06', 'weekday': 7, 'has_activity': false},
+    {'date': '2026-09-04', 'weekday': 5, 'has_activity': false, 'is_future': true},
+    {'date': '2026-09-05', 'weekday': 6, 'has_activity': false, 'is_future': true},
+    {'date': '2026-09-06', 'weekday': 7, 'has_activity': false, 'is_future': true},
   ],
   'subjects': [
     {'subject_id': 's1', 'name': 'Machine Learning', 'color': '#6B5CF0', 'focus_minutes': 130, 'tasks_completed': 4, 'share': 0.6},
@@ -181,6 +182,62 @@ void main() {
         final r = dto.toModel();
         expect(r.days.first.date.weekday, DateTime.monday);
         expect(r.weekStart.weekday, DateTime.monday);
+      });
+    });
+  });
+
+  group('days that have not happened yet', () {
+    late WeeklyReport report;
+
+    setUp(() => report = WeeklyReportDto.fromJson(_full).toModel());
+
+    test('a future day is not activity and not a gap', () {
+      // The distinction the whole fix rests on. Friday on a Thursday is neither
+      // a day you worked nor a day you left empty, and drawing it as either is
+      // a false statement about a day that has not arrived.
+      final friday = report.days[4];
+      expect(friday.isFuture, isTrue);
+      expect(friday.hasActivity, isFalse);
+      expect(friday.isGap, isFalse);
+    });
+
+    test('a day that happened with nothing on it IS a gap', () {
+      final thursday = report.days[3];
+      expect(thursday.isFuture, isFalse);
+      expect(thursday.hasActivity, isFalse);
+      expect(thursday.isGap, isTrue);
+    });
+
+    test('an active day is never a gap', () {
+      expect(report.days[0].isGap, isFalse);
+      expect(report.days[2].isGap, isFalse);
+    });
+
+    test('is_future defaults to false, so an older server is not misread', () {
+      // A payload from a build that predates the field must not turn every day
+      // into "not yet" — that would blank the whole core.
+      final d = WeeklyReportDayDto.fromJson(const {'date': '2026-09-01', 'weekday': 2}).toModel();
+      expect(d.isFuture, isFalse);
+    });
+
+    test('the hero numeral is this week, and can never exceed seven', () {
+      // The bug this replaced put a lifetime total (16) above a seven-band core.
+      expect(report.activeDays, 3);
+      expect(report.activeDays, lessThanOrEqualTo(7));
+      expect(report.elapsedDays, 4);
+      expect(report.activeDays, lessThanOrEqualTo(report.elapsedDays));
+    });
+
+    test('the mock is mid-week and carries all four band states', () {
+      // Mock mode is where this UI gets looked at day to day, and a fixture of
+      // seven full days hides every state that can be drawn wrongly.
+      return MockWeeklyReportSource().report().then((dto) {
+        final r = dto.toModel();
+        expect(r.days.any((d) => d.hasActivity && d.moodIndex != null), isTrue, reason: 'no tinted band');
+        expect(r.days.any((d) => d.isUntinted), isTrue, reason: 'no untinted band');
+        expect(r.days.any((d) => d.isGap), isTrue, reason: 'no open band');
+        expect(r.days.any((d) => d.isFuture), isTrue, reason: 'no not-yet band');
+        expect(r.activeDays, lessThanOrEqualTo(r.elapsedDays));
       });
     });
   });

@@ -124,9 +124,15 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _menu() async {
+    // The planner can be parked on any day; mood can only be logged for one
+    // that has happened.
+    final selected = ref.read(selectedDateProvider);
+    final today = AppDate.today();
+    final selectedDay = DateTime(selected.year, selected.month, selected.day);
     final result = await showPlanMenu(
       context,
       currentGrouping: ref.read(planViewModeProvider),
+      canLogMood: !selectedDay.isAfter(today),
     );
     if (!mounted || result == null) return;
     switch (result) {

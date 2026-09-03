@@ -139,7 +139,10 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
           subjectName: momentSubject?.name,
           subjectColor: momentSubject?.colorHex,
         ),
-      BeatNumeral(value: r.daysOnBoard),
+      // The week's own count, not the lifetime one. A weekly report headlining
+      // a lifetime total is not a weekly report, and a number above 7 above a
+      // seven-band core reads as a mistake.
+      BeatNumeral(value: r.activeDays),
       if (r.subjects.isNotEmpty) BeatAttention(report: r),
       if (r.recovery != null) BeatRecovery(recovery: r.recovery!),
       if (texture.isNotEmpty) BeatTexture(rows: texture),

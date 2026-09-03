@@ -34,6 +34,7 @@ WeeklyReport shapeOnly(WeeklyReport r) => WeeklyReport(
       weekEnd: r.weekEnd,
       shape: r.shape,
       activeDays: r.activeDays,
+      elapsedDays: r.elapsedDays,
       daysOnBoard: r.daysOnBoard,
       days: [
         for (final d in r.days)
@@ -41,6 +42,9 @@ WeeklyReport shapeOnly(WeeklyReport r) => WeeklyReport(
             date: d.date,
             weekday: d.weekday,
             hasActivity: d.hasActivity,
+            // Preserved: a day that has not happened must not become an open
+            // band on a card someone sends to their friends.
+            isFuture: d.isFuture,
             tasksCompleted: d.tasksCompleted,
             focusMinutes: d.focusMinutes,
             focusSessions: d.focusSessions,
@@ -103,7 +107,7 @@ class _ShareShapeScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${report.daysOnBoard}',
+                                '${report.activeDays}',
                                 style: AppText.numeral(size: 62, weight: FontWeight.w500, color: colors.text),
                               ),
                               const SizedBox(height: 6),
@@ -174,7 +178,7 @@ class _ShareShapeScreen extends StatelessWidget {
     final box = context.findRenderObject() as RenderBox?;
     await SharePlus.instance.share(
       ShareParams(
-        text: '${r.daysOnBoard} days on the board. — ${ReportCopy.shareBrand}',
+        text: '${r.activeDays} days on the board. — ${ReportCopy.shareBrand}',
         sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
       ),
     );

@@ -22,6 +22,10 @@ import '../../../../data/models/weekly_report.dart';
 ///    logged gets a dashed outline and no fill. Tinting it with the pale end of
 ///    the ramp would draw "nothing logged" as "a bad day", which is a claim the
 ///    data does not support and the student cannot correct.
+///  * **A day that has not happened is not a gap.** Opened on a Thursday, the
+///    core has three days left in it. Those are drawn as bare, undashed space —
+///    no outline, because a dashed band is the mark for "nothing logged" and
+///    Friday cannot have nothing logged before Friday arrives.
 ///  * **A day that happened but carries no mood is drawn solid and untinted.**
 ///    Work with no check-in is not the same as no work, and it is not a mood
 ///    either. Three states, and collapsing the middle one is the single easiest
@@ -223,6 +227,23 @@ class _Band extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final tint = AppMood.tint(day.moodIndex);
 
+    // Not yet drilled. No dashes: the dashed outline means "this day happened
+    // and holds nothing", which is a statement, and it is false about tomorrow.
+    if (day.isFuture) {
+      return Expanded(
+        child: Opacity(
+          opacity: t * 0.5,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(radius),
+              color: (dark ? Colors.white : colors.textDim).withValues(alpha: 0.05),
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      );
+    }
+
     // An open band never fills. It is outlined so the gap is visibly a gap — a
     // day the core has no layer for — rather than a day drawn as a pale mood.
     if (!day.hasActivity) {
@@ -387,10 +408,13 @@ class CoreDayLabels extends StatelessWidget {
                     weight: FontWeight.w800,
                     letterSpacing: AppText.em(0.1, 9.5),
                     // The label for an open day dims with its band, so a gap
-                    // reads as one thing rather than a labelled void.
+                    // reads as one thing rather than a labelled void — and a
+                    // day that has not arrived dims further still.
                     color: emphasise == days[i].weekday
                         ? colors.text
-                        : (days[i].hasActivity ? colors.textMed : colors.textDim),
+                        : days[i].isFuture
+                            ? colors.textDim.withValues(alpha: 0.45)
+                            : (days[i].hasActivity ? colors.textMed : colors.textDim),
                   ),
                 ),
               ),
