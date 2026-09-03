@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/hex_color.dart';
@@ -608,23 +609,20 @@ class _OtherDayEmpty extends StatelessWidget {
         // width, and AdaMascot scales to whatever it is given — unconstrained
         // she renders about five times her intended size and the copy lands on
         // top of her.
-        const Center(child: AdaMascot()),
-        const SizedBox(height: 14),
+        const Center(child: AdaMascot(size: 44)),
+        const SizedBox(height: 10),
         Center(
           child: Text(
             'Nothing planned yet',
             style: AppText.sans(
-              size: 22,
+              size: 15,
               weight: FontWeight.w800,
               color: colors.text,
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: _ShowMeHowButton(),
-        ),
+        const SizedBox(height: 12),
+        const Center(child: _ShowMeHowButton()),
       ],
     );
   }
@@ -633,34 +631,40 @@ class _OtherDayEmpty extends StatelessWidget {
 /// Opens the Ice Breakers section rather than one video: which one is right
 /// depends on how far along the student is, and the section already knows.
 class _ShowMeHowButton extends StatelessWidget {
+  const _ShowMeHowButton();
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // Sized and coloured as a secondary action: a pill that hugs its label
+    // rather than a full-width slab, and the surface colour rather than the
+    // ink the primary CTAs use. Adding a task is still the main thing to do
+    // here; this is only for the student who does not yet know what to add.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => unawaited(context.push(Routes.iceBreakers)),
       child: Container(
-        height: 62,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
           boxShadow: colors.cardShadow,
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_circle_outline, size: 24, color: colors.accent),
-            const SizedBox(width: 12),
+            Icon(Icons.play_circle_outline, size: 16, color: colors.accent),
+            const SizedBox(width: 8),
             Text(
               'Show me how',
               style: AppText.sans(
-                size: 19,
+                size: 12.5,
                 weight: FontWeight.w800,
                 color: colors.text,
               ),
             ),
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right, size: 19, color: colors.textDim),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 15, color: colors.textDim),
           ],
         ),
       ),

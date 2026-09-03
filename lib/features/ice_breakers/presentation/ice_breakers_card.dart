@@ -30,25 +30,26 @@ class IceBreakersCard extends ConsumerWidget {
     final state = ref.watch(iceBreakersProvider);
 
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      // No padding override: the app's standard card padding, which is what
+      // every other card on this screen sits at.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 9,
-                height: 9,
+                width: 7,
+                height: 7,
                 decoration: BoxDecoration(
                   color: colors.accent,
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 8),
               Text(
                 'Ice Breakers',
                 style: AppText.sans(
-                  size: 17,
+                  size: 14,
                   weight: FontWeight.w800,
                   color: colors.text,
                 ),
@@ -62,18 +63,18 @@ class IceBreakersCard extends ConsumerWidget {
                     Text(
                       'See all',
                       style: AppText.sans(
-                        size: 13.5,
+                        size: 11.5,
                         weight: FontWeight.w700,
                         color: colors.accent,
                       ),
                     ),
-                    Icon(Icons.chevron_right, size: 15, color: colors.accent),
+                    Icon(Icons.chevron_right, size: 13, color: colors.accent),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           for (final breaker in state.shelf) ...[
             IceBreakerRow(breaker: breaker),
             if (breaker != state.shelf.last)
@@ -81,13 +82,13 @@ class IceBreakersCard extends ConsumerWidget {
           ],
           if (state.shelf.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 11),
               child: Text(
                 "That's all of them, for now.",
-                style: AppText.sans(size: 13, color: colors.textMed),
+                style: AppText.sans(size: 11.5, color: colors.textMed),
               ),
             ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           IceBreakersProgress(state: state),
         ],
       ),
@@ -97,7 +98,7 @@ class IceBreakersCard extends ConsumerWidget {
 
 /// One row: play affordance, title, `01 · Plan`, and the runtime.
 ///
-/// The runtime is on every row on purpose — "23s" does more to earn a tap than
+/// The runtime is on every row on purpose — "22s" does more to earn a tap than
 /// any thumbnail could, and it is the honest answer to the only question a
 /// student has about a tutorial when they are avoiding work.
 class IceBreakerRow extends ConsumerWidget {
@@ -116,12 +117,12 @@ class IceBreakerRow extends ConsumerWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 30,
+              height: 30,
               decoration: BoxDecoration(
                 color: colors.accent.withValues(alpha: watched ? 0.12 : 0.28),
                 shape: BoxShape.circle,
@@ -129,11 +130,11 @@ class IceBreakerRow extends ConsumerWidget {
               alignment: Alignment.center,
               child: Icon(
                 watched ? Icons.check : Icons.play_arrow,
-                size: watched ? 17 : 19,
+                size: watched ? 14 : 16,
                 color: colors.accent,
               ),
             ),
-            const SizedBox(width: 13),
+            const SizedBox(width: 11),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,7 +142,7 @@ class IceBreakerRow extends ConsumerWidget {
                   Text(
                     breaker.title,
                     style: AppText.sans(
-                      size: 15.5,
+                      size: 12.5,
                       weight: FontWeight.w800,
                       height: 1.2,
                       color: colors.text,
@@ -150,7 +151,7 @@ class IceBreakerRow extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${breaker.number} · ${breaker.where}',
-                    style: AppText.sans(size: 12.5, color: colors.textDim),
+                    style: AppText.sans(size: 10.5, color: colors.textDim),
                   ),
                 ],
               ),
@@ -159,7 +160,7 @@ class IceBreakerRow extends ConsumerWidget {
             Text(
               breaker.runtime,
               style: AppText.sans(
-                size: 14,
+                size: 11.5,
                 weight: FontWeight.w800,
                 color: colors.textMed,
               ),
@@ -187,7 +188,7 @@ class IceBreakersProgress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 8,
+          height: 6,
           decoration: BoxDecoration(
             color: colors.bg,
             borderRadius: BorderRadius.circular(4),
@@ -203,18 +204,18 @@ class IceBreakersProgress extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Row(
           children: [
             Text(
               '${state.watchedCount} of ${state.total} watched',
-              style: AppText.sans(size: 13, color: colors.textMed),
+              style: AppText.sans(size: 10.5, color: colors.textMed),
             ),
             const Spacer(),
             Text(
               '${state.percent}%',
               style: AppText.sans(
-                size: 13.5,
+                size: 11,
                 weight: FontWeight.w800,
                 color: colors.accent,
               ),

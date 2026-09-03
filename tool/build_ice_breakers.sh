@@ -70,7 +70,7 @@ for entry in "${SOURCES[@]}"; do
   # Printed because the runtime badges in lib/features/ice_breakers/
   # ice_breaker.dart are written constants — the label has to be on screen
   # before anyone taps, so it cannot be read from the file at runtime. Recut a
-  # video and the number here is what its `seconds:` should be rounded to.
+  # video and the number here is what its `seconds:` should be, floored.
   secs=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$out")
   printf '  %s  %6s KB  %5.1fs\n' "$(basename "$out")" "$((bytes / 1024))" "$secs"
 done

@@ -32,13 +32,19 @@ class IceBreaker {
   /// under the title so the student knows which surface they are about to see.
   final String where;
 
-  /// Runtime badge, in seconds — the real length of the file, rounded.
+  /// Runtime badge, in seconds — the real length of the file, floored.
   ///
   /// The design frames carried rounder guesses (45s, 40s) that overstated
   /// three of the six by roughly double. A runtime does more to earn a tap
   /// than any thumbnail could, which is exactly why it has to be true: a
   /// student who is already avoiding work and gets told 40s for a 17s clip
   /// learns not to believe the next number.
+  ///
+  /// Floored rather than rounded, for two reasons. It can then only ever
+  /// understate, which is the harmless direction. And it matches the player's
+  /// own clock, which truncates — a badge reading 23s above a timer reading
+  /// 0:22 is two numbers for one fact, and the student has no way to know
+  /// which one lied.
   ///
   /// Still a written constant rather than something read from the asset. The
   /// player would only know the duration after loading the video, and the
@@ -76,7 +82,7 @@ const List<IceBreaker> kIceBreakers = [
     number: '02',
     title: 'Too Big? Break It Down',
     where: 'Task',
-    seconds: 23,
+    seconds: 22,
     blurb: '"Study for midterm" is not a task, it is a wall. '
         'Microtasks are the door through it.',
     asset: 'assets/ice_breakers/02-too-big-break-it-down.mp4',

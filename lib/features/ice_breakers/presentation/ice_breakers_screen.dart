@@ -34,15 +34,15 @@ class IceBreakersScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Row(
                 children: [
                   _BackCircle(onTap: () => context.pop()),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Text(
                     'Ice Breakers',
                     style: AppText.sans(
-                      size: 26,
+                      size: 20,
                       weight: FontWeight.w800,
                       color: colors.text,
                     ),
@@ -52,7 +52,7 @@ class IceBreakersScreen extends ConsumerWidget {
             ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 children: [
                   if (state.allWatched)
                     const _AllWatchedBanner()
@@ -64,9 +64,9 @@ class IceBreakersScreen extends ConsumerWidget {
                   // On a first visit the hero already carries #01, so it is not
                   // repeated in the list beneath it.
                   if (_rest(state).isNotEmpty) ...[
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     AppCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
                       child: Column(
                         children: [
                           for (final breaker in _rest(state)) ...[
@@ -86,19 +86,19 @@ class IceBreakersScreen extends ConsumerWidget {
                             ),
                             _WatchedDisclosure(state: state),
                           ],
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                           IceBreakersProgress(state: state),
-                          const SizedBox(height: 14),
+                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
                   ],
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
                   Center(
                     child: Text(
                       'More coming soon',
                       style: AppText.sans(
-                        size: 15,
+                        size: 11.5,
                         weight: FontWeight.w700,
                         color: colors.textDim,
                       ),
@@ -134,35 +134,35 @@ class _StartHereHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 74,
-            height: 84,
+            width: 58,
+            height: 66,
             decoration: BoxDecoration(
               color: colors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const AdaMascot(size: 40),
+                const AdaMascot(size: 30),
                 Positioned(
                   right: 4,
                   bottom: 4,
                   child: Container(
-                    width: 26,
-                    height: 26,
+                    width: 21,
+                    height: 21,
                     decoration: const BoxDecoration(
                       color: Color(0xFF2B2B2B),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.play_arrow,
-                      size: 15,
+                      size: 12,
                       color: Colors.white,
                     ),
                   ),
@@ -170,7 +170,7 @@ class _StartHereHero extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,8 +179,8 @@ class _StartHereHero extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+                        horizontal: 9,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: colors.text,
@@ -189,9 +189,9 @@ class _StartHereHero extends StatelessWidget {
                       child: Text(
                         'START HERE',
                         style: AppText.sans(
-                          size: 11,
+                          size: 9,
                           weight: FontWeight.w800,
-                          letterSpacing: AppText.em(0.04, 11),
+                          letterSpacing: AppText.em(0.06, 9),
                           color: colors.bg,
                         ),
                       ),
@@ -200,18 +200,18 @@ class _StartHereHero extends StatelessWidget {
                     Text(
                       '${breaker.number} · ${breaker.runtime}',
                       style: AppText.sans(
-                        size: 13,
+                        size: 10.5,
                         weight: FontWeight.w700,
                         color: colors.textDim,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   breaker.title,
                   style: AppText.sans(
-                    size: 18,
+                    size: 14.5,
                     weight: FontWeight.w800,
                     height: 1.15,
                     color: colors.text,
@@ -221,8 +221,8 @@ class _StartHereHero extends StatelessWidget {
                 Text(
                   breaker.blurb,
                   style: AppText.sans(
-                    size: 13.5,
-                    height: 1.35,
+                    size: 11.5,
+                    height: 1.4,
                     color: colors.textMed,
                   ),
                 ),
@@ -267,11 +267,11 @@ class _Banner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Row(
         children: [
-          const AdaMascot(size: 44),
-          const SizedBox(width: 14),
+          const AdaMascot(size: 34),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +279,7 @@ class _Banner extends StatelessWidget {
                 Text(
                   title,
                   style: AppText.sans(
-                    size: 17,
+                    size: 14,
                     weight: FontWeight.w800,
                     height: 1.2,
                     color: colors.text,
@@ -288,7 +288,7 @@ class _Banner extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   body,
-                  style: AppText.sans(size: 14, color: colors.textMed),
+                  style: AppText.sans(size: 11.5, color: colors.textMed),
                 ),
               ],
             ),
@@ -325,19 +325,19 @@ class _WatchedDisclosureState extends State<_WatchedDisclosure> {
           behavior: HitTestBehavior.opaque,
           onTap: () => setState(() => _open = !_open),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: const EdgeInsets.symmetric(vertical: 11),
             child: Row(
               children: [
                 Icon(
                   _open ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
+                  size: 17,
                   color: colors.textMed,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 9),
                 Text(
                   'Watched (${watched.length})',
                   style: AppText.sans(
-                    size: 15,
+                    size: 12,
                     weight: FontWeight.w700,
                     color: colors.textMed,
                   ),
@@ -365,14 +365,15 @@ class _BackCircle extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 46,
-        height: 46,
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: colors.surface,
           shape: BoxShape.circle,
           boxShadow: colors.cardShadow,
         ),
-        child: Icon(Icons.chevron_left, size: 24, color: colors.text),
+        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }
