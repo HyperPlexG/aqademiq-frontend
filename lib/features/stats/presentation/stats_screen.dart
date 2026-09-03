@@ -13,8 +13,10 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/mood_log.dart';
 import '../../../data/models/user_stats.dart';
+import '../../../data/models/weekly_report.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/profile_repository.dart';
+import '../../../data/repositories/weekly_report_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -23,6 +25,7 @@ import '../../../shared/widgets/share_sheet.dart';
 import '../../ice_breakers/presentation/ice_breakers_card.dart';
 import '../../plan/presentation/sheets/log_mood_sheet.dart';
 import '../../plan/providers/plan_providers.dart';
+import '../../report/presentation/widgets/core_column.dart';
 import '../../report/report_copy.dart';
 import '../../report/report_optout.dart';
 import '../../settings/presentation/sheets/rate_sheet.dart';
@@ -210,38 +213,80 @@ class _StatCol extends StatelessWidget {
 /// week held. Nothing pushes it: a notification that fires on good weeks and
 /// stays quiet on bad ones turns its own absence into a verdict on the
 /// lock screen, and this feature is never allowed to deliver one of those.
-class _CoreEntry extends StatelessWidget {
+/// The way into the weekly report.
+///
+/// It waits here identically every week, with the same frost dot, whatever the
+/// week held. Nothing pushes it: a notification that fires on good weeks and
+/// stays quiet on bad ones turns its own absence into a lock-screen verdict,
+/// and this feature is never allowed to deliver one of those.
+///
+/// The thumbnail is the real core drawn small, from the real week — not a
+/// decorative glyph. The student should recognise the object before they open
+/// it, and a placeholder that never matched the contents would make the card a
+/// button rather than a preview.
+class _CoreEntry extends ConsumerWidget {
   const _CoreEntry();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final week = ref.watch(weeklyReportProvider).value;
+    // Seven open bands until the week loads: the tube is the same object either
+    // way, so the card does not change shape when the data lands.
+    final days = week?.days ??
+        [for (var i = 0; i < 7; i++) ReportDay(date: DateTime.now(), weekday: i + 1, hasActivity: false)];
+
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(15, 14, 14, 14),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       onTap: () => unawaited(context.push(Routes.weeklyReport)),
       child: Row(
         children: [
-          Container(
-            width: 26,
-            height: 34,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(9),
-              color: colors.accent.withValues(alpha: 0.10),
-              border: Border.all(color: colors.accent.withValues(alpha: 0.28)),
-            ),
-          ),
-          const SizedBox(width: 13),
+          CoreColumn.mini(days: days),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(ReportCopy.entryTitle, style: AppText.sans(size: 13.5, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
-                const SizedBox(height: 3),
-                Text(ReportCopy.entrySub, style: AppText.sans(size: 10.5, color: colors.textMed)),
+                Text(
+                  ReportCopy.entryEyebrow,
+                  style: AppText.sans(
+                    size: 9.5,
+                    weight: FontWeight.w800,
+                    letterSpacing: AppText.em(0.16, 9.5),
+                    color: colors.textMed,
+                  ),
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  ReportCopy.coreName,
+                  style: AppText.sans(size: 22, weight: FontWeight.w800, letterSpacing: -0.5, color: colors.text),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  ReportCopy.entryTagline,
+                  style: AppText.sans(size: 12.5, height: 1.35, color: colors.textMed),
+                ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, size: 18, color: colors.textDim),
+          // The frost dot. Identical every week — it marks where the report is,
+          // never whether the week was any good. Sized rather than aligned:
+          // an Align inside a Row expands to fill the width it is offered.
+          Align(
+            alignment: Alignment.topCenter,
+            // widthFactor pins the Align to its child's width; without it an
+            // Align in a Row expands to fill whatever it is offered.
+            widthFactor: 1,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: colors.accent,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: colors.accent.withValues(alpha: 0.45), blurRadius: 10, spreadRadius: 2)],
+              ),
+            ),
+          ),
         ],
       ),
     );

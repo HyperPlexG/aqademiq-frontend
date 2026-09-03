@@ -34,6 +34,7 @@ import '../../features/onboarding/presentation/ob_study_screen.dart';
 import '../../features/onboarding/presentation/ob_syllabus_screen.dart';
 import '../../features/plan/presentation/add_task_screen.dart';
 import '../../features/plan/presentation/plan_screen.dart';
+import '../../features/report/presentation/report_settings_screen.dart';
 import '../../features/report/presentation/weekly_report_screen.dart';
 import '../../features/settings/presentation/settings_email_screen.dart';
 import '../../features/settings/presentation/settings_home_screen.dart';
@@ -102,6 +103,9 @@ abstract final class Routes {
   /// design forbids browsing back through past weeks, and a route that cannot
   /// name another week cannot be talked into showing one.
   static const weeklyReport = '/report/week';
+
+  /// The report's off switch and the promises beside it.
+  static const settingsReport = '/settings/report';
   static String feedbackPost(String id) => '/settings/feedback/post/$id';
 
   // Mood check-ins (full-screen, time/system-triggered).
@@ -173,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
     GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
       GoRoute(path: Routes.weeklyReport, builder: (_, _) => const WeeklyReportScreen()),
+      GoRoute(path: Routes.settingsReport, builder: (_, _) => const ReportSettingsScreen()),
       GoRoute(
         path: '/settings/feedback/post/:id',
         builder: (_, state) => FeedbackDetailScreen(id: state.pathParameters['id']!),

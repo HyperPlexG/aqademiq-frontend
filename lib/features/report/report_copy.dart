@@ -18,13 +18,20 @@ library;
 
 import '../../data/models/weekly_report.dart';
 
-/// Metric shapes that must never render, kept next to the copy they constrain.
+/// Metric shapes and words that must never render, kept next to the copy they
+/// constrain.
 ///
 /// This list is not documentation — `report_copy_test.dart` asserts that no
 /// string this file can produce contains any of it, and that no sentence
 /// contains a digit-slash-digit denominator. A target the student can fall
 /// short of is the thing the whole design is built to avoid, and denominators
 /// are how targets get in.
+///
+/// `only` is on the list for one reason: it is the word that turns a count into
+/// a shortfall ("only three days"). That costs us the natural phrasing in a
+/// couple of places — the share note reads "Just your shape" rather than "Your
+/// shape only" — and the trade is worth it, because the lint is worthless the
+/// first time it gets an exception.
 const List<String> kReportBannedWords = [
   'streak',
   'goal',
@@ -62,71 +69,101 @@ String weekdayName(int weekday) =>
     (weekday >= 1 && weekday <= 7) ? _weekdayNames[weekday - 1] : '';
 
 abstract final class ReportCopy {
-  /// Beat 2 — the shape of the week, before a single number appears.
+  // ---- the way in, from the Stats tab ------------------------------------
+
+  static const String entryEyebrow = 'YOUR WEEK';
+  static const String coreName = 'The Core';
+  static const String entryTagline = 'Seven days, drilled and read.';
+
+  // ---- beat 1 — the core freezes in --------------------------------------
+
+  static const String drilling = 'Drilling your week…';
+
+  // ---- beat 2 — the shape of the week ------------------------------------
+
+  static const String shapeLabel = 'THE SHAPE OF THE WEEK';
+
+  /// One sentence about the *shape*, before a single number appears anywhere.
   ///
-  /// Every one of these is a statement about a distribution. None of them is
-  /// better or worse than another, and none can be read as a grade.
+  /// Every one of these is a statement about a distribution. None is better or
+  /// worse than another, and none can be read as a grade.
   static String shape(WeekShape shape) => switch (shape) {
-        WeekShape.empty => 'A clear core this week.',
-        WeekShape.single => 'One day carried this week.',
-        WeekShape.steady => 'Spread right across the week.',
-        WeekShape.frontLoaded => 'The weight sat early this week.',
-        WeekShape.backLoaded => 'The week gathered towards the end.',
-        WeekShape.clustered => 'A quiet start, then a run that held.',
-        WeekShape.scattered => 'A week in patches.',
+        WeekShape.empty => 'An open core, all the way down.',
+        WeekShape.single => 'One band, and a lot of open core.',
+        WeekShape.steady => 'Layers right through the week.',
+        WeekShape.frontLoaded => 'A thick start, then open core.',
+        WeekShape.backLoaded => 'Open core, then it gathered.',
+        WeekShape.clustered => 'A quiet start, then days that held.',
+        WeekShape.scattered => 'Thin bands, spread out.',
       };
 
-  /// Beat 5 — the label under the one numeral. A count of things that happened,
-  /// never a rate, and with nothing to divide it by.
-  static const String heroLabel = 'DAYS ON THE BOARD';
+  // ---- beat 3 — the core itself ------------------------------------------
 
-  /// Beat 1 — what the core is, said once.
   static const String coreCaption =
       'Each band is a day, Monday at the top. Tint is that day’s mood.';
 
   /// Said only when at least one band is empty, so a full week is not handed an
-  /// explanation of a thing it does not contain.
-  static const String gapCaption = 'A day with nothing logged is an empty band.';
+  /// explanation of a thing it does not contain. The named day makes the rule
+  /// concrete instead of abstract.
+  static String gapCaption(String dayName) =>
+      '$dayName has nothing logged, so it stays an open band.';
 
-  /// Beat 4 — one concrete thing that happened. A named task on a named day,
-  /// never an aggregate.
+  /// The generic form, for a week whose gaps are not worth singling out.
+  static const String gapCaptionPlain =
+      'A day with nothing logged stays an open band.';
+
+  // ---- beat 4 — one thing that happened ----------------------------------
+
+  static const String momentTitle = 'ONE THING THAT HAPPENED';
+
+  /// A named task on a named day, never an aggregate.
   static String moment(ReportMoment m) =>
       '${weekdayName(m.date.weekday)}, you finished “${m.title}”.';
 
-  /// Card labels. They live here rather than inline in the screen for one
-  /// reason: `report_copy_test.dart` scans this file, and a label written at
-  /// its call site is a sentence the lint cannot see.
-  static const String attentionTitle = 'Where attention went';
-  static const String momentTitle = 'One thing that happened';
-  static const String recoveryTitle = 'What the week gave back';
-  static const String longestTitle = 'Your longest stretch';
-  static const String heldTitle = 'Held time counts';
-  static const String rhythmTitle = 'Your rhythm';
-  static const String prismTitle = 'What the week sounded like';
+  /// The chip under it: the task, and where it sat.
+  static String momentWhere(ReportMoment m, String? subjectName) {
+    final day = weekdayName(m.date.weekday);
+    return subjectName == null || subjectName.isEmpty ? day : '$subjectName · $day';
+  }
 
-  /// The section's own name, and the way in from the Stats tab.
-  static const String coreTitle = 'THE CORE';
-  static const String entryTitle = 'This week’s core';
-  static const String entrySub = 'Seven days, drilled and read back';
+  /// A week with nothing completed still gets a concrete line, reaching for the
+  /// smallest true thing rather than skipping the beat.
+  static String smallestTrueThing(ReportDay day) =>
+      '${weekdayName(day.weekday)}, you opened the app and put something down. That’s on the board.';
 
-  /// Shown while the core is still being drilled.
-  static const String drilling = 'Drilling';
+  // ---- beat 5 — the one numeral ------------------------------------------
 
-  /// A subject deleted after the work happened. Named as absent rather than
-  /// invented, and never as something the student neglected.
-  static const String namelessSubject = 'A subject that is no longer here';
+  static const String heroLabel = 'DAYS ON THE BOARD';
 
-  /// The failure state. It says the week exists and the fetch did not, because
-  /// "could not load your week" reads as the week being the thing that is gone.
-  static const String loadFailed =
-      'Your week is here, the report just could not reach it.';
-  static const String retry = 'Try again';
+  // ---- beat 6 — where attention went -------------------------------------
 
-  /// Beat 7 — the recovery read. Renders only when it points positive, which is
-  /// enforced server-side by the number simply not existing otherwise.
+  static const String attentionTitle = 'WHERE ATTENTION WENT';
+
+  /// Names the subject that took the most, and explains the drawing. Never
+  /// ranks the rest, and never names a subject that got nothing.
+  static String attentionCaption(String? topName) => topName == null || topName.isEmpty
+      ? 'The crisper the cube, the more of your attention it held.'
+      : '$topName took the most of your week. The crisper the cube, the more of your attention it held.';
+
+  // ---- beat 7 — what the week gave back ----------------------------------
+
+  static const String recoveryTitle = 'WHAT THE WEEK GAVE BACK';
+
+  /// Renders only when it points positive, which is enforced server-side by the
+  /// number simply not existing otherwise.
   static String recovery(ReportRecovery r) => r.sessions == 1
-      ? 'One session ended lighter than it started.'
-      : '${_count(r.sessions)} sessions ended lighter than they started.';
+      ? 'You finished your session feeling better than you started it.'
+      : 'You finished most sessions feeling better than you started them.';
+
+  static const String goingIn = 'GOING IN';
+  static const String comingOut = 'COMING OUT';
+
+  // ---- the quieter cards -------------------------------------------------
+
+  static const String longestTitle = 'YOUR LONGEST STRETCH';
+  static const String heldTitle = 'HELD TIME COUNTS';
+  static const String rhythmTitle = 'YOUR RHYTHM';
+  static const String prismTitle = 'WHAT THE WEEK SOUNDED LIKE';
 
   /// Length and the task, never the word this file bans for it: describing a
   /// stretch as unbroken makes freezing a flaw, and freezing is the product.
@@ -152,7 +189,8 @@ abstract final class ReportCopy {
     return '${plural.join(', ')} and $last carry your work.';
   }
 
-  /// Beat 8 — the landing. Sized so that refusing it would feel absurd.
+  // ---- beat 8 — the landing ----------------------------------------------
+
   static const String closing =
       'One small thing for next week — or just tomorrow’s check-in, if that’s the size that fits.';
 
@@ -160,10 +198,51 @@ abstract final class ReportCopy {
   static const String closingEmpty =
       'Next week starts whenever you do. Tomorrow’s check-in is enough to begin one.';
 
-  /// Sharing sits beside the landing, never as the finale — and carries the
-  /// activity shape only, never a mood.
+  static const String suggestionTitle = 'Tomorrow’s check-in';
+  static const String suggestionSub = 'Two taps, in the morning.';
+  static const String keepIt = 'Keep it';
+  static const String notThisTime = 'Not this time';
+
+  // ---- sharing -----------------------------------------------------------
+
   static const String shareLabel = 'Share the shape';
-  static const String shareNote = 'Shares the shape of your week. Mood stays here.';
+
+  /// "Just your shape" rather than "your shape only" — see [kReportBannedWords].
+  static const String sharePrivacy =
+      'Just your shape. Nothing about how you felt is in this image.';
+  static const String shareAction = 'Share';
+  static const String shareBrand = 'Aqademiq';
+
+  // ---- the off switch, and what the report never does --------------------
+
+  static const String settingsTitle = 'Weekly report';
+  static const String settingsToggle = 'Show me The Core';
+  static const String settingsToggleNote =
+      'One tap turns it off, immediately. We won’t ask again.';
+  static const String neverDoesTitle = 'What it never does';
+
+  static const String neverNotify = 'Notify you';
+  static const String neverNotifySub = 'It waits in the tab, the same way every week.';
+  static const String neverBackBrowse = 'Open on a past week';
+  static const String neverBackBrowseSub = 'The current week, never an older one.';
+  static const String neverShowWriting = 'Show what you wrote';
+  static const String neverShowWritingSub = 'Never shown, never exported.';
+
+  // ---- a bad season, not a bad week --------------------------------------
+
+  /// Shown at most once a month after several consecutive weeks in the lowest
+  /// read. Plain product voice, dismissible, and outside the story — Ada does
+  /// not comment on it, because a cartoon mascot diagnosing a run of hard weeks
+  /// is out of its depth.
+  static const String supportBanner =
+      'Support resources are available any time, if you’d like them.';
+  static const String supportAction = 'View';
+
+  // ---- shared helpers ----------------------------------------------------
+
+  static const String loadFailed =
+      'Your week is here, the report just could not reach it.';
+  static const String retry = 'Try again';
 
   /// `48m`, `1h 12m`. Never a decimal — a fractional hour reads as a
   /// measurement of the person rather than a length of time.
@@ -173,14 +252,4 @@ abstract final class ReportCopy {
     final m = mins % 60;
     return m == 0 ? '${h}h' : '${h}h ${m}m';
   }
-
-  static String _count(int n) => switch (n) {
-        2 => 'Two',
-        3 => 'Three',
-        4 => 'Four',
-        5 => 'Five',
-        6 => 'Six',
-        7 => 'Seven',
-        _ => '$n',
-      };
 }

@@ -17,6 +17,7 @@ import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/settings_row.dart';
+import '../../report/report_copy.dart';
 import '../../report/report_optout.dart';
 import '../providers/prism_settings_provider.dart';
 import '../providers/profile_controller.dart';
@@ -104,17 +105,15 @@ class SettingsHomeScreen extends ConsumerWidget {
             SettingsRow(label: 'Appearance', icon: Icons.wb_sunny, value: _modeLabel(mode), showChevron: true, onTap: () => unawaited(showAppearanceSheet(context))),
             SettingsRow(label: 'Prism', icon: Icons.graphic_eq, value: ref.watch(prismDefaultModeProvider), showChevron: true, onTap: () => unawaited(context.push(Routes.settingsSounds))),
             SettingsRow(label: 'What Ada remembers', icon: Icons.psychology_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsMemories))),
-            // One tap, honoured immediately: no confirmation, no win-back
-            // screen, no "are you sure you'll miss out". A weekly report you
-            // cannot decline is one that can reach you every seven days
-            // forever, so declining it has to be the cheapest action here.
+            // A row to its own screen rather than a bare toggle here: the off
+            // switch ships with the three promises that make leaving it on
+            // safe, and those need somewhere to be read.
             SettingsRow(
-              label: 'Weekly report',
+              label: ReportCopy.settingsTitle,
               icon: Icons.view_week_outlined,
-              toggle: ref.watch(weeklyReportEnabledProvider),
-              onToggle: (v) => unawaited(
-                ref.read(weeklyReportEnabledProvider.notifier).set(value: v),
-              ),
+              value: ref.watch(weeklyReportEnabledProvider) ? '' : 'Off',
+              showChevron: true,
+              onTap: () => unawaited(context.push(Routes.settingsReport)),
             ),
             SettingsRow(label: 'Calendar import', icon: Icons.calendar_today, showChevron: true, onTap: () => _comingSoon(context, 'Calendar import')),
             SettingsRow(label: 'Reminder import', icon: Icons.format_list_bulleted, showChevron: true, last: true, onTap: () => _comingSoon(context, 'Reminder import')),
