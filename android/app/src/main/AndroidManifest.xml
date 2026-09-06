@@ -37,6 +37,30 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Referral deep links.
+
+                 The custom scheme works the moment the app is installed and
+                 needs nothing hosted, but it is not clickable in most chat
+                 apps - which is why the SHARED link is the https one below. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="aqademiq" android:host="join"/>
+            </intent-filter>
+            <!-- The shared link. android:autoVerify makes this an Android App
+                 Link, which opens the app instead of the browser - but ONLY
+                 once https://www.aqademiq.com/.well-known/assetlinks.json is
+                 hosted with this app's package name and signing-cert SHA-256.
+                 Until that file exists the link still works, it just opens the
+                 site, which is what the bare URL it replaced already did. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="www.aqademiq.com" android:pathPrefix="/join"/>
+                <data android:scheme="https" android:host="aqademiq.com" android:pathPrefix="/join"/>
+            </intent-filter>
         </activity>
         <!-- flutter_foreground_task service keeping focus sessions alive. -->
         <service

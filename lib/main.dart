@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
 import 'features/report/report_optout.dart';
+import 'services/deep_link_service.dart';
 import 'services/haptics/haptic_settings_service.dart';
 import 'services/ice_breakers_service.dart';
 import 'services/push_service.dart';
@@ -16,6 +17,10 @@ import 'services/sound_settings_service.dart';
 // Everything runs inside the guarded zone, including binding initialisation —
 // `runZonedGuarded` only catches errors raised in the zone it owns, and a
 // binding created outside it schedules its callbacks outside it too.
+/// Owned here rather than created by the provider so the link that launched
+/// the app is captured before the first frame, not after the first `ref.read`.
+final _deepLinks = DeepLinkService();
+
 Future<void> main() => runGuardedApp(_start);
 
 Future<void> _start() async {
@@ -30,6 +35,9 @@ Future<void> _start() async {
   // before the first frame or the entry point flashes in for a student who
   // has already turned the report off.
   await ReportSettingsService.instance.init();
+  // Started here so a cold start *from* a referral link has the code in hand
+  // before onboarding renders. Best-effort inside: it never blocks startup.
+  await _deepLinks.start();
 
   // Live builds use Supabase Auth (identity) + Firebase (FCM push). Mock builds
   // skip both so the app runs entirely offline on fixtures.
@@ -49,5 +57,12 @@ Future<void> _start() async {
     }
   }
 
-  runApp(const ProviderScope(child: AqademiqApp()));
+  runApp(
+    ProviderScope(
+      // The same instance that already captured the launch link, rather than a
+      // second one the provider would build too late to see it.
+      overrides: [deepLinkServiceProvider.overrideWithValue(_deepLinks)],
+      child: const AqademiqApp(),
+    ),
+  );
 }

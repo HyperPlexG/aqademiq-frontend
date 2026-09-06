@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/referral_repository.dart';
+import '../../../services/deep_link_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -34,6 +35,34 @@ class ObReferralScreen extends ConsumerStatefulWidget {
 class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
   bool _validating = false;
   String? _error;
+
+  /// Seeded from a referral deep link, when the app was opened by one.
+  ///
+  /// Prefill only — never auto-submitted. A link is attacker-controlled input,
+  /// so the code has to be on screen where it can be read and cleared before
+  /// it is used. Taken once, so clearing the field does not get undone by the
+  /// next rebuild, and only when nothing has been typed yet.
+  String _prefill = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final typed = ref.read(onboardingProvider).referral;
+    if (typed.isNotEmpty) {
+      _prefill = typed;
+      return;
+    }
+    final code = ref.read(deepLinkServiceProvider).takeReferralCode();
+    if (code == null) return;
+    _prefill = code;
+    // Mirrored into the wizard's draft after the first frame. Writing to a
+    // provider during initState or build is what Riverpod refuses, and the
+    // field itself is seeded from `_prefill` rather than from the draft, so
+    // nothing on screen is waiting for this.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(onboardingProvider.notifier).setReferral(code);
+    });
+  }
 
   Future<void> _continueWithCode() async {
     if (_validating) return;
@@ -96,6 +125,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
           const SizedBox(height: 20),
           const FieldLabel('Referral code'),
           OtpField(
+            initial: _prefill,
             // Codes are 8 chars — the backend generates them as
             // randomBytes(4).hex (see referrals.service.ts). The field was
             // capped at 5, so the full code could never be entered.

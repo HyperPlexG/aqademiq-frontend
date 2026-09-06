@@ -28,6 +28,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  # Referral deep links. Already in the tree transitively (supabase_flutter uses
+  # it for OAuth callbacks); pinned at the version already locked so making it
+  # direct cannot move it.
+  app_links: ^7.0.0
   crypto: ^3.0.3
   cupertino_icons: ^1.0.8
   dio: ^5.9.2
