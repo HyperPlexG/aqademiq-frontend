@@ -36,8 +36,12 @@ flutter run --dart-define=USE_MOCKS=false \
   --dart-define=SOCKET_URL=http://localhost:8080
 
 # Release builds MUST pass the defines, or config silently goes missing:
-flutter build ipa --dart-define-from-file=dart_defines.json
+flutter build ipa --dart-define-from-file=dart_defines.json        # TestFlight
+flutter build appbundle --dart-define-from-file=dart_defines.json  # Play
 ```
+
+Android release signing needs `android/key.properties` + the upload keystore,
+neither of which is in git. See `docs/ANDROID_RELEASE.md`.
 
 `dart_defines.json` is **gitignored**, so it does not travel with a clone or a
 merge — every machine that builds a release needs its own copy, including the
