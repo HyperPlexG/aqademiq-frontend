@@ -122,3 +122,50 @@ the screen going off. Play asks what the service is for and, for `mediaPlayback`
 usually wants a short video showing it. There is deliberately **no**
 `SCHEDULE_EXACT_ALARM` — the reminder scheduler uses inexact alarms precisely to
 avoid that permission's policy review.
+
+## Testing on an emulator
+
+There is no AVD in this repo; create one once. The toolchain notes matter more
+than the commands, because two of them cost an hour to find:
+
+```sh
+# Flutter overrides JAVA_HOME with its own setting, so fix that, not the shell.
+flutter config --jdk-dir="/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home"
+
+sdkmanager --install "system-images;android-36;google_apis_playstore;arm64-v8a" emulator
+avdmanager create avd -n aqademiq_test \
+  -k "system-images;android-36;google_apis_playstore;arm64-v8a" -d pixel_7
+
+emulator -avd aqademiq_test -gpu host -memory 6144
+```
+
+**JDK 21, not the newest.** AGP 8.11 rejects JDK 26 with the unhelpful message
+`* What went wrong:` followed by nothing but `26.0.1`. That is the whole error.
+
+**`-gpu host`, and give it real memory.** The AVD default is 2 GB with a 228 MB
+heap, and `-gpu swiftshader_indirect` renders every Flutter frame and every
+video frame on the CPU. That combination produced repeatable ANRs — load
+average 13 to 23, CPU stalled 68–84% of the time, `lowmemorykiller` culling
+system processes — in an app that is completely responsive once the emulator
+has the GPU. If you see "isn't responding", check `Load:` in the ANR record
+before you go looking for a bug in the app.
+
+Driving it without Android Studio:
+
+```sh
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+adb shell am start -n com.r13.aqademiq/com.aqademiq.aqademiq.MainActivity
+adb exec-out screencap -p > shot.png
+```
+
+Note the activity name. `.MainActivity` shorthand resolves against the
+applicationId (`com.r13.aqademiq`) and fails — the class lives under the
+namespace (`com.aqademiq.aqademiq`). `aapt2 dump badging <apk>` prints the real
+`launchable-activity` when in doubt.
+
+Reading app state back:
+
+```sh
+adb shell run-as com.r13.aqademiq cat \
+  /data/data/com.r13.aqademiq/shared_prefs/FlutterSharedPreferences.xml
+```
