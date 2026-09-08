@@ -43,12 +43,17 @@ To build a Play-ready bundle you need, on the machine doing the build:
    storeFile=/absolute/path/to/aqademiq-upload.jks
    ```
 
-If the keystore is lost and the app is **already on Play**, it is not
-recoverable from here — Play Support can reset an upload key, but only for apps
-enrolled in Play App Signing, and only on their timeline. If the app has **never
-been uploaded**, generate a fresh one (`keytool -genkey -v -keystore
-aqademiq-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload`)
-and back it up somewhere that is not a single laptop.
+**Do not generate a new keystore.** Aqademiq is already published — Play
+Console shows `22 (1.0.0)` live in production, full rollout, since 14 Aug 2026.
+Play matches every upload against the key that signed that release, so a fresh
+key is rejected outright and there is no flag to override it. The existing
+`aqademiq-upload.jks` is the only one that works.
+
+If it is genuinely lost, the recovery is Play Support: apps on Play App Signing
+can have their **upload** key reset (the app signing key never changes, which is
+why installs keep updating). That is a support request with their turnaround,
+not something to do the evening of a release. Back the file up somewhere that
+is not one laptop before that becomes the story.
 
 ## Build
 
@@ -84,11 +89,16 @@ and fix `key.properties` rather than trying the upload.
 versionName `1.1.0` and versionCode `29`.
 
 Play's rule is different from App Store Connect's. ASC closes a *train* (which
-is why 1.0.0 is dead and everything is now 1.1.0); Play only requires that
-**versionCode strictly increases**, and it never reopens a number. The two
-stores share the counter here, so a build made for TestFlight burns a
-versionCode for Play too. That is deliberate — one number, one build, either
-store — but it means Play sees gaps, which is fine and not worth "fixing".
+is why 1.0.0 is dead on iOS and everything is now 1.1.0); Play only requires
+that **versionCode strictly increases**, and it never reopens a number.
+
+Play production is currently `22 (1.0.0)`, so `29` is a valid next upload — the
+22→29 gap is the iOS builds that burned numbers along the way. That is expected:
+the two stores share one counter, one build number per build, whichever store it
+went to. Gaps on Play are not worth "fixing".
+
+Note that 1.0.0 is still the *live* version on Play even though iOS has moved
+on. Play never closed it; it simply has not been updated since August.
 
 ## What Play checks, and where this app stands
 
@@ -97,8 +107,14 @@ store — but it means Play sees gaps, which is fine and not worth "fixing".
 | `targetSdk` ≥ 36 (from 31 Aug 2026) | ✅ 36, inherited from the Flutter SDK |
 | App Bundle, not APK | ✅ `bundleRelease` |
 | 64-bit native code | ✅ arm64-v8a shipped alongside armeabi-v7a and x86_64 |
-| Upload signed with the upload key | ❌ needs the keystore (above) |
-| Data safety form, content rating, privacy policy | Console-side, not in this repo |
+| versionCode above the live release | ✅ 29 > 22 |
+| Upload signed with the **existing** upload key | ❌ needs the keystore (above) |
+| Data safety form, content rating, privacy policy | Console-side, already done for 1.0.0 |
+
+One thing to check in the Console rather than assume: the production track is
+live in **2 of 177 countries**. A new release inherits the track's country list,
+so if that 2 was a soft launch rather than a decision, 1.1.0 ships to the same
+two countries unless it is widened first.
 
 Foreground-service use needs a declaration in the Console: the app holds
 `FOREGROUND_SERVICE_MEDIA_PLAYBACK` so Prism audio and the focus timer survive
