@@ -57,7 +57,13 @@ end
 # render, and the same date parsing the extension reads with — a second,
 # slightly different copy in Runner is exactly how a Live Activity ends up
 # failing to decode a session it was just handed.
-SHARED = %w[FocusActivityAttributes.swift AmbientState.swift].freeze
+#
+# SessionIntent.swift is here for a different reason than the other two, and it
+# is the reason Freeze and End did nothing at all. A LiveActivityIntent is run
+# by the system *in the app's process*, not in the extension that drew the
+# button — so if the app target cannot see the type, the press resolves to
+# nothing and fails silently. No log, no crash, a dead button.
+SHARED = %w[FocusActivityAttributes.swift AmbientState.swift SessionIntent.swift].freeze
 SHARED.each do |name|
   ref = group.files.find { |f| f.path == name }
   next unless ref
