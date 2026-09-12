@@ -64,6 +64,18 @@
 			</array>
 		</dict>
 	</array>
+	<!-- Off, deliberately.
+	
+	     With a Router-based app this defaults ON, and it hands every incoming
+	     aqademiq:// URL to go_router as a literal location. A widget tap then
+	     cold-launched the app straight into
+	     "GoException: no routes for location: aqademiq://focus/start5", because
+	     the surfaces speak in intent and have never spoken in route strings —
+	     that is the whole point of them. AmbientPlugin.handle(url:) translates,
+	     and app_links still receives referral links through the plugin
+	     callback, which this flag does not touch. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

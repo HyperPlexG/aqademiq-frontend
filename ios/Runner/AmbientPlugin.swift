@@ -98,6 +98,14 @@ final class AmbientPlugin: NSObject {
         // aqademiq://focus/start5 → "focus/start5"
         let route = ((url.host ?? "") + url.path).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !route.isEmpty else { return false }
+        // Park it as well as sending it.
+        //
+        // A tap on a widget cold-launches the app, and this runs long before
+        // Dart is listening on the channel — so the invoke below goes nowhere
+        // and the student lands on whatever screen the app opens on. Parked, it
+        // is drained on the first `applicationDidBecomeActive`, which is after
+        // Dart has attached.
+        defaults?.set(route, forKey: Self.pendingRouteKey)
         channel.invokeMethod("route", arguments: route)
         return true
     }
@@ -108,18 +116,24 @@ final class AmbientPlugin: NSObject {
     /// the extension and cannot reach into the session themselves, so they leave
     /// the press here for the app to find.
     func drainPendingAction() {
-        guard
-            let defaults = UserDefaults(suiteName: Self.appGroup),
-            let action = defaults.string(forKey: "ambient_pending_action")
-        else { return }
-        defaults.removeObject(forKey: "ambient_pending_action")
-        channel.invokeMethod("action", arguments: action)
+        guard let defaults = UserDefaults(suiteName: Self.appGroup) else { return }
+        // Route first: a widget that both starts five minutes and shows the
+        // timer should not land on the timer before the session exists.
+        if let route = defaults.string(forKey: Self.pendingRouteKey) {
+            defaults.removeObject(forKey: Self.pendingRouteKey)
+            channel.invokeMethod("route", arguments: route)
+        }
+        if let action = defaults.string(forKey: "ambient_pending_action") {
+            defaults.removeObject(forKey: "ambient_pending_action")
+            channel.invokeMethod("action", arguments: action)
+        }
     }
 
     // MARK: - Shared container
 
     private static let appGroup = "group.com.r13.aqademiq.ambient"
     private static let stateKey = "ambient_state"
+    private static let pendingRouteKey = "ambient_pending_route"
 
     private var defaults: UserDefaults? { UserDefaults(suiteName: Self.appGroup) }
 

@@ -42,22 +42,38 @@ struct FocusLiveActivity: Widget {
                             .frame(width: 46, height: 46)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(context.attributes.taskTitle)
+                                Text(title(for: context))
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
-                                Text(subtitle(for: context))
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .tracking(0.9)
-                                    .foregroundStyle(.white.opacity(0.45))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                                // Only when there is something to say. An
+                                // empty caption still claims a line, and the
+                                // title then sits high against the disc rather
+                                // than centred on it.
+                                if let subtitle = subtitle(for: context) {
+                                    Text(subtitle)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .tracking(0.9)
+                                        .foregroundStyle(.white.opacity(0.45))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Spacer(minLength: 4)
-
+                            // Fixed width, right-aligned, and both are needed.
+                            //
+                            // Text(timerInterval:) reserves room for the widest
+                            // time it might ever show and centres inside it, so
+                            // left to itself the clock floats in the middle of
+                            // a wide blank column instead of sitting at the
+                            // trailing edge the spec puts it at. Pinning the
+                            // width also stops the title reflowing every time a
+                            // digit changes shape.
                             TimeReadout(state: context.state, size: 34, weight: .bold)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 104, alignment: .trailing)
                                 .layoutPriority(1)
                         }
 
@@ -104,11 +120,21 @@ struct FocusLiveActivity: Widget {
         Color(hex: context.attributes.subjectTint) ?? .adaAccent
     }
 
-    private func subtitle(for context: ActivityViewContext<FocusActivityAttributes>) -> String {
-        [context.attributes.subjectLabel, context.state.prismMode]
+    /// What the student sat down to do — or, when they started five minutes
+    /// from a widget and there is no task at all, something true rather than an
+    /// empty string. A blank title collapsed the middle column entirely and
+    /// left the Island looking like a bug.
+    private func title(for context: ActivityViewContext<FocusActivityAttributes>) -> String {
+        let given = context.attributes.taskTitle.trimmingCharacters(in: .whitespaces)
+        return given.isEmpty ? "Focus session" : given
+    }
+
+    /// Nil rather than "" when there is nothing to show, so the caller can drop
+    /// the line instead of laying out an empty one.
+    private func subtitle(for context: ActivityViewContext<FocusActivityAttributes>) -> String? {
+        let parts = [context.attributes.subjectLabel, context.state.prismMode]
             .compactMap { $0?.isEmpty == false ? $0 : nil }
-            .joined(separator: " · ")
-            .uppercased()
+        return parts.isEmpty ? nil : parts.joined(separator: " · ").uppercased()
     }
 }
 
@@ -209,7 +235,8 @@ struct LockScreenCard: View {
                     .tracking(1.2)
                     .foregroundStyle(.white.opacity(0.5))
                     .lineLimit(1)
-                Text(context.attributes.taskTitle)
+                Text(context.attributes.taskTitle.trimmingCharacters(in: .whitespaces).isEmpty
+                     ? "Focus session" : context.attributes.taskTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .lineLimit(1)
@@ -261,7 +288,8 @@ struct StandByCard: View {
                 TimeReadout(state: context.state, size: 68, weight: .bold)
                     .minimumScaleFactor(0.5)
 
-                Text(context.attributes.taskTitle)
+                Text(context.attributes.taskTitle.trimmingCharacters(in: .whitespaces).isEmpty
+                     ? "Focus session" : context.attributes.taskTitle)
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundStyle(.white.opacity(dimmed ? 0.55 : 0.92))
                     .lineLimit(1)

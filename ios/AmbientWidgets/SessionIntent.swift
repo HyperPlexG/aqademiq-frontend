@@ -2,6 +2,9 @@ import Foundation
 
 #if canImport(AppIntents)
 import AppIntents
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 /// A press on a surface outside the app.
 ///
@@ -29,6 +32,12 @@ enum PendingAction {
 
     /// Reflect the press in the shared state straight away, so the surfaces do
     /// not sit there looking unpressed until the app gets around to it.
+    ///
+    /// This is the *widgets'* copy of the truth. It is not what the Live
+    /// Activity renders from — see `restate` below, which was the missing half:
+    /// a press updated the container, the container drives the home screen, and
+    /// the Island went on showing exactly what it showed before. From the
+    /// student's side the button did nothing.
     static func applyOptimistically(frozen: Bool) {
         guard
             let defaults = AmbientStore.defaults,
@@ -47,6 +56,49 @@ enum PendingAction {
     }
 }
 
+#if canImport(ActivityKit)
+/// Redraw the Live Activity from the press, immediately.
+///
+/// The activity renders from ActivityKit's own ContentState, which nothing in
+/// the shared container touches. Parking the press and waiting for the app to
+/// reconcile leaves the Island and the lock screen showing the old state for as
+/// long as it takes the student to open the app — which, for a control whose
+/// entire promise is "one press, no unlock", is indistinguishable from a dead
+/// button.
+///
+/// Updating from the intent is the documented shape for an interactive Live
+/// Activity, and the app still reconciles afterwards: this moves the pixels,
+/// the app moves the session.
+@available(iOS 17.0, *)
+enum ActivityEcho {
+    static func freeze(_ frozen: Bool) async {
+        for activity in Activity<FocusActivityAttributes>.activities {
+            var state = activity.content.state
+            guard state.frozen != frozen else { continue }
+            state.frozen = frozen
+            if frozen {
+                // A system countdown cannot be paused, so pin what is left at
+                // the moment of the press — that number is what the frozen
+                // surfaces draw instead of a ticking clock.
+                state.remainingSec = max(0, Int(state.endsAt.timeIntervalSinceNow.rounded()))
+            } else {
+                // Held time is not spent time: the end moves out by however
+                // long the hold lasted, which is exactly the remaining time we
+                // pinned when it started.
+                state.endsAt = Date().addingTimeInterval(TimeInterval(state.remainingSec))
+            }
+            await activity.update(ActivityContent(state: state, staleDate: nil))
+        }
+    }
+
+    static func end() async {
+        for activity in Activity<FocusActivityAttributes>.activities {
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+}
+#endif
+
 /// Hold the session. The tutorial teaches "freeze, don't quit"; this is that,
 /// one press from anywhere, without unlocking and without the session dying.
 @available(iOS 17.0, *)
@@ -57,6 +109,9 @@ struct FreezeSessionIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         PendingAction.park("freeze")
         PendingAction.applyOptimistically(frozen: true)
+        #if canImport(ActivityKit)
+        await ActivityEcho.freeze(true)
+        #endif
         return .result()
     }
 }
@@ -69,6 +124,9 @@ struct ResumeSessionIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult {
         PendingAction.park("resume")
         PendingAction.applyOptimistically(frozen: false)
+        #if canImport(ActivityKit)
+        await ActivityEcho.freeze(false)
+        #endif
         return .result()
     }
 }
@@ -80,6 +138,9 @@ struct EndSessionIntent: LiveActivityIntent {
 
     func perform() async throws -> some IntentResult {
         PendingAction.park("end")
+        #if canImport(ActivityKit)
+        await ActivityEcho.end()
+        #endif
         return .result()
     }
 }
