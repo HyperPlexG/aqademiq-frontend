@@ -26,57 +26,50 @@ struct FocusLiveActivity: Widget {
                 // Everything lives in .bottom as one composed card rather than
                 // spread across leading/trailing, because those regions are
                 // narrow and wrap the title long before the space runs out.
-                DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 12) {
-                        HStack(spacing: 12) {
-                            // She sits in a disc, as the spec draws her. The
-                            // disc is not decoration: the expanded Island is a
-                            // wide dark field, and an unbacked silhouette at
-                            // 46pt reads as a smudge floating in it.
-                            ZStack {
-                                Circle().fill(tint(for: context).opacity(0.20))
-                                AdaView(stage: context.state.meltStage,
-                                        frozen: context.state.frozen)
-                                    .padding(6)
-                            }
-                            .frame(width: 46, height: 46)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(title(for: context))
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                                // Only when there is something to say. An
-                                // empty caption still claims a line, and the
-                                // title then sits high against the disc rather
-                                // than centred on it.
-                                if let subtitle = subtitle(for: context) {
-                                    Text(subtitle)
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .tracking(0.9)
-                                        .foregroundStyle(.white.opacity(0.45))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                            // Fixed width, right-aligned, and both are needed.
-                            //
-                            // Text(timerInterval:) reserves room for the widest
-                            // time it might ever show and centres inside it, so
-                            // left to itself the clock floats in the middle of
-                            // a wide blank column instead of sitting at the
-                            // trailing edge the spec puts it at. Pinning the
-                            // width also stops the title reflowing every time a
-                            // digit changes shape.
-                            TimeReadout(state: context.state, size: 34, weight: .bold)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 104, alignment: .trailing)
-                                .layoutPriority(1)
+                // Split across regions rather than stacked in .bottom.
+                //
+                // .bottom is only the strip *below* the sensor housing, so a
+                // whole card in it runs out of room and the system clips from
+                // the base — which took the buttons with it. .leading and
+                // .trailing are the space beside the housing, and using them
+                // costs nothing and buys back the entire top row.
+                DynamicIslandExpandedRegion(.leading) {
+                    HStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(tint(for: context).opacity(0.20))
+                            AdaView(stage: context.state.meltStage,
+                                    frozen: context.state.frozen)
+                                .padding(5)
                         }
+                        .frame(width: 40, height: 40)
 
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(title(for: context))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            if let subtitle = subtitle(for: context) {
+                                Text(subtitle)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .tracking(0.8)
+                                    .foregroundStyle(.white.opacity(0.45))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                DynamicIslandExpandedRegion(.trailing) {
+                    TimeReadout(state: context.state, size: 26, weight: .bold)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+
+                DynamicIslandExpandedRegion(.bottom) {
+                    VStack(spacing: 10) {
                         PuddleRail(spent: context.state.spent,
                                    frozen: context.state.frozen)
 
@@ -84,7 +77,7 @@ struct FocusLiveActivity: Widget {
                             SessionControls(frozen: context.state.frozen)
                         }
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 2)
                 }
             } compactLeading: {
                 // Ada leads, the clock trails. She is the only element that
@@ -399,7 +392,7 @@ struct SessionControls: View {
         }
         .foregroundStyle(ink)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(height: 40)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(fill))
     }
 }

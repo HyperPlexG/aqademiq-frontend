@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -71,6 +73,18 @@ class AmbientBridge {
     _install();
   }
 
+  /// Tell the native side a handler exists, and only then let it deliver.
+  ///
+  /// The presses parked by a widget or a Live Activity button are drained on
+  /// `applicationDidBecomeActive`, and on a cold launch that fires before
+  /// Flutter's first frame — which is before this handler is installed. The
+  /// drain then cleared the parked press and invoked into nothing, so a Start 5
+  /// from the home screen opened the app and did precisely nothing else. The
+  /// press was not dropped in transit; it was consumed by a listener that did
+  /// not exist yet.
+  ///
+  /// Announcing readiness is the handshake that closes that race: nothing is
+  /// drained until there is somewhere for it to land.
   void _install() {
     if (!_supported) return;
     channel.setMethodCallHandler((call) async {
@@ -90,6 +104,9 @@ class AmbientBridge {
       }
       return null;
     });
+    // Fire-and-forget: if the native side has nothing parked this is a no-op,
+    // and it must not block the first frame either way.
+    unawaited(_invoke('ready', null));
   }
 
   /// Publish the glanceable data the widgets read.

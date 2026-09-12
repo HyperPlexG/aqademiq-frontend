@@ -38,8 +38,13 @@ object AmbientBridge {
     fun attach(channel: MethodChannel, context: Context) {
         this.channel = channel
         channel.setMethodCallHandler { call, result -> handle(context, call, result) }
-        // A press that arrived while nothing was listening still has to land.
-        drainPendingAction(context)
+        // Deliberately NOT draining here.
+        //
+        // Attaching means this side is ready, not that Dart is. The engine sets
+        // the channel up before the Dart entrypoint has installed its handler,
+        // so draining now removes the parked press and invokes it into nothing.
+        // Dart calls "ready" once it is actually listening; that is where the
+        // drain happens.
     }
 
     fun detach() {
@@ -70,6 +75,13 @@ object AmbientBridge {
             "publish" -> {
                 val args = call.arguments as? Map<*, *>
                 if (args != null) publish(context, args)
+                result.success(null)
+            }
+
+            // Dart has a handler now, so a press parked by a widget, a tile or
+            // a notification action finally has somewhere to land.
+            "ready" -> {
+                drainPendingAction(context)
                 result.success(null)
             }
 

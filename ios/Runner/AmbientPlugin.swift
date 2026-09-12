@@ -24,6 +24,9 @@ final class AmbientPlugin: NSObject {
     private let channel: FlutterMethodChannel
     private var currentActivityID: String?
 
+    /// Set by Dart's `ready` call, once its method-call handler is installed.
+    private var dartIsListening = false
+
     /// The wrist. Every other surface reads the App Group; the watch is a
     /// separate device and needs a transport, so it is the one place this
     /// plugin pushes rather than publishes.
@@ -83,6 +86,15 @@ final class AmbientPlugin: NSObject {
             reloadWidgets()
             result(nil)
 
+        case "ready":
+            // Dart has a handler now. Anything parked before this point was
+            // being drained into nothing on cold launch — didBecomeActive fires
+            // well before Flutter's first frame — which is why a Start 5 from
+            // the home screen opened the app and then sat there.
+            dartIsListening = true
+            drainPendingAction()
+            result(nil)
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -116,7 +128,10 @@ final class AmbientPlugin: NSObject {
     /// the extension and cannot reach into the session themselves, so they leave
     /// the press here for the app to find.
     func drainPendingAction() {
-        guard let defaults = UserDefaults(suiteName: Self.appGroup) else { return }
+        // Nothing is consumed until there is somewhere for it to land. Without
+        // this the parked press is removed and invoked into a channel with no
+        // handler, and it is gone for good.
+        guard dartIsListening, let defaults = UserDefaults(suiteName: Self.appGroup) else { return }
         // Route first: a widget that both starts five minutes and shows the
         // timer should not land on the timer before the session exists.
         if let route = defaults.string(forKey: Self.pendingRouteKey) {
