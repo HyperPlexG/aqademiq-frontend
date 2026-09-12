@@ -94,7 +94,14 @@ watch.build_configurations.each do |config|
   s['SWIFT_VERSION'] = '5.0'
   s['DEVELOPMENT_TEAM'] = TEAM
   s['CODE_SIGN_STYLE'] = 'Automatic'
-  s['SKIP_INSTALL'] = 'NO'
+  # YES, like the widget extension. This target is *embedded* by Runner's copy
+  # phase, not installed beside it — and NO puts a second AqademiqWatch.app at
+  # the archive root, which leaves the archive with two applications and no way
+  # for Xcode to tell which is the product. The symptom is far from the cause:
+  # the archive builds, then export dies with "Unknown Distribution Error" and
+  # `expected one {} but found app-store-connect`, because with no
+  # ApplicationProperties the set of valid distribution methods is empty.
+  s['SKIP_INSTALL'] = 'YES'
   s['CURRENT_PROJECT_VERSION'] = '1'
   s['MARKETING_VERSION'] = '1.0'
   # A watch app without an icon archives fine and is rejected on upload, which
