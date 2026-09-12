@@ -182,6 +182,33 @@ Widgets deep-link through `aqademiq://` and speak in intent (`focus`, `plan`,
 `stats`), not route strings, so renaming a route cannot break a widget already
 installed on someone's home screen.
 
+**The watch is the one surface with a transport.** Every other renderer reads
+the shared object out of the App Group; watchOS is a separate device with its
+own container and no entitlement bridges that, so `ios/Runner/WatchLink.swift`
+mirrors the same flat dictionary over WatchConnectivity. State goes down as
+`updateApplicationContext` (coalescing — the newest replaces any older one still
+queued, which is the same budget the rest of the design keeps) and presses come
+back as `sendMessage` with a `transferUserInfo` fallback (never coalesced: two
+freezes are not one freeze). A press lands in the same `ambient_pending_action`
+slot a widget press uses, so there is one way into the session, not two.
+
+`ios/add_watch_target.rb` builds the target, idempotently, for the same reason
+the widget script exists. It shares `AdaShape.swift` with the extension rather
+than adding a third copy of her.
+
+**Embedding a watch app makes the watchOS platform a build requirement.** Xcode
+refuses any scheme that embeds one unless the matching watchOS runtime is
+installed — for device builds as well as the simulator, and the error names the
+version it wants:
+
+```sh
+xcodebuild -downloadPlatform watchOS     # several GB, once per machine
+```
+
+Without it every `flutter build ios` fails with "This scheme builds an embedded
+Apple Watch app", which reads like a project problem and is not one. A machine
+that only builds Android never needs it.
+
 ## Backend integration status
 
 Wired end-to-end behind the seams (mock + `ApiXxxSource`): tasks, subjects, tags,

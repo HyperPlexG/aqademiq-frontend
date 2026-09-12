@@ -26,9 +26,15 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		A1CEC950575E9065CB12FE2F /* WatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159215F43CA55688262DC9D9 /* WatchLink.swift */; };
+		A51ACD5E6D5B444D1AEEF545 /* WatchSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347CF04A195330D4BBAD496F /* WatchSessionView.swift */; };
+		AD6F5751A35D16314DE48687 /* AqademiqWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B77F7497BC3248BEFB9669A9 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071168B7E6D42BF20FDE924B /* WatchApp.swift */; };
+		BABA1155186DF77B5A0204E3 /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
 		C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
 		C91EEB2E04F6E6471403A959 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
 		CDB59264E64A434746DE11D9 /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
+		E39F4D6F8F1A2F5E0424FE45 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1787A1223E80E4BAB8424154 /* Foundation.framework */; };
 		F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
 		FEEDA9AD000000000000C0C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
@@ -48,6 +54,13 @@
 			remoteGlobalIDString = D575B1C9E709C74CFD3CF78B;
 			remoteInfo = AmbientWidgets;
 		};
+		9F3AD7894A4C4CF75F5C85DC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A8F50F21C6F7C5BA5B33C73B;
+			remoteInfo = AqademiqWatch;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -59,6 +72,17 @@
 			files = (
 			);
 			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E427FD3DD6E53CC9A8D07277 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				AD6F5751A35D16314DE48687 /* AqademiqWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F3639B14F448F74CF3B3999C /* Embed Foundation Extensions */ = {
@@ -76,18 +100,23 @@
 
 /* Begin PBXFileReference section */
 		004734AFE3AC492C3D078C23 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		071168B7E6D42BF20FDE924B /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		1082CF61BFCDFE0BB1A7B51D /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
+		159215F43CA55688262DC9D9 /* WatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
+		1787A1223E80E4BAB8424154 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		22D9DB4F300D10270044D165 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		2A1B6E32B519F5489D525134 /* AdaShape.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdaShape.swift; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		347CF04A195330D4BBAD496F /* WatchSessionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSessionView.swift; sourceTree = "<group>"; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
 		4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		550699B9FE5E3FD68C938C10 /* AmbientState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientState.swift; sourceTree = "<group>"; };
 		5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientPlugin.swift; sourceTree = "<group>"; };
 		63BC88FC67DAA3E60A1A6B63 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
+		65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AqademiqWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -116,6 +145,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0EA64789106B6D5713D7834A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E39F4D6F8F1A2F5E0424FE45 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		121753BE63482DAD4ED292B3 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -152,6 +189,17 @@
 			path = RunnerTests;
 			sourceTree = "<group>";
 		};
+		83C28780CF97255F3D200FB0 /* AqademiqWatch */ = {
+			isa = PBXGroup;
+			children = (
+				071168B7E6D42BF20FDE924B /* WatchApp.swift */,
+				159215F43CA55688262DC9D9 /* WatchLink.swift */,
+				347CF04A195330D4BBAD496F /* WatchSessionView.swift */,
+			);
+			name = AqademiqWatch;
+			path = AqademiqWatch;
+			sourceTree = SOURCE_ROOT;
+		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
@@ -174,6 +222,7 @@
 				E4E5967BF208E1096F3BA96F /* Pods */,
 				EAF68D2B93829D3C01212FDF /* Frameworks */,
 				B76B709933370D46FF984DFD /* AmbientWidgets */,
+				83C28780CF97255F3D200FB0 /* AqademiqWatch */,
 			);
 			sourceTree = "<group>";
 		};
@@ -183,6 +232,7 @@
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */,
+				65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -249,8 +299,17 @@
 				004734AFE3AC492C3D078C23 /* Pods_Runner.framework */,
 				F6CBD3F1A10FF6DB7A7D95CB /* Pods_RunnerTests.framework */,
 				A5080294CE11BB43C5C91C69 /* iOS */,
+				F4811886BCE33C1015262A7A /* watchOS */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F4811886BCE33C1015262A7A /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				1787A1223E80E4BAB8424154 /* Foundation.framework */,
+			);
+			name = watchOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -286,6 +345,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				F3639B14F448F74CF3B3999C /* Embed Foundation Extensions */,
+				E427FD3DD6E53CC9A8D07277 /* Embed Watch Content */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				2A7CF9145B44B5FE68D395D1 /* [CP] Embed Pods Frameworks */,
 			);
@@ -293,6 +353,7 @@
 			);
 			dependencies = (
 				0318674A8FBA104B8CD30750 /* PBXTargetDependency */,
+				5B7A4CC8D46F543677270525 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -300,6 +361,23 @@
 			);
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A8F50F21C6F7C5BA5B33C73B /* AqademiqWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 483D94D021171CEEC5A9EF72 /* Build configuration list for PBXNativeTarget "AqademiqWatch" */;
+			buildPhases = (
+				03EBB1764000A2AAA1AB8379 /* Sources */,
+				0EA64789106B6D5713D7834A /* Frameworks */,
+				129C61C02765D75C5A6F6B46 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AqademiqWatch;
+			productName = AqademiqWatch;
+			productReference = 65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D575B1C9E709C74CFD3CF78B /* AmbientWidgets */ = {
@@ -358,11 +436,19 @@
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				D575B1C9E709C74CFD3CF78B /* AmbientWidgets */,
+				A8F50F21C6F7C5BA5B33C73B /* AqademiqWatch */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		129C61C02765D75C5A6F6B46 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -487,6 +573,17 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		03EBB1764000A2AAA1AB8379 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B77F7497BC3248BEFB9669A9 /* WatchApp.swift in Sources */,
+				A1CEC950575E9065CB12FE2F /* WatchLink.swift in Sources */,
+				A51ACD5E6D5B444D1AEEF545 /* WatchSessionView.swift in Sources */,
+				BABA1155186DF77B5A0204E3 /* AdaShape.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807D294A63A400263BE5 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -535,6 +632,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		5B7A4CC8D46F543677270525 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = AqademiqWatch;
+			target = A8F50F21C6F7C5BA5B33C73B /* AqademiqWatch */;
+			targetProxy = 9F3AD7894A4C4CF75F5C85DC /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -682,6 +785,28 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
+			};
+			name = Profile;
+		};
+		56D520CAE286A4CFB9E77BCC /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SXN54W6F6T;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AqademiqWatch/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_NAME = AqademiqWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Profile;
 		};
@@ -871,6 +996,28 @@
 			};
 			name = Release;
 		};
+		A92DB935FE34403A939B9C1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SXN54W6F6T;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AqademiqWatch/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_NAME = AqademiqWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
 		C6B516D790D3FBCFCCA438E0 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = C2388CCE972579FC8E9A4A1A /* AmbientWidgets.xcconfig */;
@@ -891,6 +1038,27 @@
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB99F5D282C2802AFB926F21 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = SXN54W6F6T;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = AqademiqWatch/Info.plist;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_NAME = AqademiqWatch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = NO;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -927,6 +1095,16 @@
 				331C8088294A63A400263BE5 /* Debug */,
 				331C8089294A63A400263BE5 /* Release */,
 				331C808A294A63A400263BE5 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		483D94D021171CEEC5A9EF72 /* Build configuration list for PBXNativeTarget "AqademiqWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A92DB935FE34403A939B9C1D /* Release */,
+				CB99F5D282C2802AFB926F21 /* Debug */,
+				56D520CAE286A4CFB9E77BCC /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

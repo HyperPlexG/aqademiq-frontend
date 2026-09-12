@@ -24,12 +24,28 @@ final class AmbientPlugin: NSObject {
     private let channel: FlutterMethodChannel
     private var currentActivityID: String?
 
+    /// The wrist. Every other surface reads the App Group; the watch is a
+    /// separate device and needs a transport, so it is the one place this
+    /// plugin pushes rather than publishes.
+    private let watch = WatchLink()
+
     init(messenger: FlutterBinaryMessenger) {
         channel = FlutterMethodChannel(name: Self.channelName, binaryMessenger: messenger)
         super.init()
         channel.setMethodCallHandler { [weak self] call, result in
             self?.handle(call, result: result)
         }
+        // A press on the watch goes through the same door as a press on a
+        // widget: park it in the shared container, then drain it. Reusing that
+        // path rather than invoking the channel directly means one reconcile
+        // to reason about, and it already handles the case where the app was
+        // not running when the press happened.
+        watch.onCommand = { [weak self] action in
+            guard let self else { return }
+            self.defaults?.set(action, forKey: "ambient_pending_action")
+            self.drainPendingAction()
+        }
+        watch.activate()
     }
 
     // MARK: - Channel
@@ -140,6 +156,10 @@ final class AmbientPlugin: NSObject {
             let string = String(data: data, encoding: .utf8)
         else { return }
         defaults?.set(string, forKey: Self.stateKey)
+        // The watch cannot see the container, so it is told. Same object, same
+        // moment — there is no second schema and no second decision about when
+        // a surface is stale.
+        watch.push(json)
     }
 
     private func reloadWidgets() {
