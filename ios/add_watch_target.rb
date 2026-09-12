@@ -61,6 +61,26 @@ shared_ref = shared_group.files.find { |f| f.path == 'AdaShape.swift' }
 abort 'AdaShape.swift missing — run add_widget_target.rb first' unless shared_ref
 watch.source_build_phase.add_file_reference(shared_ref)
 
+# The asset catalog, so the icon actually ships.
+assets = group.files.find { |f| f.path == 'Assets.xcassets' } ||
+         group.new_reference('Assets.xcassets')
+unless watch.resources_build_phase.files_references.include?(assets)
+  watch.resources_build_phase.add_file_reference(assets)
+end
+
+# The phone half of the link has to be in the *app* target, not this one.
+#
+# It is easy to add a file to ios/Runner/ and assume Xcode noticed. It does not,
+# and the failure is a compile error in a file that plainly exists
+# ("cannot find 'WatchBridge' in scope"), which sends you looking at the wrong
+# thing entirely.
+runner_group = project.main_group.find_subpath('Runner', true)
+bridge = runner_group.files.find { |f| f.path == 'WatchBridge.swift' } ||
+         runner_group.new_reference('WatchBridge.swift')
+unless app.source_build_phase.files_references.include?(bridge)
+  app.source_build_phase.add_file_reference(bridge)
+end
+
 watch.build_configurations.each do |config|
   s = config.build_settings
   s['PRODUCT_NAME'] = TARGET_NAME
@@ -77,8 +97,10 @@ watch.build_configurations.each do |config|
   s['SKIP_INSTALL'] = 'NO'
   s['CURRENT_PROJECT_VERSION'] = '1'
   s['MARKETING_VERSION'] = '1.0'
-  # No asset catalog yet, so say so rather than leaving Xcode looking for one.
-  s.delete('ASSETCATALOG_COMPILER_APPICON_NAME')
+  # A watch app without an icon archives fine and is rejected on upload, which
+  # is a slow way to find out. It reuses the phone's 1024 rather than carrying
+  # a second artwork to keep in step.
+  s['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
 end
 
 # The phone app carries the watch app inside it.

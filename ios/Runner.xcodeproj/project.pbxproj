@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		066FE5FC884D45988014E898 /* AmbientWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BA01ED19694CF4833BAC04 /* AmbientWidgets.swift */; };
 		098C74C41F7805EE248EF7BA /* AccessoryWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9550DA3BC330DF13A231DE9B /* AccessoryWidgets.swift */; };
+		0B50E91B3F4DFC7C12DDDD0E /* WatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159215F43CA55688262DC9D9 /* WatchLink.swift */; };
 		0CC15D3217B7B76B4E314925 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
+		1414770647FDEF47FBDD2999 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13516D050481EF87D54B78A8 /* Assets.xcassets */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		27F639E286C203F37CFBEA88 /* AmbientWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2D5598F1CC25EB0B5A1D062C /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
@@ -18,6 +20,8 @@
 		48C761BD7336D092CBC190D1 /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB09A799A5BA3080E3C744 /* FocusLiveActivity.swift */; };
 		518AE02524526747B54807EC /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 004734AFE3AC492C3D078C23 /* Pods_Runner.framework */; };
 		551EEC829B53020A6980517F /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
+		58B42A344571152D6DD2B338 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071168B7E6D42BF20FDE924B /* WatchApp.swift */; };
+		59AE08FB9656EEDE6BEF8BC0 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF53A998BC55D853E629F440 /* WatchBridge.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
@@ -26,17 +30,15 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
-		A1CEC950575E9065CB12FE2F /* WatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159215F43CA55688262DC9D9 /* WatchLink.swift */; };
-		A51ACD5E6D5B444D1AEEF545 /* WatchSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347CF04A195330D4BBAD496F /* WatchSessionView.swift */; };
 		AD6F5751A35D16314DE48687 /* AqademiqWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B77F7497BC3248BEFB9669A9 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071168B7E6D42BF20FDE924B /* WatchApp.swift */; };
-		BABA1155186DF77B5A0204E3 /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
 		C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
 		C91EEB2E04F6E6471403A959 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
 		CDB59264E64A434746DE11D9 /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
 		E39F4D6F8F1A2F5E0424FE45 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1787A1223E80E4BAB8424154 /* Foundation.framework */; };
+		F311F5A79FDC5FD2736ED5DE /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
 		F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
 		FEEDA9AD000000000000C0C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */; };
+		FF8603E712D2237125A079D2 /* WatchSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347CF04A195330D4BBAD496F /* WatchSessionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +104,7 @@
 		004734AFE3AC492C3D078C23 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		071168B7E6D42BF20FDE924B /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
 		1082CF61BFCDFE0BB1A7B51D /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
+		13516D050481EF87D54B78A8 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		159215F43CA55688262DC9D9 /* WatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
@@ -142,6 +145,7 @@
 		E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusActivityAttributes.swift; sourceTree = "<group>"; };
 		F6CBD3F1A10FF6DB7A7D95CB /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		FF53A998BC55D853E629F440 /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +199,7 @@
 				071168B7E6D42BF20FDE924B /* WatchApp.swift */,
 				159215F43CA55688262DC9D9 /* WatchLink.swift */,
 				347CF04A195330D4BBAD496F /* WatchSessionView.swift */,
+				13516D050481EF87D54B78A8 /* Assets.xcassets */,
 			);
 			name = AqademiqWatch;
 			path = AqademiqWatch;
@@ -252,6 +257,7 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */,
+				FF53A998BC55D853E629F440 /* WatchBridge.swift */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -446,6 +452,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1414770647FDEF47FBDD2999 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -577,10 +584,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B77F7497BC3248BEFB9669A9 /* WatchApp.swift in Sources */,
-				A1CEC950575E9065CB12FE2F /* WatchLink.swift in Sources */,
-				A51ACD5E6D5B444D1AEEF545 /* WatchSessionView.swift in Sources */,
-				BABA1155186DF77B5A0204E3 /* AdaShape.swift in Sources */,
+				58B42A344571152D6DD2B338 /* WatchApp.swift in Sources */,
+				0B50E91B3F4DFC7C12DDDD0E /* WatchLink.swift in Sources */,
+				FF8603E712D2237125A079D2 /* WatchSessionView.swift in Sources */,
+				F311F5A79FDC5FD2736ED5DE /* AdaShape.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -602,6 +609,7 @@
 				C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */,
 				F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */,
 				96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */,
+				59AE08FB9656EEDE6BEF8BC0 /* WatchBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -791,6 +799,7 @@
 		56D520CAE286A4CFB9E77BCC /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -999,6 +1008,7 @@
 		A92DB935FE34403A939B9C1D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -1044,6 +1054,7 @@
 		CB99F5D282C2802AFB926F21 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;

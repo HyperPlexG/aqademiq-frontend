@@ -3,6 +3,10 @@ import WatchConnectivity
 
 /// The phone's half of the wrist.
 ///
+/// Named apart from the watch target's own `WatchLink` deliberately: they are
+/// separate modules and the compiler would not mind sharing a name, but the two
+/// ends of one link reading identically in a stack trace helps nobody.
+///
 /// Everywhere else the ambient surfaces read one shared object out of an App
 /// Group. The watch cannot: it is a separate device with its own container, and
 /// no amount of entitlement sharing bridges that. So this is the one surface
@@ -25,7 +29,7 @@ import WatchConnectivity
 /// It is deliberately dumb about content. The payload is the same flat
 /// dictionary already written to the App Group, so there is no second schema to
 /// keep in step — the watch reads the fields it can draw and ignores the rest.
-final class WatchLink: NSObject {
+final class WatchBridge: NSObject {
     /// Called with `freeze`, `resume`, `end` or `start5` when the wrist asks
     /// for something. Routed by the plugin into the same pending-action path a
     /// widget press takes, so there is one way into the session and not two.
@@ -64,7 +68,7 @@ final class WatchLink: NSObject {
     }
 }
 
-extension WatchLink: WCSessionDelegate {
+extension WatchBridge: WCSessionDelegate {
     func session(
         _ session: WCSession,
         activationDidCompleteWith state: WCSessionActivationState,

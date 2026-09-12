@@ -27,7 +27,7 @@ final class AmbientPlugin: NSObject {
     /// The wrist. Every other surface reads the App Group; the watch is a
     /// separate device and needs a transport, so it is the one place this
     /// plugin pushes rather than publishes.
-    private let watch = WatchLink()
+    private let watch = WatchBridge()
 
     init(messenger: FlutterBinaryMessenger) {
         channel = FlutterMethodChannel(name: Self.channelName, binaryMessenger: messenger)
