@@ -55,3 +55,11 @@ app.*.map.json
 devtools_options.yaml
 /ios/build/
 ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+
+# Signing keys. android/.gitignore covers the android/ directory only, and a
+# keystore dropped anywhere else in the repo would otherwise be committable —
+# `git add -A` would publish the one secret that proves a Play upload is us.
+*.jks
+*.keystore
+*.p12
+key.properties
