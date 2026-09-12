@@ -153,6 +153,20 @@ class AmbientSessionService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(0xFF6B5CF0.toInt())
             .setColorized(false)
+            // The status-bar chip (Android 16+): Android's answer to the
+            // compact Island, and the spec's §6 ceiling. The system draws the
+            // small icon plus this text in the status bar while the session
+            // runs, so Ada's silhouette and the remaining time follow the
+            // student into every other app.
+            //
+            // It is a request, not a guarantee — the platform decides, and
+            // demotes the chip if the notification stops qualifying (it must
+            // stay ongoing, and only a few categories are eligible). Below 16
+            // both calls are no-ops through the compat layer, which is the
+            // "feature-detect and degrade, never fork the design" line: the
+            // floor is the same ongoing notification either way.
+            .setShortCriticalText(chipText(frozen, remainingSec))
+            .setRequestPromotedOngoing(true)
 
         if (frozen) {
             // A system-rendered countdown cannot be paused. Swapping it for
@@ -180,6 +194,17 @@ class AmbientSessionService : Service() {
 
         return builder.build()
     }
+
+    /**
+     * The chip's text, which has room for almost nothing.
+     *
+     * The status bar gives a handful of characters beside the icon, so this is
+     * the remaining time and nothing else — no task, no label. Frozen sessions
+     * say so in a word rather than showing a number that is not moving, which
+     * would read as a stuck clock at a glance.
+     */
+    private fun chipText(frozen: Boolean, remainingSec: Int): String =
+        if (frozen) "Frozen" else formatRemaining(remainingSec)
 
     /**
      * The card itself.

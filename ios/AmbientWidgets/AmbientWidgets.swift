@@ -102,7 +102,11 @@ struct WeekWidget: Widget {
         }
         .configurationDisplayName("This week")
         .description("The days you showed up. No streak, no scolding.")
-        .supportedFamilies([.systemSmall])
+        // Medium, because seven cells cannot fit a small widget: at 22pt with
+        // 5pt gutters the row wants 184pt against roughly 140pt of usable
+        // width, so at small it either clipped or squeezed to nothing. §5
+        // draws this one wide for exactly that reason.
+        .supportedFamilies([.systemMedium])
     }
 }
 
@@ -117,13 +121,16 @@ struct WeekView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Label_("This week")
             Spacer(minLength: 0)
-            HStack(spacing: 5) {
+            // Evenly divided rather than fixed-width: a medium widget is a
+            // different number of points on every device, and seven columns
+            // that each take their share stay centred on all of them.
+            HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { index in
                     let shown = index < state.weekDays.count && state.weekDays[index]
-                    VStack(spacing: 6) {
+                    VStack(spacing: 7) {
                         ZStack {
                             if shown {
                                 // A day you showed up wears Ada's face.
@@ -131,21 +138,23 @@ struct WeekView: View {
                             } else {
                                 // A day you did not is an empty outline, never a
                                 // puddle: absence is not depletion.
-                                RoundedRectangle(cornerRadius: 5)
-                                    .stroke(Color.white.opacity(0.20), lineWidth: 1.2)
+                                RoundedRectangle(cornerRadius: 7)
+                                    .stroke(Color.white.opacity(0.20), lineWidth: 1.4)
                                     .padding(1)
                             }
                         }
-                        .frame(width: 22, height: 22)
+                        .frame(width: 28, height: 28)
                         Text(Self.letters[index])
-                            .font(.system(size: 8.5,
+                            .font(.system(size: 10,
                                           weight: index == todayIndex ? .bold : .medium)
                                 .monospaced())
                             .foregroundStyle(index == todayIndex
                                              ? AdaPalette.accent : Color.widgetMeta)
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .widgetURL(URL(string: "aqademiq://stats"))

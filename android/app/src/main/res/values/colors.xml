@@ -2,4 +2,8 @@
 <resources>
     <!-- Aqademiq accent — tints the status-bar notification icon. -->
     <color name="notification_color">#FF6B5CF0</color>
+    <!-- The colour SplashScreen's own Scaffold paints (AppColors.surface,
+         light). The system splash window uses the same one so the handover to
+         Flutter is a repaint of the same colour rather than a visible cut. -->
+    <color name="splash_background">#FFFFFFFF</color>
 </resources>

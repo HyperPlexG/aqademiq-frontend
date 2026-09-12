@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Intentionally blank.
+
+     Android 12+ always shows a splash window and always puts an icon in it;
+     the icon cannot be turned off, only replaced. Replacing it with nothing
+     leaves the background colour alone on screen, which is what the app's own
+     first frame paints too - so the launcher icon no longer flashes up before
+     the intro animation. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="1dp"
+    android:height="1dp"
+    android:viewportWidth="1"
+    android:viewportHeight="1" />

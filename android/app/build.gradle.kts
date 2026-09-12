@@ -89,4 +89,11 @@ dependencies {
     // Backports java.time (and other Java 8+ APIs) so flutter_local_notifications
     // works on older Android versions. Pairs with isCoreLibraryDesugaringEnabled.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Pinned, not inherited. androidx.core arrives transitively through Flutter
+    // at whatever version the plugins happen to agree on, and the status-bar
+    // chip needs NotificationCompat.setShortCriticalText /
+    // setRequestPromotedOngoing, which only exist from 1.17.0. Left to the
+    // transitive resolution the chip silently never appears.
+    implementation("androidx.core:core-ktx:1.17.0")
 }
