@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 
 /// fc-duration — centered "Set time" dialog. Opened by tapping the "Set time"
 /// pill on the Focus setup screen. Returns the chosen minutes (5..120) when the
@@ -18,24 +20,34 @@ Future<int?> showFocusDurationDialog(
   );
 }
 
-class _FocusDurationDialog extends StatefulWidget {
+class _FocusDurationDialog extends ConsumerStatefulWidget {
   const _FocusDurationDialog({required this.current});
 
   final int current;
 
   @override
-  State<_FocusDurationDialog> createState() => _FocusDurationDialogState();
+  ConsumerState<_FocusDurationDialog> createState() =>
+      _FocusDurationDialogState();
 }
 
-class _FocusDurationDialogState extends State<_FocusDurationDialog> {
+class _FocusDurationDialogState extends ConsumerState<_FocusDurationDialog> {
   static const int _min = 5;
   static const int _max = 120;
   static const List<int> _presets = [15, 25, 45, 60];
 
   late int _minutes = widget.current.clamp(_min, _max);
 
-  void _setMinutes(int value) {
-    setState(() => _minutes = value.clamp(_min, _max));
+  /// [detent] is true only for the slider.
+  ///
+  /// This is a *picker*, so its budget is 1 (§7, "Pickers · time · date · month
+  /// · duration") and it is spent on the slider detent. The ± steppers and the
+  /// preset chips are ordinary taps that stage a value nothing has committed
+  /// yet — §4.1 territory, and spending the budget on them would leave the
+  /// slider, which is the one continuous control here, silent.
+  void _setMinutes(int value, {bool detent = false}) {
+    final next = value.clamp(_min, _max);
+    if (detent && next != _minutes) ref.read(hapticsProvider).sliderStop();
+    setState(() => _minutes = next);
   }
 
   @override
@@ -72,7 +84,7 @@ class _FocusDurationDialogState extends State<_FocusDurationDialog> {
                 minutes: _minutes,
                 min: _min,
                 max: _max,
-                onChanged: (v) => _setMinutes(v.round()),
+                onChanged: (v) => _setMinutes(v.round(), detent: true),
               ),
               _PresetChips(
                 presets: _presets,

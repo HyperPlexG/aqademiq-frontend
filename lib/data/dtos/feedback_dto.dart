@@ -14,7 +14,8 @@ class FeedbackPostDto {
     required this.title,
     required this.createdAt,
     this.body = '',
-    this.status = 'open', // open|planned|in_progress|completed|acknowledged|exists_already
+    // Mirrors `feedback_statuses.key` on the server.
+    this.status = 'under_review', // under_review|planned|in_progress|shipped|declined
     this.category = 'feature', // feature|improvement|bug
     this.votes = 0,
     this.hasVoted = false,
@@ -28,7 +29,7 @@ class FeedbackPostDto {
         number: (json['number'] as num?)?.toInt() ?? 0,
         title: json['title'] as String? ?? '',
         body: json['body'] as String? ?? '',
-        status: json['status'] as String? ?? 'open',
+        status: json['status'] as String? ?? 'under_review',
         category: json['category'] as String? ?? 'feature',
         votes: (json['votes'] as num?)?.toInt() ?? 0,
         hasVoted: json['hasVoted'] as bool? ?? false,

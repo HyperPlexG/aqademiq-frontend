@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/hex_color.dart';
@@ -20,6 +21,8 @@ import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
+import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
@@ -91,7 +94,27 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       durationMin: 30,
       repeat: repeat,
     );
-    await ref.read(tasksRepositoryProvider).create(task);
+    // Quick add is the OTHER creation path, and until now it was the one that
+    // failed in silence: `add_task_screen._save` has always caught and shown a
+    // snackbar, while this awaited the create bare. A throw here escaped into
+    // the void — the sheet had already closed, no task appeared, and nothing
+    // said why. "I added a task and it just didn't add" is what that looks like
+    // from the outside, and it is indistinguishable from the app ignoring the
+    // tap. Both paths now report the same way.
+    try {
+      await ref.read(tasksRepositoryProvider).create(task);
+    } on Object {
+      ref.read(hapticsProvider).saveFailed();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't add task. Try again.")),
+      );
+      return;
+    }
+    // Second creation path (quick add) alongside `add_task_screen._save`. Same
+    // Tier 2 event, not a new one — the state change is identical, so it costs
+    // nothing against Plan's budget of 4.
+    ref.read(hapticsProvider).taskCreated();
     ref.invalidate(dayTasksProvider);
   }
 
@@ -102,9 +125,15 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _menu() async {
+    // The planner can be parked on any day; mood can only be logged for one
+    // that has happened.
+    final selected = ref.read(selectedDateProvider);
+    final today = AppDate.today();
+    final selectedDay = DateTime(selected.year, selected.month, selected.day);
     final result = await showPlanMenu(
       context,
       currentGrouping: ref.read(planViewModeProvider),
+      canLogMood: !selectedDay.isAfter(today),
     );
     if (!mounted || result == null) return;
     switch (result) {
@@ -117,6 +146,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 date: ref.read(selectedDateProvider),
                 mood: result.mood,
               );
+          // On commit, and only after it lands — distinct from the ramp detents
+          // that preceded it inside the sheet.
+          ref.read(hapticsProvider).moodLogged();
           ref.invalidate(moodWeekProvider);
           ref.invalidate(streakProvider);
         }
@@ -298,6 +330,11 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   Future<void> _overflow(Task t) async {
+    // Spec Finding 04 — the only long-press in the app, and until now it was
+    // functionally broken: nothing told the user the gesture had registered.
+    // First thing in the handler, before any await, so the tick lands with the
+    // press rather than with the sheet.
+    ref.read(hapticsProvider).longPressTick();
     final tag = resolveStudyTag(ref.read(tagsByIdProvider).values, t.tagId);
     final color = tag != null ? hexColor(tag.color) : context.colors.accent;
     final action = await showTaskOverflowSheet(
@@ -551,6 +588,7 @@ class _OtherDayEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return ListView(
       padding: EdgeInsets.zero,
       children: [
@@ -559,7 +597,77 @@ class _OtherDayEmpty extends StatelessWidget {
         const SizedBox(height: 8),
         const CollapseHead(label: 'PLANNED', count: 0, open: true),
         AddRow(label: 'Add a planned task', onTap: onAdd),
+        const SizedBox(height: 30),
+        // The second door.
+        //
+        // The add-rows above stay exactly as they were: creating a task is the
+        // primary action and watching must never replace it. What was missing
+        // is somewhere to go for the student who does not yet know what a good
+        // task even looks like — for whom "add one" is the whole problem, not
+        // the answer. So this sits underneath, secondary, and never instead.
+        // Centred explicitly: a ListView stretches its children to the full
+        // width, and AdaMascot scales to whatever it is given — unconstrained
+        // she renders about five times her intended size and the copy lands on
+        // top of her.
+        const Center(child: AdaMascot(size: 44)),
+        const SizedBox(height: 10),
+        Center(
+          child: Text(
+            'Nothing planned yet',
+            style: AppText.sans(
+              size: 15,
+              weight: FontWeight.w800,
+              color: colors.text,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Center(child: _ShowMeHowButton()),
       ],
+    );
+  }
+}
+
+/// Opens the Ice Breakers section rather than one video: which one is right
+/// depends on how far along the student is, and the section already knows.
+class _ShowMeHowButton extends StatelessWidget {
+  const _ShowMeHowButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    // Sized and coloured as a secondary action: a pill that hugs its label
+    // rather than a full-width slab, and the surface colour rather than the
+    // ink the primary CTAs use. Adding a task is still the main thing to do
+    // here; this is only for the student who does not yet know what to add.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => unawaited(context.push(Routes.iceBreakers)),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          boxShadow: colors.cardShadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.play_circle_outline, size: 16, color: colors.accent),
+            const SizedBox(width: 8),
+            Text(
+              'Show me how',
+              style: AppText.sans(
+                size: 12.5,
+                weight: FontWeight.w800,
+                color: colors.text,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 15, color: colors.textDim),
+          ],
+        ),
+      ),
     );
   }
 }

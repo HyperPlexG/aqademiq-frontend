@@ -102,10 +102,24 @@ class AuthInterceptor extends Interceptor {
 
 /// Window within which two identical mutations are treated as one.
 ///
-/// Short on purpose. Long enough to absorb a double-tap or a manual retry after
-/// a timeout; short enough that deliberately adding the same 25-minute block
-/// twice in a row still creates two.
-const kIdempotencyDedupeWindow = Duration(seconds: 5);
+/// Two seconds, narrowed from five. The trade is not symmetric, and which side
+/// hurts changed the day the backend started honouring this header at all:
+/// until Upstash was configured the idempotency middleware was a no-op, so the
+/// window cost nothing no matter how wide it was.
+///
+/// Now it is live, a false positive means a write the user asked for is
+/// silently answered with an older response and never happens — indisting-
+/// uishable, from the outside, from the app ignoring them. A false negative
+/// merely means a duplicate they can delete. So the window only needs to cover
+/// the accidental case it exists for: a double-tap, which lands inside a
+/// second. Five seconds was wide enough to swallow someone deliberately adding
+/// two identically-named blocks back to back, which is a real thing to do.
+///
+/// This does NOT weaken retry protection. Dio has no automatic retry here, and
+/// the one retry that exists — the single-flight refresh after a 401 — reuses
+/// the original `RequestOptions`, header included, so it presents the same key
+/// however this is tuned.
+const kIdempotencyDedupeWindow = Duration(seconds: 2);
 
 /// An `Idempotency-Key` derived from the request itself.
 ///

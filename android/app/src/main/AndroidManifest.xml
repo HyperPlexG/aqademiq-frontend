@@ -13,7 +13,7 @@
          and avoids the Play Store policy review exact alarms trigger. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
-        android:label="aqademiq"
+        android:label="Aqademiq"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -37,15 +37,37 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Where a tapped widget lands. The surfaces speak in intent
-                 (aqademiq://focus, ://plan, ://stats) rather than in route
-                 strings, so renaming a route cannot break a widget already
-                 sitting on someone's home screen. -->
+            <!-- Deep links, arriving from two directions and sharing one filter.
+
+                 The ambient surfaces speak in intent (aqademiq://focus, ://plan,
+                 ://stats) rather than in route strings, so renaming a route
+                 cannot break a widget already sitting on someone's home screen.
+                 Referrals use the same scheme (aqademiq://join?ref=CODE). The
+                 filter deliberately carries no android:host, which makes it a
+                 superset of both - a host="join" filter would have to be kept in
+                 step with every new surface that ever wants a link.
+
+                 The custom scheme works the moment the app is installed and
+                 needs nothing hosted, but it is not clickable in most chat
+                 apps - which is why the SHARED link is the https one below. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="aqademiq"/>
+            </intent-filter>
+            <!-- The shared link. android:autoVerify makes this an Android App
+                 Link, which opens the app instead of the browser - but ONLY
+                 once https://www.aqademiq.com/.well-known/assetlinks.json is
+                 hosted with this app's package name and signing-cert SHA-256.
+                 Until that file exists the link still works, it just opens the
+                 site, which is what the bare URL it replaced already did. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="www.aqademiq.com" android:pathPrefix="/join"/>
+                <data android:scheme="https" android:host="aqademiq.com" android:pathPrefix="/join"/>
             </intent-filter>
         </activity>
         <!-- flutter_foreground_task service keeping focus sessions alive. -->

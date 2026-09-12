@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/env/env.dart';
 import '../../core/network/dio_client.dart';
+import '../../services/haptics/haptics_service.dart';
 import '../adapters/adapters.dart';
 import '../auth/auth_repository.dart';
 import '../models/subject.dart';
@@ -97,14 +98,20 @@ class SubjectsController extends AsyncNotifier<List<Subject>> {
     return ref.watch(subjectsRepositoryProvider).all();
   }
 
+  /// Create or edit. Only a **creation** earns the Tier 2 confirmation — an
+  /// upsert that carries an id is an edit, and Subjects' budget of 2 (§7) is
+  /// spent on "created · destructive confirm".
   Future<Subject> save(Subject subject) async {
+    final creating = subject.id.isEmpty;
     final saved = await ref.read(subjectsRepositoryProvider).upsert(subject);
+    if (creating) ref.read(hapticsProvider).subjectCreated();
     ref.invalidateSelf();
     return saved;
   }
 
   Future<void> remove(String id) async {
     await ref.read(subjectsRepositoryProvider).delete(id);
+    ref.read(hapticsProvider).destructiveConfirmed();
     ref.invalidateSelf();
   }
 }
@@ -126,15 +133,20 @@ class SemestersController extends AsyncNotifier<List<Semester>> {
     DateTime? start,
     DateTime? end,
   }) async {
+    final creating = semester.id.isEmpty;
     final saved = await ref
         .read(subjectsRepositoryProvider)
         .upsertSemester(semester, start: start, end: end);
+    // Spec §3 names this event "Subject **or semester** created" — one event
+    // type covering both, so this costs nothing extra against the budget.
+    if (creating) ref.read(hapticsProvider).subjectCreated();
     ref.invalidateSelf();
     return saved;
   }
 
   Future<void> remove(String id) async {
     await ref.read(subjectsRepositoryProvider).deleteSemester(id);
+    ref.read(hapticsProvider).destructiveConfirmed();
     ref.invalidateSelf();
   }
 }

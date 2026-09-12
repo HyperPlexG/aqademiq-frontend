@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../../core/utils/referral_link.dart';
 import '../../data/repositories/referral_repository.dart';
 import '../../features/settings/providers/profile_controller.dart';
 
@@ -205,6 +206,9 @@ class _ShareInviteButton extends ConsumerWidget {
     return GestureDetector(
       onTap: () async {
         final code = ref.read(referralCodeProvider).value ?? '';
+        // The code stays in the text as well as the link: the link only opens
+        // the app once the domain-association files are hosted, and until then
+        // the readable code is still the thing that works.
         final codePart = code.isEmpty ? '' : ' Use my referral code $code.';
         // iPad presents the share sheet as a POPOVER, and UIKit requires an
         // anchor rect for it. Without one the presentation fails on iPad while
@@ -223,7 +227,7 @@ class _ShareInviteButton extends ConsumerWidget {
         await SharePlus.instance.share(
           ShareParams(
             text: 'Join me on Aqademiq — my focus sanctuary.$codePart '
-                'https://www.aqademiq.com',
+                '${referralLink(code)}',
             subject: 'Join me on Aqademiq',
             sharePositionOrigin: origin,
           ),

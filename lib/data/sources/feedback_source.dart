@@ -54,13 +54,16 @@ class MockFeedbackSource implements FeedbackSource {
   final List<FeedbackPostDto> _posts = [...Fixtures.feedbackPosts()];
   final List<FeedbackCommentDto> _comments = [...Fixtures.feedbackComments()];
 
+  // Mirrors `feedback_statuses` on the server (key, label and which appear on
+  // the roadmap). Seam 3 says the mock must behave like the real thing; when
+  // this drifted, mock mode kept exercising a status vocabulary production had
+  // not used for months, which is why nothing caught the mismatch.
   static const _statusLabels = <String, String>{
-    'open': 'Open',
+    'under_review': 'Under review',
     'planned': 'Planned',
     'in_progress': 'In progress',
-    'completed': 'Completed',
-    'acknowledged': 'Acknowledged',
-    'exists_already': 'Exists already',
+    'shipped': 'Shipped',
+    'declined': 'Declined',
   };
   static const _categoryLabels = <String, String>{
     'feature': 'Feature',
@@ -76,7 +79,9 @@ class MockFeedbackSource implements FeedbackSource {
               FeedbackStatusMetaDto(
                 key: e.key,
                 label: e.value,
-                onRoadmap: e.key == 'planned' || e.key == 'in_progress',
+                onRoadmap: e.key == 'planned' ||
+                    e.key == 'in_progress' ||
+                    e.key == 'shipped',
               ),
           ],
           categories: [
@@ -126,7 +131,7 @@ class MockFeedbackSource implements FeedbackSource {
           ? 'fb-${DateTime.now().microsecondsSinceEpoch}'
           : input.id,
       number: maxNumber + 1,
-      status: 'open',
+      status: 'under_review',
       votes: 1,
       hasVoted: true,
     );
@@ -270,7 +275,7 @@ class ApiFeedbackSource implements FeedbackSource {
       number: ref,
       title: j['title'] as String? ?? '',
       body: j['body'] as String? ?? '',
-      status: j['status'] as String? ?? 'open',
+      status: j['status'] as String? ?? 'under_review',
       category: j['category'] as String? ?? 'feature',
       votes: (j['upvotes'] as num?)?.toInt() ?? 0,
       hasVoted: j['you_voted'] as bool? ?? false,

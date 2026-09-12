@@ -15,6 +15,7 @@ import '../../../data/models/task.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../services/reminder_scheduler.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -85,6 +86,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       _timeOfDay = existing.startTime != null
           ? AppDate.time12h(existing.startTime!)
           : PlanTime.dayPartLabel(existing.dayPart ?? DayPart.anytime);
+      // Now that the picker actually persists, editing has to show the saved
+      // subject — otherwise opening a task and saving it would silently clear
+      // one, which is a worse bug than the picker doing nothing at all.
+      _subject = existing.subjectId ?? '';
       _date = existing.date;
       _durationMin = existing.durationMin ?? 30;
       _repeat = existing.repeat;
@@ -139,6 +144,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     final tagId = _tag.isNotEmpty
         ? _tag
         : (tags.isNotEmpty ? tags.first.id : _tag);
+    // `_subject` is empty for the picker's own "no subject" option, which is
+    // now a real choice rather than a shrug the wire never heard about.
+    final subjectId = _subject.isEmpty ? null : _subject;
     final resolved = PlanTime.resolve(_timeOfDay, date);
     final startTime = resolved.startTime;
     final dayPart = resolved.dayPart;
@@ -152,6 +160,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           title: title,
           note: note,
           tagId: tagId,
+          subjectId: subjectId,
           date: date,
           dayPart: dayPart,
           startTime: startTime,
@@ -164,6 +173,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           title: title,
           note: note,
           tagId: tagId,
+          subjectId: subjectId,
           date: date,
           dayPart: dayPart,
           startTime: startTime,
@@ -188,12 +198,18 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
           // Non-fatal.
         }
       }
+      // Tier 2, and only for a creation. An edit is not a new task, and Plan's
+      // budget of 4 (§7) has no room for "task edited" — nor should it.
+      if (existing == null) ref.read(hapticsProvider).taskCreated();
       ref.invalidate(dayTasksProvider);
       // Arm the device's reminders for the task the user just saved, without
       // waiting for the next resume.
       unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
       if (mounted) context.pop();
     } on Object {
+      // Tier 4. The user explicitly submitted this and it did not land; the
+      // snackbar is easy to miss and the form looks unchanged.
+      ref.read(hapticsProvider).saveFailed();
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(

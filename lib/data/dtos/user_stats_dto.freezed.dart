@@ -15,7 +15,16 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserStatsDto {
 
- int get streakDays; int get focusMinutesThisWeek; int get tasksCompletedThisWeek; List<MoodLogDto> get weekMoods;
+ int get streakDays;// These two are LIFETIME totals. `/v1/me/stats` sums every completed task
+// and every focus session a user has ever run; it has no week filter and
+// never had one. They were called `...ThisWeek` here, and the Stats screen
+// showed the result under a "this week" label whenever the real weekly
+// provider was still loading — a lifetime count presented as seven days.
+// Named for what they are so the next person cannot make that mistake.
+ int get focusMinutesLifetime; int get tasksCompletedLifetime;/// Days the student has ever been on the board. Only ever goes up, and has
+/// nothing to fall short of — which is why it replaced the streak on the
+/// Stats screen.
+ int get totalActiveDays; List<MoodLogDto> get weekMoods;
 /// Create a copy of UserStatsDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +37,16 @@ $UserStatsDtoCopyWith<UserStatsDto> get copyWith => _$UserStatsDtoCopyWithImpl<U
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserStatsDto&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.focusMinutesThisWeek, focusMinutesThisWeek) || other.focusMinutesThisWeek == focusMinutesThisWeek)&&(identical(other.tasksCompletedThisWeek, tasksCompletedThisWeek) || other.tasksCompletedThisWeek == tasksCompletedThisWeek)&&const DeepCollectionEquality().equals(other.weekMoods, weekMoods));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserStatsDto&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.focusMinutesLifetime, focusMinutesLifetime) || other.focusMinutesLifetime == focusMinutesLifetime)&&(identical(other.tasksCompletedLifetime, tasksCompletedLifetime) || other.tasksCompletedLifetime == tasksCompletedLifetime)&&(identical(other.totalActiveDays, totalActiveDays) || other.totalActiveDays == totalActiveDays)&&const DeepCollectionEquality().equals(other.weekMoods, weekMoods));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,streakDays,focusMinutesThisWeek,tasksCompletedThisWeek,const DeepCollectionEquality().hash(weekMoods));
+int get hashCode => Object.hash(runtimeType,streakDays,focusMinutesLifetime,tasksCompletedLifetime,totalActiveDays,const DeepCollectionEquality().hash(weekMoods));
 
 @override
 String toString() {
-  return 'UserStatsDto(streakDays: $streakDays, focusMinutesThisWeek: $focusMinutesThisWeek, tasksCompletedThisWeek: $tasksCompletedThisWeek, weekMoods: $weekMoods)';
+  return 'UserStatsDto(streakDays: $streakDays, focusMinutesLifetime: $focusMinutesLifetime, tasksCompletedLifetime: $tasksCompletedLifetime, totalActiveDays: $totalActiveDays, weekMoods: $weekMoods)';
 }
 
 
@@ -48,7 +57,7 @@ abstract mixin class $UserStatsDtoCopyWith<$Res>  {
   factory $UserStatsDtoCopyWith(UserStatsDto value, $Res Function(UserStatsDto) _then) = _$UserStatsDtoCopyWithImpl;
 @useResult
 $Res call({
- int streakDays, int focusMinutesThisWeek, int tasksCompletedThisWeek, List<MoodLogDto> weekMoods
+ int streakDays, int focusMinutesLifetime, int tasksCompletedLifetime, int totalActiveDays, List<MoodLogDto> weekMoods
 });
 
 
@@ -65,11 +74,12 @@ class _$UserStatsDtoCopyWithImpl<$Res>
 
 /// Create a copy of UserStatsDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? streakDays = null,Object? focusMinutesThisWeek = null,Object? tasksCompletedThisWeek = null,Object? weekMoods = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? streakDays = null,Object? focusMinutesLifetime = null,Object? tasksCompletedLifetime = null,Object? totalActiveDays = null,Object? weekMoods = null,}) {
   return _then(_self.copyWith(
 streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
-as int,focusMinutesThisWeek: null == focusMinutesThisWeek ? _self.focusMinutesThisWeek : focusMinutesThisWeek // ignore: cast_nullable_to_non_nullable
-as int,tasksCompletedThisWeek: null == tasksCompletedThisWeek ? _self.tasksCompletedThisWeek : tasksCompletedThisWeek // ignore: cast_nullable_to_non_nullable
+as int,focusMinutesLifetime: null == focusMinutesLifetime ? _self.focusMinutesLifetime : focusMinutesLifetime // ignore: cast_nullable_to_non_nullable
+as int,tasksCompletedLifetime: null == tasksCompletedLifetime ? _self.tasksCompletedLifetime : tasksCompletedLifetime // ignore: cast_nullable_to_non_nullable
+as int,totalActiveDays: null == totalActiveDays ? _self.totalActiveDays : totalActiveDays // ignore: cast_nullable_to_non_nullable
 as int,weekMoods: null == weekMoods ? _self.weekMoods : weekMoods // ignore: cast_nullable_to_non_nullable
 as List<MoodLogDto>,
   ));
@@ -156,10 +166,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int streakDays,  int focusMinutesThisWeek,  int tasksCompletedThisWeek,  List<MoodLogDto> weekMoods)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int streakDays,  int focusMinutesLifetime,  int tasksCompletedLifetime,  int totalActiveDays,  List<MoodLogDto> weekMoods)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserStatsDto() when $default != null:
-return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompletedThisWeek,_that.weekMoods);case _:
+return $default(_that.streakDays,_that.focusMinutesLifetime,_that.tasksCompletedLifetime,_that.totalActiveDays,_that.weekMoods);case _:
   return orElse();
 
 }
@@ -177,10 +187,10 @@ return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompleted
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int streakDays,  int focusMinutesThisWeek,  int tasksCompletedThisWeek,  List<MoodLogDto> weekMoods)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int streakDays,  int focusMinutesLifetime,  int tasksCompletedLifetime,  int totalActiveDays,  List<MoodLogDto> weekMoods)  $default,) {final _that = this;
 switch (_that) {
 case _UserStatsDto():
-return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompletedThisWeek,_that.weekMoods);case _:
+return $default(_that.streakDays,_that.focusMinutesLifetime,_that.tasksCompletedLifetime,_that.totalActiveDays,_that.weekMoods);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -197,10 +207,10 @@ return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompleted
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int streakDays,  int focusMinutesThisWeek,  int tasksCompletedThisWeek,  List<MoodLogDto> weekMoods)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int streakDays,  int focusMinutesLifetime,  int tasksCompletedLifetime,  int totalActiveDays,  List<MoodLogDto> weekMoods)?  $default,) {final _that = this;
 switch (_that) {
 case _UserStatsDto() when $default != null:
-return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompletedThisWeek,_that.weekMoods);case _:
+return $default(_that.streakDays,_that.focusMinutesLifetime,_that.tasksCompletedLifetime,_that.totalActiveDays,_that.weekMoods);case _:
   return null;
 
 }
@@ -212,12 +222,22 @@ return $default(_that.streakDays,_that.focusMinutesThisWeek,_that.tasksCompleted
 @JsonSerializable()
 
 class _UserStatsDto implements UserStatsDto {
-  const _UserStatsDto({this.streakDays = 0, this.focusMinutesThisWeek = 0, this.tasksCompletedThisWeek = 0, final  List<MoodLogDto> weekMoods = const <MoodLogDto>[]}): _weekMoods = weekMoods;
+  const _UserStatsDto({this.streakDays = 0, this.focusMinutesLifetime = 0, this.tasksCompletedLifetime = 0, this.totalActiveDays = 0, final  List<MoodLogDto> weekMoods = const <MoodLogDto>[]}): _weekMoods = weekMoods;
   factory _UserStatsDto.fromJson(Map<String, dynamic> json) => _$UserStatsDtoFromJson(json);
 
 @override@JsonKey() final  int streakDays;
-@override@JsonKey() final  int focusMinutesThisWeek;
-@override@JsonKey() final  int tasksCompletedThisWeek;
+// These two are LIFETIME totals. `/v1/me/stats` sums every completed task
+// and every focus session a user has ever run; it has no week filter and
+// never had one. They were called `...ThisWeek` here, and the Stats screen
+// showed the result under a "this week" label whenever the real weekly
+// provider was still loading — a lifetime count presented as seven days.
+// Named for what they are so the next person cannot make that mistake.
+@override@JsonKey() final  int focusMinutesLifetime;
+@override@JsonKey() final  int tasksCompletedLifetime;
+/// Days the student has ever been on the board. Only ever goes up, and has
+/// nothing to fall short of — which is why it replaced the streak on the
+/// Stats screen.
+@override@JsonKey() final  int totalActiveDays;
  final  List<MoodLogDto> _weekMoods;
 @override@JsonKey() List<MoodLogDto> get weekMoods {
   if (_weekMoods is EqualUnmodifiableListView) return _weekMoods;
@@ -239,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserStatsDto&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.focusMinutesThisWeek, focusMinutesThisWeek) || other.focusMinutesThisWeek == focusMinutesThisWeek)&&(identical(other.tasksCompletedThisWeek, tasksCompletedThisWeek) || other.tasksCompletedThisWeek == tasksCompletedThisWeek)&&const DeepCollectionEquality().equals(other._weekMoods, _weekMoods));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserStatsDto&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&(identical(other.focusMinutesLifetime, focusMinutesLifetime) || other.focusMinutesLifetime == focusMinutesLifetime)&&(identical(other.tasksCompletedLifetime, tasksCompletedLifetime) || other.tasksCompletedLifetime == tasksCompletedLifetime)&&(identical(other.totalActiveDays, totalActiveDays) || other.totalActiveDays == totalActiveDays)&&const DeepCollectionEquality().equals(other._weekMoods, _weekMoods));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,streakDays,focusMinutesThisWeek,tasksCompletedThisWeek,const DeepCollectionEquality().hash(_weekMoods));
+int get hashCode => Object.hash(runtimeType,streakDays,focusMinutesLifetime,tasksCompletedLifetime,totalActiveDays,const DeepCollectionEquality().hash(_weekMoods));
 
 @override
 String toString() {
-  return 'UserStatsDto(streakDays: $streakDays, focusMinutesThisWeek: $focusMinutesThisWeek, tasksCompletedThisWeek: $tasksCompletedThisWeek, weekMoods: $weekMoods)';
+  return 'UserStatsDto(streakDays: $streakDays, focusMinutesLifetime: $focusMinutesLifetime, tasksCompletedLifetime: $tasksCompletedLifetime, totalActiveDays: $totalActiveDays, weekMoods: $weekMoods)';
 }
 
 
@@ -259,7 +279,7 @@ abstract mixin class _$UserStatsDtoCopyWith<$Res> implements $UserStatsDtoCopyWi
   factory _$UserStatsDtoCopyWith(_UserStatsDto value, $Res Function(_UserStatsDto) _then) = __$UserStatsDtoCopyWithImpl;
 @override @useResult
 $Res call({
- int streakDays, int focusMinutesThisWeek, int tasksCompletedThisWeek, List<MoodLogDto> weekMoods
+ int streakDays, int focusMinutesLifetime, int tasksCompletedLifetime, int totalActiveDays, List<MoodLogDto> weekMoods
 });
 
 
@@ -276,11 +296,12 @@ class __$UserStatsDtoCopyWithImpl<$Res>
 
 /// Create a copy of UserStatsDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? streakDays = null,Object? focusMinutesThisWeek = null,Object? tasksCompletedThisWeek = null,Object? weekMoods = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? streakDays = null,Object? focusMinutesLifetime = null,Object? tasksCompletedLifetime = null,Object? totalActiveDays = null,Object? weekMoods = null,}) {
   return _then(_UserStatsDto(
 streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
-as int,focusMinutesThisWeek: null == focusMinutesThisWeek ? _self.focusMinutesThisWeek : focusMinutesThisWeek // ignore: cast_nullable_to_non_nullable
-as int,tasksCompletedThisWeek: null == tasksCompletedThisWeek ? _self.tasksCompletedThisWeek : tasksCompletedThisWeek // ignore: cast_nullable_to_non_nullable
+as int,focusMinutesLifetime: null == focusMinutesLifetime ? _self.focusMinutesLifetime : focusMinutesLifetime // ignore: cast_nullable_to_non_nullable
+as int,tasksCompletedLifetime: null == tasksCompletedLifetime ? _self.tasksCompletedLifetime : tasksCompletedLifetime // ignore: cast_nullable_to_non_nullable
+as int,totalActiveDays: null == totalActiveDays ? _self.totalActiveDays : totalActiveDays // ignore: cast_nullable_to_non_nullable
 as int,weekMoods: null == weekMoods ? _self._weekMoods : weekMoods // ignore: cast_nullable_to_non_nullable
 as List<MoodLogDto>,
   ));

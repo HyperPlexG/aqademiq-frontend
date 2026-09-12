@@ -39,15 +39,25 @@
 				<string>com.googleusercontent.apps.233194050188-27sijfj5tsrnd9efqitt00hi0mh4svt5</string>
 			</array>
 		</dict>
+		<!-- One scheme, two callers.
+
+		     The ambient surfaces speak in intent (aqademiq://focus, ://plan,
+		     ://stats) rather than in route strings, so renaming a route cannot
+		     break a widget already sitting on someone's home screen. Referrals
+		     use the same scheme (aqademiq://join?ref=CODE). iOS matches on the
+		     scheme alone, so registering it twice would be a no-op with two
+		     names for one thing.
+
+		     The https form is deliberately NOT registered here: Universal Links
+		     need the com.apple.developer.associated-domains entitlement, which
+		     must also be enabled on the provisioning profile. Adding it before
+		     the profile has the capability fails the archive, so it is left for
+		     whoever hosts apple-app-site-association to turn on together. -->
 		<dict>
-			<!-- Where a tapped widget lands. The surfaces speak in intent
-			     (aqademiq://focus, ://plan, ://stats) rather than in route
-			     strings, so renaming a route cannot break a widget already
-			     sitting on someone's home screen. -->
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.r13.aqademiq.ambient</string>
+			<string>com.r13.aqademiq.deeplinks</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>aqademiq</string>

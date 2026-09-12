@@ -561,7 +561,14 @@ as List<int>,
 /// @nodoc
 mixin _$TaskDto {
 
- String get id; String get title; String get tagId; DateTime get date; String? get note; String? get timeOfDay;// morning|afternoon|evening|anytime
+ String get id; String get title; String get tagId; DateTime get date; String? get note;/// The subject this task belongs to, or null for none.
+///
+/// The Add Task form has always shown a subject picker and tracked the
+/// selection in state — and then dropped it. There was no field for it on
+/// the model, no key for it in the request body, and no reader for it in
+/// the response, so choosing a subject changed nothing and every task was
+/// filed by the server's fallback instead. The picker was decorative.
+ String? get subjectId; String? get timeOfDay;// morning|afternoon|evening|anytime
  DateTime? get startTime; int? get durationMin; RepeatRuleDto? get repeat; List<SubtaskDto> get subtasks; bool get done;
 /// Create a copy of TaskDto
 /// with the given fields replaced by the non-null parameter values.
@@ -575,16 +582,16 @@ $TaskDtoCopyWith<TaskDto> get copyWith => _$TaskDtoCopyWithImpl<TaskDto>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskDto&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.timeOfDay, timeOfDay) || other.timeOfDay == timeOfDay)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other.subtasks, subtasks)&&(identical(other.done, done) || other.done == done));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TaskDto&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.subjectId, subjectId) || other.subjectId == subjectId)&&(identical(other.timeOfDay, timeOfDay) || other.timeOfDay == timeOfDay)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other.subtasks, subtasks)&&(identical(other.done, done) || other.done == done));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,timeOfDay,startTime,durationMin,repeat,const DeepCollectionEquality().hash(subtasks),done);
+int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,subjectId,timeOfDay,startTime,durationMin,repeat,const DeepCollectionEquality().hash(subtasks),done);
 
 @override
 String toString() {
-  return 'TaskDto(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, timeOfDay: $timeOfDay, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
+  return 'TaskDto(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, subjectId: $subjectId, timeOfDay: $timeOfDay, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
 }
 
 
@@ -595,7 +602,7 @@ abstract mixin class $TaskDtoCopyWith<$Res>  {
   factory $TaskDtoCopyWith(TaskDto value, $Res Function(TaskDto) _then) = _$TaskDtoCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, String tagId, DateTime date, String? note, String? timeOfDay, DateTime? startTime, int? durationMin, RepeatRuleDto? repeat, List<SubtaskDto> subtasks, bool done
+ String id, String title, String tagId, DateTime date, String? note, String? subjectId, String? timeOfDay, DateTime? startTime, int? durationMin, RepeatRuleDto? repeat, List<SubtaskDto> subtasks, bool done
 });
 
 
@@ -612,13 +619,14 @@ class _$TaskDtoCopyWithImpl<$Res>
 
 /// Create a copy of TaskDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? timeOfDay = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? subjectId = freezed,Object? timeOfDay = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,tagId: null == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,subjectId: freezed == subjectId ? _self.subjectId : subjectId // ignore: cast_nullable_to_non_nullable
 as String?,timeOfDay: freezed == timeOfDay ? _self.timeOfDay : timeOfDay // ignore: cast_nullable_to_non_nullable
 as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,durationMin: freezed == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable
@@ -722,10 +730,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? subjectId,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TaskDto() when $default != null:
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.subjectId,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   return orElse();
 
 }
@@ -743,10 +751,10 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.tim
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? subjectId,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)  $default,) {final _that = this;
 switch (_that) {
 case _TaskDto():
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.subjectId,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -763,10 +771,10 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.tim
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  String tagId,  DateTime date,  String? note,  String? subjectId,  String? timeOfDay,  DateTime? startTime,  int? durationMin,  RepeatRuleDto? repeat,  List<SubtaskDto> subtasks,  bool done)?  $default,) {final _that = this;
 switch (_that) {
 case _TaskDto() when $default != null:
-return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
+return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.subjectId,_that.timeOfDay,_that.startTime,_that.durationMin,_that.repeat,_that.subtasks,_that.done);case _:
   return null;
 
 }
@@ -778,7 +786,7 @@ return $default(_that.id,_that.title,_that.tagId,_that.date,_that.note,_that.tim
 @JsonSerializable()
 
 class _TaskDto implements TaskDto {
-  const _TaskDto({required this.id, required this.title, required this.tagId, required this.date, this.note, this.timeOfDay, this.startTime, this.durationMin, this.repeat, final  List<SubtaskDto> subtasks = const <SubtaskDto>[], this.done = false}): _subtasks = subtasks;
+  const _TaskDto({required this.id, required this.title, required this.tagId, required this.date, this.note, this.subjectId, this.timeOfDay, this.startTime, this.durationMin, this.repeat, final  List<SubtaskDto> subtasks = const <SubtaskDto>[], this.done = false}): _subtasks = subtasks;
   factory _TaskDto.fromJson(Map<String, dynamic> json) => _$TaskDtoFromJson(json);
 
 @override final  String id;
@@ -786,6 +794,14 @@ class _TaskDto implements TaskDto {
 @override final  String tagId;
 @override final  DateTime date;
 @override final  String? note;
+/// The subject this task belongs to, or null for none.
+///
+/// The Add Task form has always shown a subject picker and tracked the
+/// selection in state — and then dropped it. There was no field for it on
+/// the model, no key for it in the request body, and no reader for it in
+/// the response, so choosing a subject changed nothing and every task was
+/// filed by the server's fallback instead. The picker was decorative.
+@override final  String? subjectId;
 @override final  String? timeOfDay;
 // morning|afternoon|evening|anytime
 @override final  DateTime? startTime;
@@ -813,16 +829,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskDto&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.timeOfDay, timeOfDay) || other.timeOfDay == timeOfDay)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other._subtasks, _subtasks)&&(identical(other.done, done) || other.done == done));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TaskDto&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.tagId, tagId) || other.tagId == tagId)&&(identical(other.date, date) || other.date == date)&&(identical(other.note, note) || other.note == note)&&(identical(other.subjectId, subjectId) || other.subjectId == subjectId)&&(identical(other.timeOfDay, timeOfDay) || other.timeOfDay == timeOfDay)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.durationMin, durationMin) || other.durationMin == durationMin)&&(identical(other.repeat, repeat) || other.repeat == repeat)&&const DeepCollectionEquality().equals(other._subtasks, _subtasks)&&(identical(other.done, done) || other.done == done));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,timeOfDay,startTime,durationMin,repeat,const DeepCollectionEquality().hash(_subtasks),done);
+int get hashCode => Object.hash(runtimeType,id,title,tagId,date,note,subjectId,timeOfDay,startTime,durationMin,repeat,const DeepCollectionEquality().hash(_subtasks),done);
 
 @override
 String toString() {
-  return 'TaskDto(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, timeOfDay: $timeOfDay, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
+  return 'TaskDto(id: $id, title: $title, tagId: $tagId, date: $date, note: $note, subjectId: $subjectId, timeOfDay: $timeOfDay, startTime: $startTime, durationMin: $durationMin, repeat: $repeat, subtasks: $subtasks, done: $done)';
 }
 
 
@@ -833,7 +849,7 @@ abstract mixin class _$TaskDtoCopyWith<$Res> implements $TaskDtoCopyWith<$Res> {
   factory _$TaskDtoCopyWith(_TaskDto value, $Res Function(_TaskDto) _then) = __$TaskDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, String tagId, DateTime date, String? note, String? timeOfDay, DateTime? startTime, int? durationMin, RepeatRuleDto? repeat, List<SubtaskDto> subtasks, bool done
+ String id, String title, String tagId, DateTime date, String? note, String? subjectId, String? timeOfDay, DateTime? startTime, int? durationMin, RepeatRuleDto? repeat, List<SubtaskDto> subtasks, bool done
 });
 
 
@@ -850,13 +866,14 @@ class __$TaskDtoCopyWithImpl<$Res>
 
 /// Create a copy of TaskDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? timeOfDay = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? tagId = null,Object? date = null,Object? note = freezed,Object? subjectId = freezed,Object? timeOfDay = freezed,Object? startTime = freezed,Object? durationMin = freezed,Object? repeat = freezed,Object? subtasks = null,Object? done = null,}) {
   return _then(_TaskDto(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,tagId: null == tagId ? _self.tagId : tagId // ignore: cast_nullable_to_non_nullable
 as String,date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime,note: freezed == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String?,subjectId: freezed == subjectId ? _self.subjectId : subjectId // ignore: cast_nullable_to_non_nullable
 as String?,timeOfDay: freezed == timeOfDay ? _self.timeOfDay : timeOfDay // ignore: cast_nullable_to_non_nullable
 as String?,startTime: freezed == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime?,durationMin: freezed == durationMin ? _self.durationMin : durationMin // ignore: cast_nullable_to_non_nullable

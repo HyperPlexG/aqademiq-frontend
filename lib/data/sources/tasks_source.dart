@@ -267,6 +267,11 @@ class ApiTasksSource implements TasksSource {
       'title': input.title,
       'date': ymd(input.date),
       if (input.tagId.isNotEmpty) 'category': input.tagId,
+      // Omitted rather than sent as null when there is no subject: the backend
+      // treats an absent key as "no subject", which is what the picker's own
+      // none option means.
+      if (input.subjectId != null && input.subjectId!.isNotEmpty)
+        'subject_id': input.subjectId,
       if (input.note != null) 'note': input.note,
       if (input.durationMin != null) 'duration_seconds': input.durationMin! * 60,
       if (input.startTime != null) 'scheduled_at': naiveIso(input.startTime!),
@@ -287,6 +292,8 @@ class ApiTasksSource implements TasksSource {
       'title': task.title,
       'status': task.done ? 'COMPLETE' : 'PENDING',
       if (task.tagId.isNotEmpty) 'category': task.tagId,
+      if (task.subjectId != null && task.subjectId!.isNotEmpty)
+        'subject_id': task.subjectId,
       'note': task.note ?? '',
       if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
       if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),
@@ -366,6 +373,8 @@ class ApiTasksSource implements TasksSource {
       tagId: j['category'] as String? ?? '',
       date: date,
       note: (j['note'] as String?)?.isNotEmpty ?? false ? j['note'] as String : null,
+      // The server has always returned this; nothing read it.
+      subjectId: j['subject_id'] as String?,
       // Time-of-day bucket now round-trips via its own field, so a bucket task
       // (no scheduled_at) still regroups correctly instead of falling to Anytime.
       timeOfDay: j['part_of_day'] as String?,

@@ -11,6 +11,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../data/models/mood_log.dart';
 import '../../../data/repositories/mood_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
@@ -49,6 +50,12 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
     super.dispose();
   }
 
+  /// Tier 3 detent on an actual move — the melt ramp made tactile (§5.1).
+  void _select(int idx) {
+    if (idx != _sel) ref.read(hapticsProvider).moodRampStep(idx);
+    setState(() => _sel = idx);
+  }
+
   Future<void> _save() async {
     final note = _note.text.trim();
     // Persist the selected mood on the morning/adhoc wire (mood_index), then
@@ -60,6 +67,9 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
           note: note,
           writeReflection: true,
         );
+    // On commit. The note field itself is explicitly zero (§7, Mood) — the
+    // keyboard owns typing.
+    ref.read(hapticsProvider).moodLogged();
     ref.invalidate(moodWeekProvider);
     ref.invalidate(streakProvider);
     if (mounted) context.go(Routes.plan);
@@ -139,7 +149,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                         idx: i,
                         selected: i == _sel,
                         color: _moodColors[i],
-                        onTap: () => setState(() => _sel = i),
+                        onTap: () => _select(i),
                       ),
                   ],
                 ),

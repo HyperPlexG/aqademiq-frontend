@@ -5,6 +5,7 @@ import '../../../core/env/env.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/repositories/onboarding_repository.dart';
 import '../../../data/repositories/subjects_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 
 /// The multi-step onboarding draft (README §6: name, subjects, moods, peak time,
 /// goal, prism) plus the PDPL age + consent captured on the first two steps
@@ -185,6 +186,13 @@ class OnboardingController extends Notifier<OnboardingDraft> {
             workBestTimes: {'times': draft.peakTimes},
           ),
         );
+
+    // Tier 1, and the *only* haptic in the whole wizard (spec §4.6): eleven
+    // steps with a buzz each is eleven chances to decide the app is noisy, at
+    // the exact moment someone is deciding whether to keep it. Fired here, the
+    // instant the server accepts — the material uploads and the mock guest-link
+    // below are best-effort extras that must not gate it, and must not repeat it.
+    ref.read(hapticsProvider).onboardingFinished();
 
     // Live: `complete` provisioned the subjects server-side, so now push any
     // syllabus/notes picked on the upload step to the first one. Best-effort —

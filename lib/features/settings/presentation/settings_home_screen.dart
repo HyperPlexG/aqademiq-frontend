@@ -15,7 +15,10 @@ import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/tag.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/tags_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/settings_row.dart';
+import '../../report/report_copy.dart';
+import '../../report/report_optout.dart';
 import '../providers/prism_settings_provider.dart';
 import '../providers/profile_controller.dart';
 import 'sheets/add_tag_sheet.dart';
@@ -40,6 +43,7 @@ class SettingsHomeScreen extends ConsumerWidget {
     final colors = context.colors;
     final mode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileControllerProvider);
+    final isGuest = ref.watch(isGuestProvider);
 
     return SettingsScaffold(
       title: 'Settings',
@@ -101,39 +105,74 @@ class SettingsHomeScreen extends ConsumerWidget {
             SettingsRow(label: 'Appearance', icon: Icons.wb_sunny, value: _modeLabel(mode), showChevron: true, onTap: () => unawaited(showAppearanceSheet(context))),
             SettingsRow(label: 'Prism', icon: Icons.graphic_eq, value: ref.watch(prismDefaultModeProvider), showChevron: true, onTap: () => unawaited(context.push(Routes.settingsSounds))),
             SettingsRow(label: 'What Ada remembers', icon: Icons.psychology_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsMemories))),
+            // A row to its own screen rather than a bare toggle here: the off
+            // switch ships with the three promises that make leaving it on
+            // safe, and those need somewhere to be read.
+            SettingsRow(
+              label: ReportCopy.settingsTitle,
+              icon: Icons.view_week_outlined,
+              value: ref.watch(weeklyReportEnabledProvider) ? '' : 'Off',
+              showChevron: true,
+              onTap: () => unawaited(context.push(Routes.settingsReport)),
+            ),
             SettingsRow(label: 'Calendar import', icon: Icons.calendar_today, showChevron: true, onTap: () => _comingSoon(context, 'Calendar import')),
             SettingsRow(label: 'Reminder import', icon: Icons.format_list_bulleted, showChevron: true, last: true, onTap: () => _comingSoon(context, 'Reminder import')),
           ],
         ),
         const SizedBox(height: 20),
         const GroupLabel('Account'),
-        SetGroup(
-          children: [
-            SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
-            SettingsRow(
-              label: 'Sign out',
-              icon: Icons.logout,
-              showChevron: true,
-              onTap: () async {
-                await ref.read(authRepositoryProvider).signOut();
-                if (context.mounted) context.go(Routes.welcome);
-              },
-            ),
-            SettingsRow(
-              label: 'Delete account',
-              icon: Icons.delete_outline,
-              danger: true,
-              showChevron: true,
-              last: true,
-              onTap: () async {
-                final confirmed = await showDeleteAccountDialog(context);
-                if (confirmed != true) return;
-                await ref.read(authRepositoryProvider).deleteAccount();
-                if (context.mounted) context.go(Routes.welcome);
-              },
-            ),
-          ],
-        ),
+        // A guest has no account, and every row in the signed-in version of this
+        // group is wrong for them — one of them destructively so.
+        //
+        // "Sign out" is the dangerous one. A guest IS their anonymous Supabase
+        // session; there are no credentials to sign back in with. Signing out
+        // does not log them out of anything, it abandons the only handle on
+        // their tasks, subjects and streaks, permanently and with no warning.
+        // The row that should be here instead is the one offering to keep that
+        // data, which is exactly what onboarding does.
+        if (isGuest)
+          SetGroup(
+            children: [
+              SettingsRow(
+                label: 'Create account & save progress',
+                icon: Icons.person_add_alt,
+                showChevron: true,
+                last: true,
+                onTap: () => context.go(Routes.obAge),
+              ),
+            ],
+          )
+        else
+          SetGroup(
+            children: [
+              SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
+              SettingsRow(
+                label: 'Sign out',
+                icon: Icons.logout,
+                showChevron: true,
+                onTap: () async {
+                  await ref.read(authRepositoryProvider).signOut();
+                  if (context.mounted) context.go(Routes.welcome);
+                },
+              ),
+              SettingsRow(
+                label: 'Delete account',
+                icon: Icons.delete_outline,
+                danger: true,
+                showChevron: true,
+                last: true,
+                onTap: () async {
+                  final confirmed = await showDeleteAccountDialog(context);
+                  if (confirmed != true) return;
+                  await ref.read(authRepositoryProvider).deleteAccount();
+                  // Tier 4, on the confirm rather than the tap that opened the
+                  // dialog. Deliberately unpleasant — this one is irreversible.
+                  ref.read(hapticsProvider).destructiveConfirmed();
+                  if (context.mounted) context.go(Routes.welcome);
+                },
+              ),
+            ],
+          ),
         const SizedBox(height: 20),
         const GroupLabel('About'),
         SetGroup(

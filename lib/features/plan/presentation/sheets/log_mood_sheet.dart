@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/mood_blob.dart';
 import '../../../../shared/widgets/primary_button.dart';
 
@@ -48,7 +50,9 @@ Future<LogMoodResult?> showLogMoodSheet(
   );
 }
 
-class _LogMoodSheet extends StatefulWidget {
+/// Consumer-backed only so the ramp detent can reach `hapticsProvider`; this
+/// sheet still owns no app state and still returns its result by popping.
+class _LogMoodSheet extends ConsumerStatefulWidget {
   const _LogMoodSheet({
     required this.initialMood,
     required this.initialNote,
@@ -60,10 +64,10 @@ class _LogMoodSheet extends StatefulWidget {
   final bool includeNote;
 
   @override
-  State<_LogMoodSheet> createState() => _LogMoodSheetState();
+  ConsumerState<_LogMoodSheet> createState() => _LogMoodSheetState();
 }
 
-class _LogMoodSheetState extends State<_LogMoodSheet> {
+class _LogMoodSheetState extends ConsumerState<_LogMoodSheet> {
   late int _selected = widget.initialMood;
   late final TextEditingController _note = TextEditingController(
     text: widget.initialNote ?? '',
@@ -73,6 +77,16 @@ class _LogMoodSheetState extends State<_LogMoodSheet> {
   void dispose() {
     _note.dispose();
     super.dispose();
+  }
+
+  /// Tier 3 detent on an actual move, following the melt ramp (§5.1).
+  ///
+  /// The *commit* haptic is not fired here: this sheet only reports a choice,
+  /// and its callers (Plan's menu, Stats' day editor) write the log and fire
+  /// `moodLogged` once the write lands.
+  void _select(int idx) {
+    if (idx != _selected) ref.read(hapticsProvider).moodRampStep(idx);
+    setState(() => _selected = idx);
   }
 
   void _submit() {
@@ -132,7 +146,7 @@ class _LogMoodSheetState extends State<_LogMoodSheet> {
                       _MoodColumn(
                         idx: i,
                         selected: _selected == i,
-                        onTap: () => setState(() => _selected = i),
+                        onTap: () => _select(i),
                       ),
                   ],
                 ),

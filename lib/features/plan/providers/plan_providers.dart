@@ -6,6 +6,7 @@ import '../../../core/utils/date_format.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/task.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../services/reminder_scheduler.dart';
 
 /// The day currently shown on the Plan timeline (defaults to the demo "today").
@@ -48,6 +49,13 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
 
   /// Optimistically flip a task's done state, rolling back on failure
   /// (README §7: "optimistic updates for toggles").
+  ///
+  /// The haptic confirms the **outcome**, not the tap (spec §2.1). These three
+  /// mutations are optimistic with rollback, and guide §4.2 gives two coherent
+  /// choices for that: fire after the repository succeeds, or fire optimistically
+  /// and follow a rollback with `saveFailed`. This file picks the first —
+  /// consistently, in all three — because it is the one that cannot teach the
+  /// hand a lie. The rollback still speaks, in Tier 4.
   Future<void> toggleDone(Task task) async {
     final previous = state.value ?? const <Task>[];
     final next = task.copyWith(done: !task.done);
@@ -56,10 +64,15 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     ]);
     try {
       await ref.read(tasksRepositoryProvider).update(next);
+      // Only a completion is an earned moment. Un-ticking a task is a correction,
+      // and rewarding it would make the signature haptic of the product mean
+      // "you touched a checkbox".
+      if (next.done) ref.read(hapticsProvider).taskCompleted();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
+      ref.read(hapticsProvider).saveFailed();
     }
   }
 
@@ -93,10 +106,14 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
       await ref.read(tasksRepositoryProvider).move(task, newDate);
+      // Light single. Must never feel like a penalty — pushing a task is a
+      // legitimate way to use the app, not a failure to finish it.
+      ref.read(hapticsProvider).taskRescheduled();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
+      ref.read(hapticsProvider).saveFailed();
     }
   }
 
@@ -106,10 +123,12 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
       await ref.read(tasksRepositoryProvider).delete(task.id);
+      ref.read(hapticsProvider).destructiveConfirmed();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
+      ref.read(hapticsProvider).saveFailed();
     }
   }
 

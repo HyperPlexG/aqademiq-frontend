@@ -335,6 +335,23 @@ class ApiAdaSource implements AdaSource {
     return (key: key, name: name, mimeType: mimeType);
   }
 
+  /// How long to wait for the agent, as opposed to an ordinary request.
+  ///
+  /// The client-wide receiveTimeout is 30s, which is right for CRUD and wrong
+  /// for this: an Ada turn is several provider calls, and reading an attachment
+  /// pushes it well past a minute — one measured run took 65.6s to answer a PDF.
+  /// At 30s the app stopped listening while the server was still working, so the
+  /// reply landed in the database and never on screen. It looked like the
+  /// attachment had silently failed when it had actually succeeded.
+  ///
+  /// Deliberately scoped to the agent endpoints rather than raised globally: a
+  /// 2-minute client-wide timeout would mean any hung request freezes the UI for
+  /// two minutes, which is a bad trade for the ~40 endpoints that answer in
+  /// under a second. Must stay above the server's ADA_RUN_DEADLINE_MS, or the
+  /// client gives up on work the server is about to finish.
+  static const _agentTimeout = Duration(minutes: 2);
+  static final _agentOptions = Options(receiveTimeout: _agentTimeout);
+
   @override
   Future<AdaTurn> reply(
     String userText,
@@ -356,6 +373,7 @@ class ApiAdaSource implements AdaSource {
               },
           ],
       },
+      _agentOptions,
     );
     final messages = listOf(body, 'messages');
     final assistant = messages.lastWhere(
@@ -381,7 +399,9 @@ class ApiAdaSource implements AdaSource {
       _decide('/ada/actions/$actionId/reject');
 
   Future<AdaDecisionResult> _decide(String path) async {
-    final body = await _dio.postMap(path);
+    // Approving resumes the agent so it can verify and carry on — same cost as
+    // a turn, so the same allowance.
+    final body = await _dio.postMap(path, null, _agentOptions);
     final action = body['action'];
     final message = body['message'];
     return (
@@ -400,6 +420,7 @@ class ApiAdaSource implements AdaSource {
     final body = await _dio.postMap(
       '/ada/conversations/$cid/actions/decide',
       <String, dynamic>{'approve': approve},
+      _agentOptions,
     );
     return (
       actions: listOf(body, 'actions').map(AdaAction.fromJson).toList(growable: false),

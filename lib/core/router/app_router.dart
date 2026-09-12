@@ -17,6 +17,8 @@ import '../../features/feedback/presentation/feedback_board_screen.dart';
 import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/focus/presentation/focus_end_screen.dart';
 import '../../features/focus/presentation/timer_screen.dart';
+import '../../features/ice_breakers/presentation/ice_breaker_screen.dart';
+import '../../features/ice_breakers/presentation/ice_breakers_screen.dart';
 import '../../features/mood/presentation/mood_evening_screen.dart';
 import '../../features/mood/presentation/mood_morning_screen.dart';
 import '../../features/onboarding/presentation/ada_loading_screen.dart';
@@ -32,6 +34,8 @@ import '../../features/onboarding/presentation/ob_study_screen.dart';
 import '../../features/onboarding/presentation/ob_syllabus_screen.dart';
 import '../../features/plan/presentation/add_task_screen.dart';
 import '../../features/plan/presentation/plan_screen.dart';
+import '../../features/report/presentation/report_settings_screen.dart';
+import '../../features/report/presentation/weekly_report_screen.dart';
 import '../../features/settings/presentation/settings_email_screen.dart';
 import '../../features/settings/presentation/settings_home_screen.dart';
 import '../../features/settings/presentation/settings_memories_screen.dart';
@@ -87,7 +91,21 @@ abstract final class Routes {
   static const settingsEmail = '/settings/email';
 
   // Feedback board (full-screen, pushed over the shell).
+  // Ice Breakers — the tutorial shelf. Full-screen and pushed, not a tab, so
+  // it covers the bottom nav the way the feedback board does. Deep-linkable to
+  // one video so the empty-planner CTA can open exactly the right one.
+  static const iceBreakers = '/ice-breakers';
+  static String iceBreaker(String id) => '/ice-breakers/$id';
+
   static const settingsFeedback = '/settings/feedback';
+
+  /// The weekly report. Deliberately has no `:week` parameter — §6 of the
+  /// design forbids browsing back through past weeks, and a route that cannot
+  /// name another week cannot be talked into showing one.
+  static const weeklyReport = '/report/week';
+
+  /// The report's off switch and the promises beside it.
+  static const settingsReport = '/settings/report';
   static String feedbackPost(String id) => '/settings/feedback/post/$id';
 
   // Mood check-ins (full-screen, time/system-triggered).
@@ -144,7 +162,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.settingsSounds, builder: (_, _) => const PrismSettingsScreen()),
       GoRoute(path: Routes.settingsMemories, builder: (_, _) => const SettingsMemoriesScreen()),
       GoRoute(path: Routes.settingsEmail, builder: (_, _) => const EmailSettingsScreen()),
-      GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
+      GoRoute(
+      path: Routes.iceBreakers,
+      builder: (_, _) => const IceBreakersScreen(),
+      routes: [
+        // Nested so a back gesture from a video lands on the section rather
+        // than wherever the student happened to open it from.
+        GoRoute(
+          path: ':id',
+          builder: (_, state) =>
+              IceBreakerScreen(id: state.pathParameters['id'] ?? ''),
+        ),
+      ],
+    ),
+    GoRoute(path: Routes.settingsFeedback, builder: (_, _) => const FeedbackBoardScreen()),
+      GoRoute(path: Routes.weeklyReport, builder: (_, _) => const WeeklyReportScreen()),
+      GoRoute(path: Routes.settingsReport, builder: (_, _) => const ReportSettingsScreen()),
       GoRoute(
         path: '/settings/feedback/post/:id',
         builder: (_, state) => FeedbackDetailScreen(id: state.pathParameters['id']!),

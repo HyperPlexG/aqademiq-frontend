@@ -109,24 +109,28 @@ void main() {
     expect(repo.sentMood, isNotNull, reason: 'the mood picker must not be decorative');
   });
 
-  testWidgets('a rating is sent when one is chosen', (tester) async {
+  testWidgets('the screen asks about the session exactly once', (tester) async {
+    // Reported by a user as "why is there an extra mood button". The screen
+    // carried two overlapping questions — a row of faces and a separate 1-5
+    // numeric rating — which read as one control duplicated. The faces stay.
     final repo = _RecordingFocusRepo();
     final container = await _liveSession(repo);
     addTearDown(container.dispose);
 
     await _pumpEnd(tester, container);
-    await tester.tap(find.text('4'));
-    await tester.pump();
-    await tester.tap(find.text('Back to today →'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
 
-    expect(repo.sentRating, 4);
+    expect(find.text('How was that session?'), findsOneWidget);
+    expect(find.text('How did it go?'), findsNothing);
+    for (final n in ['1', '2', '3', '4', '5']) {
+      expect(find.text(n), findsNothing,
+          reason: 'the numeric rating buttons should be gone, found "$n"');
+    }
   });
 
-  testWidgets('no rating stays null rather than defaulting to a middle score', (tester) async {
-    // The analytics read null as "not asked". Defaulting to 3 would invent a
-    // neutral answer from every user who skipped the question.
+  testWidgets('no rating is sent now that the control is gone', (tester) async {
+    // `focus_sessions.session_rating` stays nullable and the analytics read null
+    // as "not asked" — which is now true of every session, rather than a value
+    // invented on the user's behalf.
     final repo = _RecordingFocusRepo();
     final container = await _liveSession(repo);
     addTearDown(container.dispose);
@@ -137,22 +141,6 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(repo.sentRating, isNull);
-  });
-
-  testWidgets('tapping the chosen rating again clears it', (tester) async {
-    final repo = _RecordingFocusRepo();
-    final container = await _liveSession(repo);
-    addTearDown(container.dispose);
-
-    await _pumpEnd(tester, container);
-    await tester.tap(find.text('2'));
-    await tester.pump();
-    await tester.tap(find.text('2'));
-    await tester.pump();
-    await tester.tap(find.text('Back to today →'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(repo.sentRating, isNull);
+    expect(repo.sentMood, isNotNull, reason: 'the mood must still be submitted');
   });
 }

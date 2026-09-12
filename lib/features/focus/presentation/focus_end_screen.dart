@@ -22,8 +22,6 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
   static const _ink = Color(0xFF1A1320);
   static const _inkSub = Color.fromRGBO(36, 24, 52, 0.58);
   int _mood = 3;
-  /// 1-5, null until tapped. Optional by design — leaving is never blocked on it.
-  int? _rating;
   bool _submitting = false;
 
   /// Time actually focused, not the planned duration. Ending a 30-minute
@@ -53,7 +51,7 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
     try {
       await ref
           .read(focusControllerProvider.notifier)
-          .complete(mood: _mood, rating: _rating);
+          .complete(mood: _mood);
     } on Object {
       // Non-fatal.
     }
@@ -107,11 +105,6 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                   Text('Focused', style: AppText.sans(size: 12, color: _inkSub)),
                   const SizedBox(height: 18),
                   _MoodCard(selected: _mood, onSelect: (i) => setState(() => _mood = i)),
-                  const SizedBox(height: 10),
-                  _RatingCard(
-                    selected: _rating,
-                    onSelect: (v) => setState(() => _rating = _rating == v ? null : v),
-                  ),
                   const SizedBox(height: 16),
                   GestureDetector(
                     onTap: _backToPlan,
@@ -182,72 +175,7 @@ class _MoodCard extends StatelessWidget {
 }
 
 
-/// Optional 1-5 rating of how the session went (`focus_sessions.session_rating`).
 ///
 /// Deliberately skippable and unselected by default: a forced rating produces
 /// compliance data rather than a signal, and the analytics treat null as "not
 /// asked" rather than as a middling score. Tapping the current value clears it.
-class _RatingCard extends StatelessWidget {
-  const _RatingCard({required this.selected, required this.onSelect});
-
-  final int? selected;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'How did it go?',
-            style: AppText.sans(
-              size: 11,
-              weight: FontWeight.w700,
-              color: _FocusEndScreenState._inkSub,
-            ),
-          ),
-          const SizedBox(height: 9),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var v = 1; v <= 5; v++) ...[
-                if (v > 1) const SizedBox(width: 8),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onSelect(v),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected != null && v <= selected!
-                          ? const Color(0xFF6B5CF0)
-                          : Colors.white.withValues(alpha: 0.7),
-                    ),
-                    child: Text(
-                      '$v',
-                      style: AppText.sans(
-                        size: 13,
-                        weight: FontWeight.w700,
-                        color: selected != null && v <= selected!
-                            ? Colors.white
-                            : _FocusEndScreenState._inkSub,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}

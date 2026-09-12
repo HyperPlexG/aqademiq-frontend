@@ -16,7 +16,7 @@ class FeedbackPost {
     required this.title,
     required this.createdAt,
     this.body = '',
-    this.status = FeedbackStatus.open,
+    this.status = FeedbackStatus.underReview,
     this.category = FeedbackCategory.feature,
     this.votes = 0,
     this.hasVoted = false,

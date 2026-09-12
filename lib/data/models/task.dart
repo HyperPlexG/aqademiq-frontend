@@ -34,6 +34,14 @@ abstract class Task with _$Task {
     required String tagId,
     required DateTime date,
     String? note,
+    /// The subject this task belongs to, or null for none.
+    ///
+    /// The Add Task form has always shown a subject picker and tracked the
+    /// selection in state — and then dropped it. There was no field for it on
+    /// the model, no key for it in the request body, and no reader for it in
+    /// the response, so choosing a subject changed nothing and every task was
+    /// filed by the server's fallback instead. The picker was decorative.
+    String? subjectId,
     DayPart? dayPart,
     DateTime? startTime,
     int? durationMin,

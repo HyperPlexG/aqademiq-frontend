@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import '../../../data/models/ada_message.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/repositories/ada_repository.dart';
 import '../../../data/sources/ada_source.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
@@ -52,6 +54,16 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(adaChatProvider.notifier).applyPlan(messageId);
+      // Ada's entire budget is 1 (§7): "'Plan my week' applied to the plan".
+      // Message send, message arrival and streaming tokens are all zero — none
+      // of them is a state change the user caused, and a chat that buzzes as it
+      // types is the fastest way to lose the channel.
+      //
+      // Reuses `taskCreated` rather than minting a 23rd Tier 2 event: what just
+      // happened is that tasks appeared on the plan, which is the same state
+      // change the Plan screen confirms with the same light single. Spec §3
+      // caps the vocabulary at the events it lists, and this needs no new one.
+      ref.read(hapticsProvider).taskCreated();
       ref.invalidate(dayTasksProvider);
       messenger.showSnackBar(
         const SnackBar(content: Text('Added to your plan ✓')),
@@ -166,6 +178,12 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                 : _MessageList(
                     messages: chat.messages,
                     typing: chat.typing,
+                    error: chat.error,
+                    onRetry: () => unawaited(
+                      ref.read(adaChatProvider.notifier).retryLast(),
+                    ),
+                    onDismissError:
+                        ref.read(adaChatProvider.notifier).clearError,
                     onApplyPlan: _applyPlan,
                     actionsByMessage: chat.actionsByMessage,
                     decidingIds: chat.decidingActionIds,
@@ -341,6 +359,9 @@ class _MessageList extends StatelessWidget {
   const _MessageList({
     required this.messages,
     required this.typing,
+    required this.error,
+    required this.onRetry,
+    required this.onDismissError,
     required this.onApplyPlan,
     required this.actionsByMessage,
     required this.decidingIds,
@@ -349,6 +370,14 @@ class _MessageList extends StatelessWidget {
   });
   final List<AdaMessage> messages;
   final bool typing;
+
+  /// Why the last turn failed, or null. Rendered in the transcript rather than
+  /// as a snackbar: a snackbar for a minute-long request is gone before the
+  /// user looks back at the screen, and this is the answer to "what happened
+  /// to my message".
+  final String? error;
+  final VoidCallback onRetry;
+  final VoidCallback onDismissError;
   final ValueChanged<String> onApplyPlan;
   final Map<String, List<AdaAction>> actionsByMessage;
   final Set<String> decidingIds;
@@ -370,6 +399,12 @@ class _MessageList extends StatelessWidget {
             onReject: onReject,
           ),
         if (typing) const _TypingBubble(),
+        if (error != null)
+          _ErrorBubble(
+            message: error!,
+            onRetry: onRetry,
+            onDismiss: onDismissError,
+          ),
       ],
     );
   }
@@ -802,18 +837,72 @@ class _DecideAllBar extends StatelessWidget {
   }
 }
 
-class _TypingBubble extends StatelessWidget {
+/// "Ada is thinking", with the wait made visible.
+///
+/// An Ada turn is several provider calls and can legitimately run past a
+/// minute when it opens an attachment. A static line for that long reads as a
+/// hang — the thing you look at to decide whether the app is still alive. A
+/// loop that keeps moving answers that question without claiming progress it
+/// cannot measure, which a spinner or a percentage would.
+class _TypingBubble extends StatefulWidget {
   const _TypingBubble();
+
+  @override
+  State<_TypingBubble> createState() => _TypingBubbleState();
+}
+
+class _TypingBubbleState extends State<_TypingBubble>
+    with SingleTickerProviderStateMixin {
+  /// Slow enough to read as breathing rather than loading. A fast pulse on a
+  /// 60-second wait is agitating; this one is meant to be ignorable.
+  late final AnimationController _wave = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _wave.dispose();
+    super.dispose();
+  }
+
+  /// One dot's position in the travelling wave, 0 at rest and 1 at the peak.
+  /// [phase] staggers each dot so the crest moves left to right.
+  double _lift(double t, double phase) {
+    final local = (t - phase) % 1.0;
+    // The crest occupies the first 45% of the cycle; the rest is the pause that
+    // stops three dots looking like a stutter.
+    if (local > 0.45) return 0;
+    return math.sin((local / 0.45) * math.pi);
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // Honour the OS "reduce motion" setting. Vestibular triggers aside, this is
+    // the one widget on screen during a long wait, so a user who has asked for
+    // stillness should not be given the most persistent movement in the app.
+    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(padding: EdgeInsets.only(top: 2), child: AdaMascot(size: 22)),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: still
+                ? const AdaMascot(size: 22)
+                : AnimatedBuilder(
+                    animation: _wave,
+                    builder: (context, child) => Transform.scale(
+                      // Barely there — enough to read as alive, not as a pulse.
+                      scale: 1 + 0.05 * _lift(_wave.value, 0),
+                      child: child,
+                    ),
+                    child: const AdaMascot(size: 22),
+                  ),
+          ),
           const SizedBox(width: 7),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -826,9 +915,155 @@ class _TypingBubble extends StatelessWidget {
                 bottomRight: Radius.circular(12),
               ),
             ),
-            child: Text('Ada is thinking…', style: AppText.sans(size: 12, color: colors.textMed)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Ada is thinking',
+                  style: AppText.sans(size: 12, color: colors.textMed),
+                ),
+                const SizedBox(width: 6),
+                if (still)
+                  Text('…', style: AppText.sans(size: 12, color: colors.textMed))
+                else
+                  AnimatedBuilder(
+                    animation: _wave,
+                    builder: (context, _) => Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (var i = 0; i < 3; i++) ...[
+                          if (i > 0) const SizedBox(width: 4),
+                          _Dot(lift: _lift(_wave.value, i * 0.16), color: colors.accent),
+                        ],
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A failed turn, said out loud in the transcript.
+///
+/// Sits where Ada's reply would have been, because that is where the user is
+/// looking when they wonder what happened to their message. A snackbar would be
+/// wrong here twice over: an Ada turn can take a minute, so the snackbar is long
+/// gone by the time anyone looks back, and it carries no way to retry.
+class _ErrorBubble extends StatelessWidget {
+  const _ErrorBubble({
+    required this.message,
+    required this.onRetry,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Icon(Icons.error_outline, size: 17, color: colors.danger),
+          ),
+          const SizedBox(width: 7),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              decoration: BoxDecoration(
+                // Tinted rather than solid danger: this is information, not an
+                // alarm, and the chat should not turn red because a request
+                // timed out.
+                color: colors.danger.alpha8(0x14),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(3),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    message,
+                    style: AppText.sans(size: 12.5, height: 1.4, color: colors.text),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: onRetry,
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Retry',
+                          style: AppText.sans(
+                            size: 12,
+                            weight: FontWeight.w800,
+                            color: colors.accent,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onDismiss,
+                        style: TextButton.styleFrom(
+                          minimumSize: Size.zero,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Dismiss',
+                          style: AppText.sans(size: 12, color: colors.textMed),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One dot of the thinking indicator. [lift] is 0 at rest, 1 at the crest.
+class _Dot extends StatelessWidget {
+  const _Dot({required this.lift, required this.color});
+
+  final double lift;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(0, -2.5 * lift),
+      child: Container(
+        width: 5,
+        height: 5,
+        decoration: BoxDecoration(
+          // Never fully transparent: a dot that vanishes makes the row change
+          // width to the eye, which reads as jitter rather than rhythm.
+          color: color.withValues(alpha: 0.35 + 0.65 * lift),
+          shape: BoxShape.circle,
+        ),
       ),
     );
   }
