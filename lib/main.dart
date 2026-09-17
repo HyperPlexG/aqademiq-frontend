@@ -7,12 +7,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
+import 'features/focus/providers/prism_voice_hold.dart';
 import 'features/report/report_optout.dart';
 import 'services/deep_link_service.dart';
 import 'services/haptics/haptic_settings_service.dart';
 import 'services/ice_breakers_service.dart';
 import 'services/push_service.dart';
 import 'services/sound_settings_service.dart';
+import 'services/voice_input_service.dart';
 
 // Everything runs inside the guarded zone, including binding initialisation —
 // `runZonedGuarded` only catches errors raised in the zone it owns, and a
@@ -61,7 +63,11 @@ Future<void> _start() async {
     ProviderScope(
       // The same instance that already captured the launch link, rather than a
       // second one the provider would build too late to see it.
-      overrides: [deepLinkServiceProvider.overrideWithValue(_deepLinks)],
+      overrides: [
+        deepLinkServiceProvider.overrideWithValue(_deepLinks),
+        // Voice input quiets the focus soundscape while the mic is open.
+        voiceAudioHoldProvider.overrideWith(PrismVoiceHold.new),
+      ],
       child: const AqademiqApp(),
     ),
   );

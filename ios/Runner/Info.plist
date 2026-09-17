@@ -58,6 +58,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Aqademiq uses the microphone so you can speak to Ada and add tasks by voice. You see the words before anything is sent.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Aqademiq turns what you say into text in the message box, so you can read and edit it before sending.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

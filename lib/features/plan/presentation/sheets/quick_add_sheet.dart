@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
+import '../../../../services/voice_input_service.dart';
+import '../../../../shared/widgets/voice_feedback.dart';
 import '../../plan_time.dart';
 import '../../providers/plan_ui_providers.dart';
 import '../pickers/repeat_picker.dart';
@@ -28,15 +33,20 @@ Future<QuickAddResult?> showQuickAddSheet(BuildContext context) {
   );
 }
 
-class _QuickAddSheet extends StatefulWidget {
+class _QuickAddSheet extends ConsumerStatefulWidget {
   const _QuickAddSheet();
 
   @override
-  State<_QuickAddSheet> createState() => _QuickAddSheetState();
+  ConsumerState<_QuickAddSheet> createState() => _QuickAddSheetState();
 }
 
-class _QuickAddSheetState extends State<_QuickAddSheet> {
+class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
   final _controller = TextEditingController();
+  late final _dictation = Dictation(_controller);
+
+  /// Held from [initState] so [dispose] can end a dictation without `ref`.
+  late final VoiceInputController _voice;
+
   /// Raw picker label — keep the clock string ("2:30 PM"), do not collapse it
   /// through [DayPartX.fromWire] (that maps unknown values to Anytime).
   String? _timeLabel;
@@ -44,12 +54,40 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   RepeatRule? _repeat;
 
   @override
+  void initState() {
+    super.initState();
+    _voice = ref.read(voiceInputProvider.notifier);
+  }
+
+  @override
   void dispose() {
+    endDictationAfterTeardown(_voice, this);
     _controller.dispose();
     super.dispose();
   }
 
+  /// Tap to talk, tap again to stop. Words go into the field; the task is only
+  /// created when the student taps send or More.
+  Future<void> _toggleVoice() async {
+    if (ref.read(voiceInputProvider).isListeningFor(this)) {
+      await _voice.stop(owner: this);
+      return;
+    }
+    _dictation.begin();
+    final problem = await _voice.start(
+      owner: this,
+      // The first tap may sit behind the OS permission prompt; a screen left in
+      // the meantime must not have words written into its disposed field.
+      onWords: (words) {
+        if (mounted) _dictation.show(words);
+      },
+    );
+    if (problem != null && mounted) showVoiceUnavailable(context, problem);
+  }
+
   void _submit({required bool details}) {
+    // The mic closes now rather than when the sheet finishes animating away.
+    unawaited(_voice.cancel(owner: this));
     Navigator.of(context).pop((
       draft: TaskDraft(
         title: _controller.text.trim(),
@@ -81,6 +119,7 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final voice = ref.watch(voiceInputProvider);
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
@@ -108,7 +147,13 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
                   ),
                 ),
               ),
-              _InputPill(controller: _controller, colors: colors),
+              _InputPill(
+                controller: _controller,
+                colors: colors,
+                listening: voice.isListeningFor(this),
+                voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
+                onSpeak: () => unawaited(_toggleVoice()),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -145,10 +190,23 @@ class _QuickAddSheetState extends State<_QuickAddSheet> {
 
 /// The "Just one thing to do…" input pill with a trailing mic icon.
 class _InputPill extends StatelessWidget {
-  const _InputPill({required this.controller, required this.colors});
+  const _InputPill({
+    required this.controller,
+    required this.colors,
+    required this.listening,
+    required this.voiceAvailable,
+    required this.onSpeak,
+  });
 
   final TextEditingController controller;
   final AppColors colors;
+
+  /// The microphone is open for this sheet.
+  final bool listening;
+
+  /// False only on a phone with no speech recognizer.
+  final bool voiceAvailable;
+  final VoidCallback onSpeak;
 
   @override
   Widget build(BuildContext context) {
@@ -175,17 +233,23 @@ class _InputPill extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          // Voice capture is not implemented yet (needs a speech-to-text package
-          // + native mic permissions). Render the mic dimmed so it doesn't read
-          // as an active control, and surface a "coming soon" note on tap.
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Voice capture is coming soon.')),
+          if (voiceAvailable) ...[
+            const SizedBox(width: 10),
+            Semantics(
+              button: true,
+              label: listening ? 'Stop voice input' : 'Add a task by voice',
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onSpeak,
+                child: Icon(
+                  listening ? Icons.mic : Icons.mic_none,
+                  size: 19,
+                  color: listening ? colors.accent : colors.textDim,
+                ),
+              ),
             ),
-            child: Icon(Icons.mic_none, size: 19, color: colors.textDim),
-          ),
+          ],
         ],
       ),
     );

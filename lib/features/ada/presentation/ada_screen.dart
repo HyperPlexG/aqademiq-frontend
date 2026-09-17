@@ -15,10 +15,12 @@ import '../../../data/models/enums.dart';
 import '../../../data/repositories/ada_repository.dart';
 import '../../../data/sources/ada_source.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../services/voice_input_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
 import '../../../shared/widgets/markdown_text.dart';
+import '../../../shared/widgets/voice_feedback.dart';
 import '../../plan/providers/plan_providers.dart';
 import 'widgets/chat_history_sheet.dart';
 
@@ -34,9 +36,21 @@ class AdaScreen extends ConsumerStatefulWidget {
 class _AdaScreenState extends ConsumerState<AdaScreen> {
   final _input = TextEditingController();
   final _focus = FocusNode();
+  late final _dictation = Dictation(_input);
+
+  /// Held from [initState] so [dispose] can end a dictation without touching
+  /// `ref` while the widget is being torn down.
+  late final VoiceInputController _voice;
+
+  @override
+  void initState() {
+    super.initState();
+    _voice = ref.read(voiceInputProvider.notifier);
+  }
 
   @override
   void dispose() {
+    endDictationAfterTeardown(_voice, this);
     _input.dispose();
     _focus.dispose();
     super.dispose();
@@ -46,8 +60,31 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     final chat = ref.read(adaChatProvider);
     final value = (text ?? _input.text).trim();
     if (value.isEmpty && chat.pendingAttachments.isEmpty) return;
+    // Sending ends any dictation. Cancel rather than stop: the field already
+    // shows what was heard, and a final result arriving after the clear below
+    // would otherwise write the words back into an empty box.
+    unawaited(_voice.cancel(owner: this));
     _input.clear();
     unawaited(ref.read(adaChatProvider.notifier).send(value));
+  }
+
+  /// Tap once to talk, tap again to stop. The words land in the input for the
+  /// student to read and correct — nothing is sent until they tap send.
+  Future<void> _toggleVoice() async {
+    if (ref.read(voiceInputProvider).isListeningFor(this)) {
+      await _voice.stop(owner: this);
+      return;
+    }
+    _dictation.begin();
+    final problem = await _voice.start(
+      owner: this,
+      // The first tap may sit behind the OS permission prompt; a screen left in
+      // the meantime must not have words written into its disposed field.
+      onWords: (words) {
+        if (mounted) _dictation.show(words);
+      },
+    );
+    if (problem != null && mounted) showVoiceUnavailable(context, problem);
   }
 
   Future<void> _applyPlan(String messageId) async {
@@ -160,6 +197,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(adaChatProvider);
+    final voice = ref.watch(voiceInputProvider);
     // Sit above the keyboard when typing, otherwise above the floating nav.
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final inputBottom = keyboard > 0 ? keyboard + 8 : AppScaffold.navClearanceOf(context);
@@ -216,9 +254,11 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                   focusNode: _focus,
                   compact: !chat.isEmpty,
                   onSend: _send,
-                  onSpeak: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Voice input is coming soon.')),
-                  ),
+                  listening: voice.isListeningFor(this),
+                  // Only a phone with no recognizer at all loses the control; a
+                  // refused permission keeps it, so the student can fix it.
+                  voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
+                  onSpeak: () => unawaited(_toggleVoice()),
                 ),
               ],
             ),
@@ -1182,12 +1222,20 @@ class _InputBar extends StatelessWidget {
     required this.compact,
     required this.onSend,
     required this.onSpeak,
+    required this.listening,
+    required this.voiceAvailable,
   });
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool compact;
   final VoidCallback onSend;
   final VoidCallback onSpeak;
+
+  /// The microphone is open for this bar.
+  final bool listening;
+
+  /// False only on a phone with no speech recognizer.
+  final bool voiceAvailable;
 
   static const _ink = Color(0xFF1A1320);
 
@@ -1233,25 +1281,52 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Voice capture isn't ready yet — the pill is honest about that. Text
-          // still sends via the arrow, which is always present.
-          if (!compact) ...[
-            GestureDetector(
-              onTap: onSpeak,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _ink.withValues(alpha: 0.55),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('◈', style: TextStyle(fontSize: 12, color: Colors.white, height: 1)),
-                    const SizedBox(width: 5),
-                    Text('Speak', style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white)),
-                  ],
-                ),
+          // Voice fills the field; the arrow still does the sending. The empty
+          // chat gets the labelled pill, a running conversation a quieter mic.
+          if (voiceAvailable) ...[
+            Semantics(
+              button: true,
+              label: listening ? 'Stop voice input' : 'Speak to Ada',
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: onSpeak,
+                child: compact
+                    ? Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: listening ? _ink : null,
+                          border: listening ? null : Border.all(color: colors.border),
+                        ),
+                        child: Icon(
+                          listening ? Icons.mic : Icons.mic_none,
+                          size: 16,
+                          color: listening ? Colors.white : colors.textDim,
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: listening ? _ink : _ink.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              listening ? '●' : '◈',
+                              style: const TextStyle(fontSize: 12, color: Colors.white, height: 1),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              listening ? 'Listening' : 'Speak',
+                              style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 8),
