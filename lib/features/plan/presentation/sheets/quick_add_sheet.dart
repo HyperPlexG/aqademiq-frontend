@@ -69,7 +69,7 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
   /// Tap to talk, tap again to stop. Words go into the field; the task is only
   /// created when the student taps send or More.
   Future<void> _toggleVoice() async {
-    if (ref.read(voiceInputProvider).isListeningFor(this)) {
+    if (ref.read(voiceInputProvider).isActiveFor(this)) {
       await _voice.stop(owner: this);
       return;
     }
@@ -151,6 +151,7 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
                 controller: _controller,
                 colors: colors,
                 listening: voice.isListeningFor(this),
+                starting: voice.isActiveFor(this) && !voice.listening,
                 voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
                 onSpeak: () => unawaited(_toggleVoice()),
               ),
@@ -194,6 +195,7 @@ class _InputPill extends StatelessWidget {
     required this.controller,
     required this.colors,
     required this.listening,
+    required this.starting,
     required this.voiceAvailable,
     required this.onSpeak,
   });
@@ -203,6 +205,9 @@ class _InputPill extends StatelessWidget {
 
   /// The microphone is open for this sheet.
   final bool listening;
+
+  /// Asked to start, but not capturing yet.
+  final bool starting;
 
   /// False only on a phone with no speech recognizer.
   final bool voiceAvailable;
@@ -237,7 +242,9 @@ class _InputPill extends StatelessWidget {
             const SizedBox(width: 10),
             Semantics(
               button: true,
-              label: listening ? 'Stop voice input' : 'Add a task by voice',
+              label: listening || starting
+                  ? 'Stop voice input'
+                  : 'Add a task by voice',
               excludeSemantics: true,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -245,7 +252,11 @@ class _InputPill extends StatelessWidget {
                 child: Icon(
                   listening ? Icons.mic : Icons.mic_none,
                   size: 19,
-                  color: listening ? colors.accent : colors.textDim,
+                  color: listening
+                      ? colors.accent
+                      : starting
+                      ? colors.accent.withValues(alpha: 0.45)
+                      : colors.textDim,
                 ),
               ),
             ),

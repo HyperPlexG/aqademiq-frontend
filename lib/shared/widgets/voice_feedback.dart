@@ -25,6 +25,16 @@ void showVoiceUnavailable(BuildContext context, VoiceUnavailable problem) {
           ),
         ),
       );
+    case VoiceUnavailable.couldNotStart:
+      // Nearly always the previous session still closing. It has already been
+      // retried once, so the honest advice is simply to tap again.
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Couldn't start the microphone. Tap Speak to try again.",
+          ),
+        ),
+      );
     case VoiceUnavailable.unsupported:
       messenger.showSnackBar(
         const SnackBar(

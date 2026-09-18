@@ -60,7 +60,8 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     final chat = ref.read(adaChatProvider);
     final value = (text ?? _input.text).trim();
     if (value.isEmpty && chat.pendingAttachments.isEmpty) return;
-    // Sending ends any dictation. Cancel rather than stop: the field already
+    // Sending ends any dictation, started or merely starting. Cancel rather
+    // than stop: the field already
     // shows what was heard, and a final result arriving after the clear below
     // would otherwise write the words back into an empty box.
     unawaited(_voice.cancel(owner: this));
@@ -71,7 +72,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   /// Tap once to talk, tap again to stop. The words land in the input for the
   /// student to read and correct — nothing is sent until they tap send.
   Future<void> _toggleVoice() async {
-    if (ref.read(voiceInputProvider).isListeningFor(this)) {
+    if (ref.read(voiceInputProvider).isActiveFor(this)) {
       await _voice.stop(owner: this);
       return;
     }
@@ -255,6 +256,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                   compact: !chat.isEmpty,
                   onSend: _send,
                   listening: voice.isListeningFor(this),
+                  starting: voice.isActiveFor(this) && !voice.listening,
                   // Only a phone with no recognizer at all loses the control; a
                   // refused permission keeps it, so the student can fix it.
                   voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
@@ -1223,6 +1225,7 @@ class _InputBar extends StatelessWidget {
     required this.onSend,
     required this.onSpeak,
     required this.listening,
+    required this.starting,
     required this.voiceAvailable,
   });
   final TextEditingController controller;
@@ -1233,6 +1236,10 @@ class _InputBar extends StatelessWidget {
 
   /// The microphone is open for this bar.
   final bool listening;
+
+  /// Asked to start, but not capturing yet — so the label must not invite
+  /// anyone to speak.
+  final bool starting;
 
   /// False only on a phone with no speech recognizer.
   final bool voiceAvailable;
@@ -1286,7 +1293,9 @@ class _InputBar extends StatelessWidget {
           if (voiceAvailable) ...[
             Semantics(
               button: true,
-              label: listening ? 'Stop voice input' : 'Speak to Ada',
+              label: listening || starting
+                  ? 'Stop voice input'
+                  : 'Speak to Ada',
               excludeSemantics: true,
               child: GestureDetector(
                 onTap: onSpeak,
@@ -1297,19 +1306,27 @@ class _InputBar extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: listening ? _ink : null,
-                          border: listening ? null : Border.all(color: colors.border),
+                          color: listening || starting ? _ink : null,
+                          border: listening || starting
+                              ? null
+                              : Border.all(color: colors.border),
                         ),
                         child: Icon(
                           listening ? Icons.mic : Icons.mic_none,
                           size: 16,
-                          color: listening ? Colors.white : colors.textDim,
+                          color: listening
+                              ? Colors.white
+                              : starting
+                              ? Colors.white54
+                              : colors.textDim,
                         ),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: listening ? _ink : _ink.withValues(alpha: 0.55),
+                          color: listening || starting
+                              ? _ink
+                              : _ink.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Row(
@@ -1317,11 +1334,19 @@ class _InputBar extends StatelessWidget {
                           children: [
                             Text(
                               listening ? '●' : '◈',
-                              style: const TextStyle(fontSize: 12, color: Colors.white, height: 1),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: starting ? Colors.white54 : Colors.white,
+                                height: 1,
+                              ),
                             ),
                             const SizedBox(width: 5),
                             Text(
-                              listening ? 'Listening' : 'Speak',
+                              starting
+                                  ? 'Starting'
+                                  : listening
+                                  ? 'Listening'
+                                  : 'Speak',
                               style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white),
                             ),
                           ],

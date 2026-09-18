@@ -5,6 +5,8 @@
 // mic must NOT do: send, keep writing after a message has gone, talk over
 // another screen's dictation, or leave the focus soundscape silenced.
 
+import 'dart:async';
+
 import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/data/repositories/ada_repository.dart';
@@ -26,15 +28,30 @@ class _RecordingChat extends AdaChatController {
   Future<void> send(String text) async => sent.add(text);
 }
 
-/// A recognizer the test drives by hand.
+/// A recognizer the test drives by hand, quirks included.
 class _FakeEngine implements SpeechEngine {
   bool initialises = true;
   bool permitted = true;
   bool listenThrows = false;
 
+  /// The platform declines to start and says nothing at all — no status, no
+  /// error. Android does this whenever it still thinks it is listening.
+  bool refuseToStart = false;
+
+  /// When false the test decides when the platform confirms, via
+  /// [becomesReady].
+  bool autoReady = true;
+
   int initCalls = 0;
+  int listenCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;
+
+  @override
+  Duration get warmUp => Duration.zero;
+
+  @override
+  Duration get startTimeout => const Duration(milliseconds: 50);
 
   void Function(String status)? _onStatus;
   void Function(String message)? _onError;
@@ -56,10 +73,15 @@ class _FakeEngine implements SpeechEngine {
 
   @override
   Future<void> listen(void Function(String words) onWords) async {
+    listenCalls++;
     if (listenThrows) throw StateError('recognizer busy');
+    if (refuseToStart) return;
     _onWords = onWords;
-    _onStatus?.call('listening');
+    if (autoReady) becomesReady();
   }
+
+  /// The platform confirms it is capturing.
+  void becomesReady() => _onStatus?.call('listening');
 
   @override
   Future<void> stop() async => stopCalls++;
@@ -76,7 +98,7 @@ class _FakeEngine implements SpeechEngine {
     _onStatus?.call('done');
   }
 
-  void fails() => _onError?.call('error_no_match');
+  void fails([String message = 'error_no_match']) => _onError?.call(message);
 }
 
 class _FakeHold implements VoiceAudioHold {
@@ -109,6 +131,7 @@ Future<({_FakeEngine engine, _RecordingChat chat})> _pumpAda(
   WidgetTester tester, {
   bool initialises = true,
   bool permitted = true,
+  bool autoReady = true,
 }) async {
   tester.view
     ..physicalSize = const Size(390, 844)
@@ -117,7 +140,8 @@ Future<({_FakeEngine engine, _RecordingChat chat})> _pumpAda(
 
   final engine = _FakeEngine()
     ..initialises = initialises
-    ..permitted = permitted;
+    ..permitted = permitted
+    ..autoReady = autoReady;
   final container = ProviderContainer(
     overrides: [
       speechEngineProvider.overrideWithValue(engine),
@@ -150,8 +174,11 @@ Future<({_FakeEngine engine, _RecordingChat chat})> _pumpAda(
 String _adaInput(WidgetTester tester) =>
     tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
+/// Starting is no longer instant — it waits for the platform to confirm, and
+/// then for the microphone to warm up — so the clock has to move a little.
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
+  await tester.pump(const Duration(milliseconds: 20));
   await tester.pump();
 }
 
@@ -258,6 +285,25 @@ void main() {
         );
       },
     );
+
+    testWidgets('the pill says Starting until the mic is really open', (
+      tester,
+    ) async {
+      // The skipped-words bug: Android reports "listening" before the
+      // microphone opens, so a pill reading Listening invited the student to
+      // talk into a mic that was not capturing yet.
+      final t = await _pumpAda(tester, autoReady: false);
+
+      await tester.tap(find.text('Speak'));
+      await _settle(tester);
+      expect(find.text('Starting'), findsOneWidget);
+      expect(find.text('Listening'), findsNothing);
+
+      t.engine.becomesReady();
+      await _settle(tester);
+
+      expect(find.text('Listening'), findsOneWidget);
+    });
 
     testWidgets('a refused microphone explains itself and offers Settings', (
       tester,
@@ -435,26 +481,27 @@ void main() {
       },
     );
 
-    test('Prism comes back exactly once when listening ends', () async {
+    test('Prism comes back exactly once when the student stops', () async {
       final t = _setUp();
-      await t.container
-          .read(voiceInputProvider.notifier)
-          .start(owner: owner, onWords: (_) {});
+      final voice = t.container.read(voiceInputProvider.notifier);
+      await voice.start(owner: owner, onWords: (_) {});
 
+      await voice.stop(owner: owner);
       t.engine.finishes(); // notListening, then done
 
       expect(t.hold.releases, 1);
     });
 
-    test('an error ends listening and brings Prism back', () async {
+    test('an error it cannot recover from ends recording', () async {
       final t = _setUp();
       await t.container
           .read(voiceInputProvider.notifier)
           .start(owner: owner, onWords: (_) {});
 
-      t.engine.fails();
+      t.engine.fails('error_audio');
+      await Future<void>.delayed(voiceRestartGap * 2);
 
-      expect(t.container.read(voiceInputProvider).listening, isFalse);
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
       expect(t.hold.releases, 1);
     });
 
@@ -476,6 +523,174 @@ void main() {
         );
       },
     );
+  });
+
+  group('recording until the student stops', () {
+    final owner = Object();
+
+    test('the recognizer stopping on its own does not end recording', () async {
+      // Android ends a session about a second after you stop speaking, no
+      // matter what timeouts it is given. The session is replaced rather than
+      // being treated as the student having finished.
+      final t = _setUp();
+      await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: owner, onWords: (_) {});
+
+      t.engine.finishes();
+      await Future<void>.delayed(voiceRestartGap * 3);
+
+      expect(t.engine.listenCalls, 2);
+      expect(
+        t.container.read(voiceInputProvider).isListeningFor(owner),
+        isTrue,
+      );
+      expect(
+        t.hold.releases,
+        0,
+        reason: 'Prism stays down for the whole dictation',
+      );
+    });
+
+    test('words from every session are kept, not just the last', () async {
+      // Each session reports only its own utterance. Without stitching, the
+      // first half of a long thought disappears when the recognizer cycles.
+      final t = _setUp();
+      final heard = <String>[];
+      await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: owner, onWords: heard.add);
+
+      t.engine.hears('remind me to revise');
+      t.engine.finishes();
+      await Future<void>.delayed(voiceRestartGap * 3);
+      t.engine.hears('chemistry tonight');
+
+      expect(heard.last, 'remind me to revise chemistry tonight');
+    });
+
+    test('silence restarts the session instead of ending it', () async {
+      final t = _setUp();
+      await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: owner, onWords: (_) {});
+
+      t.engine.fails(); // error_no_match: the student simply paused
+      await Future<void>.delayed(voiceRestartGap * 3);
+
+      expect(t.engine.listenCalls, 2);
+      expect(
+        t.container.read(voiceInputProvider).isListeningFor(owner),
+        isTrue,
+      );
+    });
+
+    test(
+      'stopping really does stop — no session is started after it',
+      () async {
+        final t = _setUp();
+        final voice = t.container.read(voiceInputProvider.notifier);
+        await voice.start(owner: owner, onWords: (_) {});
+
+        await voice.stop(owner: owner);
+        t.engine.finishes();
+        await Future<void>.delayed(voiceRestartGap * 3);
+
+        expect(t.engine.listenCalls, 1);
+        expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+      },
+    );
+
+    test(
+      'a recognizer that keeps refusing gives up instead of looping',
+      () async {
+        final t = _setUp();
+        await t.container
+            .read(voiceInputProvider.notifier)
+            .start(owner: owner, onWords: (_) {});
+
+        t.engine.refuseToStart = true;
+        t.engine.finishes();
+        await Future<void>.delayed(const Duration(seconds: 1));
+
+        expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+        expect(t.engine.listenCalls, lessThan(6), reason: 'must not spin');
+        expect(t.hold.releases, 1, reason: 'Prism must not stay silenced');
+      },
+    );
+  });
+
+  group('a start the platform quietly refuses', () {
+    final owner = Object();
+
+    test('is retried once, and reported when it still will not start', () async {
+      // The mic button that "sometimes does nothing": listen() reports nothing
+      // when the platform declines, so the old code showed Listening over a
+      // microphone that was never opened.
+      final t = _setUp();
+      t.engine.refuseToStart = true;
+
+      final problem = await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: owner, onWords: (_) {});
+
+      expect(problem, VoiceUnavailable.couldNotStart);
+      expect(t.engine.listenCalls, 2, reason: 'one retry after clearing it');
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+      expect(t.hold.releases, t.hold.holds, reason: 'Prism must come back');
+    });
+
+    test('recovers silently when the retry works', () async {
+      final t = _setUp();
+      t.engine.refuseToStart = true;
+      final voice = t.container.read(voiceInputProvider.notifier);
+
+      // Clears while the first attempt is timing out, as a closing session does.
+      Timer(
+        const Duration(milliseconds: 20),
+        () => t.engine.refuseToStart = false,
+      );
+      final problem = await voice.start(owner: owner, onWords: (_) {});
+
+      expect(problem, isNull);
+      expect(
+        t.container.read(voiceInputProvider).isListeningFor(owner),
+        isTrue,
+      );
+    });
+
+    test('is not announced as listening until the platform confirms', () async {
+      // Android claims to be listening the moment it asks the recognizer to
+      // start. Announcing that invites the student to talk into a mic that is
+      // not open yet, which is where the first words went.
+      final t = _setUp();
+      t.engine.autoReady = false;
+      final voice = t.container.read(voiceInputProvider.notifier);
+
+      final starting = voice.start(owner: owner, onWords: (_) {});
+      await Future<void>.delayed(Duration.zero);
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.starting);
+      expect(t.container.read(voiceInputProvider).listening, isFalse);
+
+      t.engine.becomesReady();
+      await starting;
+
+      expect(t.container.read(voiceInputProvider).listening, isTrue);
+    });
+
+    test('stopping while it is still starting gives up cleanly', () async {
+      final t = _setUp();
+      t.engine.autoReady = false;
+      final voice = t.container.read(voiceInputProvider.notifier);
+      unawaited(voice.start(owner: owner, onWords: (_) {}));
+      await Future<void>.delayed(Duration.zero);
+
+      await voice.stop(owner: owner);
+
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+      expect(t.engine.cancelCalls, greaterThanOrEqualTo(1));
+      expect(t.hold.releases, t.hold.holds);
+    });
   });
 
   group('when voice cannot start', () {
