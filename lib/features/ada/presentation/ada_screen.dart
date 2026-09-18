@@ -21,6 +21,7 @@ import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
 import '../../../shared/widgets/markdown_text.dart';
 import '../../../shared/widgets/voice_feedback.dart';
+import '../../../shared/widgets/voice_recording_bar.dart';
 import '../../plan/providers/plan_providers.dart';
 import 'widgets/chat_history_sheet.dart';
 
@@ -69,13 +70,12 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     unawaited(ref.read(adaChatProvider.notifier).send(value));
   }
 
-  /// Tap once to talk, tap again to stop. The words land in the input for the
-  /// student to read and correct — nothing is sent until they tap send.
-  Future<void> _toggleVoice() async {
-    if (ref.read(voiceInputProvider).isActiveFor(this)) {
-      await _voice.stop(owner: this);
-      return;
-    }
+  /// Opens the mic. While it is open the input bar becomes the recording pill,
+  /// whose buttons are the three handlers below. The words still land in the
+  /// input for the student to read and correct — nothing is sent until they
+  /// tap send.
+  Future<void> _startVoice() async {
+    if (ref.read(voiceInputProvider).isActiveFor(this)) return;
     _dictation.begin();
     final problem = await _voice.start(
       owner: this,
@@ -86,6 +86,23 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
       },
     );
     if (problem != null && mounted) showVoiceUnavailable(context, problem);
+  }
+
+  /// ✕ — throw away what was said. Cancelled first so no late word can land
+  /// after the field is put back.
+  void _discardVoice() {
+    unawaited(_voice.cancel(owner: this));
+    _dictation.restore();
+  }
+
+  /// ■ — stop, and leave the words in the box to review.
+  void _stopVoice() => unawaited(_voice.stop(owner: this));
+
+  /// ↑ — stop and send. Waits for the recognizer's last words so the message
+  /// is what was actually said, not the partial result a moment before it.
+  Future<void> _sendVoice() async {
+    await _voice.stopAndSettle(owner: this);
+    if (mounted) _send();
   }
 
   Future<void> _applyPlan(String messageId) async {
@@ -250,17 +267,41 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                     onRemove: (key) =>
                         ref.read(adaChatProvider.notifier).removePendingAttachment(key),
                   ),
-                _InputBar(
-                  controller: _input,
-                  focusNode: _focus,
-                  compact: !chat.isEmpty,
-                  onSend: _send,
-                  listening: voice.isListeningFor(this),
-                  starting: voice.isActiveFor(this) && !voice.listening,
-                  // Only a phone with no recognizer at all loses the control; a
-                  // refused permission keeps it, so the student can fix it.
-                  voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
-                  onSpeak: () => unawaited(_toggleVoice()),
+                AnimatedSwitcher(
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.96, end: 1).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: voice.isActiveFor(this)
+                      ? VoiceRecordingBar(
+                          key: const ValueKey('recording'),
+                          listening: voice.isListeningFor(this),
+                          level: _voice.level,
+                          onDiscard: _discardVoice,
+                          onStop: _stopVoice,
+                          onSend: () => unawaited(_sendVoice()),
+                        )
+                      : _InputBar(
+                          key: const ValueKey('typing'),
+                          controller: _input,
+                          focusNode: _focus,
+                          compact: !chat.isEmpty,
+                          onSend: _send,
+                          // Only a phone with no recognizer at all loses the
+                          // control; a refused permission keeps it, so the
+                          // student can fix it.
+                          voiceAvailable:
+                              voice.unavailable != VoiceUnavailable.unsupported,
+                          onSpeak: () => unawaited(_startVoice()),
+                        ),
                 ),
               ],
             ),
@@ -1224,22 +1265,14 @@ class _InputBar extends StatelessWidget {
     required this.compact,
     required this.onSend,
     required this.onSpeak,
-    required this.listening,
-    required this.starting,
     required this.voiceAvailable,
+    super.key,
   });
   final TextEditingController controller;
   final FocusNode focusNode;
   final bool compact;
   final VoidCallback onSend;
   final VoidCallback onSpeak;
-
-  /// The microphone is open for this bar.
-  final bool listening;
-
-  /// Asked to start, but not capturing yet — so the label must not invite
-  /// anyone to speak.
-  final bool starting;
 
   /// False only on a phone with no speech recognizer.
   final bool voiceAvailable;
@@ -1288,14 +1321,13 @@ class _InputBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          // Voice fills the field; the arrow still does the sending. The empty
-          // chat gets the labelled pill, a running conversation a quieter mic.
+          // Opens the mic; while it is open this whole bar is swapped for the
+          // recording pill. The empty chat gets the labelled pill, a running
+          // conversation a quieter mic.
           if (voiceAvailable) ...[
             Semantics(
               button: true,
-              label: listening || starting
-                  ? 'Stop voice input'
-                  : 'Speak to Ada',
+              label: 'Speak to Ada',
               excludeSemantics: true,
               child: GestureDetector(
                 onTap: onSpeak,
@@ -1306,49 +1338,22 @@ class _InputBar extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: listening || starting ? _ink : null,
-                          border: listening || starting
-                              ? null
-                              : Border.all(color: colors.border),
+                          border: Border.all(color: colors.border),
                         ),
-                        child: Icon(
-                          listening ? Icons.mic : Icons.mic_none,
-                          size: 16,
-                          color: listening
-                              ? Colors.white
-                              : starting
-                              ? Colors.white54
-                              : colors.textDim,
-                        ),
+                        child: Icon(Icons.mic_none, size: 16, color: colors.textDim),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                         decoration: BoxDecoration(
-                          color: listening || starting
-                              ? _ink
-                              : _ink.withValues(alpha: 0.55),
+                          color: _ink.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              listening ? '●' : '◈',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: starting ? Colors.white54 : Colors.white,
-                                height: 1,
-                              ),
-                            ),
+                            const Text('◈', style: TextStyle(fontSize: 12, color: Colors.white, height: 1)),
                             const SizedBox(width: 5),
-                            Text(
-                              starting
-                                  ? 'Starting'
-                                  : listening
-                                  ? 'Listening'
-                                  : 'Speak',
-                              style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white),
-                            ),
+                            Text('Speak', style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white)),
                           ],
                         ),
                       ),

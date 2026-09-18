@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -77,8 +78,12 @@ abstract class SpeechEngine {
   /// mean it started — wait for the `listening` status.
   ///
   /// [onWords] receives the whole utterance of the current session — not a
-  /// delta, and not the text of earlier sessions.
-  Future<void> listen(void Function(String words) onWords);
+  /// delta, and not the text of earlier sessions. [onLevel] receives how loud
+  /// the microphone is, already scaled to 0–1, for the waveform.
+  Future<void> listen(
+    void Function(String words) onWords, {
+    void Function(double level)? onLevel,
+  });
 
   /// Ends the session; the recognizer may still deliver a final result.
   Future<void> stop();
@@ -120,9 +125,15 @@ class DeviceSpeechEngine implements SpeechEngine {
   Future<bool> hasPermission() => _stt.hasPermission;
 
   @override
-  Future<void> listen(void Function(String words) onWords) async {
+  Future<void> listen(
+    void Function(String words) onWords, {
+    void Function(double level)? onLevel,
+  }) async {
     await _stt.listen(
       onResult: (r) => onWords(r.recognizedWords),
+      onSoundLevelChange: onLevel == null
+          ? null
+          : (raw) => onLevel(normaliseSoundLevel(raw, defaultTargetPlatform)),
       listenOptions: SpeechListenOptions(
         // Free-form speech, not short commands.
         listenMode: ListenMode.dictation,
@@ -155,6 +166,25 @@ class DeviceSpeechEngine implements SpeechEngine {
 
   @override
   Duration get startTimeout => const Duration(seconds: 2);
+}
+
+/// Scales the recognizer's microphone level to 0–1 for drawing.
+///
+/// The two platforms report different things. Android passes through
+/// `SpeechRecognizer`'s `rmsdB`, which sits around −2 in a quiet room and
+/// reaches about 10 when someone speaks up. iOS computes dBFS from the raw
+/// buffer — 0 is the loudest possible, ordinary speech lands between −45 and
+/// −15, and a silent buffer is `log10(0)`, i.e. negative infinity. Both are
+/// clamped into a window where speech moves the needle, then eased with a
+/// square root so conversational volume reads as visible bars rather than
+/// ticks.
+double normaliseSoundLevel(double raw, TargetPlatform platform) {
+  if (!raw.isFinite) return 0;
+  final (floor, ceiling) = platform == TargetPlatform.iOS
+      ? (-50.0, -10.0)
+      : (-2.0, 10.0);
+  final linear = ((raw - floor) / (ceiling - floor)).clamp(0.0, 1.0);
+  return math.sqrt(linear);
 }
 
 final speechEngineProvider = Provider<SpeechEngine>(
@@ -256,8 +286,21 @@ class VoiceInputController extends Notifier<VoiceInputState> {
   bool _restarting = false;
   int _restartFailures = 0;
 
+  /// Completes when the current dictation has fully ended — every word in.
+  Completer<void>? _ended;
+
+  /// How loud the microphone is right now, 0–1, for the recording waveform.
+  ///
+  /// A notifier rather than part of [state] on purpose: it changes many times a
+  /// second, and routing that through the provider would rebuild every screen
+  /// watching voice input to move a few bars.
+  final level = ValueNotifier<double>(0);
+
   @override
-  VoiceInputState build() => const VoiceInputState();
+  VoiceInputState build() {
+    ref.onDispose(level.dispose);
+    return const VoiceInputState();
+  }
 
   /// Opens the microphone and streams everything heard to [onWords], until
   /// [stop] or [cancel]. Sessions ended by the platform are replaced.
@@ -315,6 +358,24 @@ class VoiceInputController extends Notifier<VoiceInputState> {
     await _engine.stop();
   }
 
+  /// Ends recording and waits until the last words are in, so whatever the
+  /// caller does next — sending, say — sees the finished text rather than the
+  /// last partial result. Gives up after [timeout] and cancels, so a
+  /// recognizer that never reports back cannot hold a send hostage.
+  Future<void> stopAndSettle({
+    Object? owner,
+    Duration timeout = const Duration(milliseconds: 1500),
+  }) async {
+    if (!_owns(owner) || state.phase == VoicePhase.idle) return;
+    final ended = _ended ??= Completer<void>();
+    await stop(owner: owner);
+    try {
+      await ended.future.timeout(timeout);
+    } on TimeoutException {
+      await cancel(owner: owner);
+    }
+  }
+
   /// Ends recording and delivers nothing more.
   ///
   /// The callback is detached *before* anything is awaited. That ordering is
@@ -341,7 +402,7 @@ class VoiceInputController extends Notifier<VoiceInputState> {
     });
 
     try {
-      await _engine.listen(_onResult);
+      await _engine.listen(_onResult, onLevel: _onLevel);
     } on Object {
       if (!confirmed.isCompleted) confirmed.complete(false);
     }
@@ -388,6 +449,8 @@ class VoiceInputController extends Notifier<VoiceInputState> {
     }
   }
 
+  void _onLevel(double value) => level.value = value;
+
   void _onResult(String words) {
     _current = words;
     _restartFailures = 0;
@@ -433,6 +496,10 @@ class VoiceInputController extends Notifier<VoiceInputState> {
     _wantListening = false;
     _startTimeout?.cancel();
     _startTimeout = null;
+    level.value = 0;
+    final ended = _ended;
+    _ended = null;
+    if (ended != null && !ended.isCompleted) ended.complete();
     _releaseAudio();
     if (state.phase != VoicePhase.idle) {
       state = VoiceInputState(unavailable: state.unavailable);
@@ -491,6 +558,13 @@ class Dictation {
 
   /// Snapshot what is already typed. Call before starting to listen.
   void begin() => _before = field.text;
+
+  /// Put the field back exactly as it was before the mic opened — the discard
+  /// button. Callers cancel the dictation first, so no late word lands after.
+  void restore() => field.value = TextEditingValue(
+    text: _before,
+    selection: TextSelection.collapsed(offset: _before.length),
+  );
 
   /// Show [spoken] after the snapshot, with the cursor at the end.
   void show(String spoken) {

@@ -12,6 +12,7 @@ import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/data/repositories/ada_repository.dart';
 import 'package:aqademiq/features/ada/presentation/ada_screen.dart';
 import 'package:aqademiq/services/voice_input_service.dart';
+import 'package:aqademiq/shared/widgets/voice_recording_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,14 +72,23 @@ class _FakeEngine implements SpeechEngine {
   @override
   Future<bool> hasPermission() async => permitted;
 
+  void Function(double level)? _onLevel;
+
   @override
-  Future<void> listen(void Function(String words) onWords) async {
+  Future<void> listen(
+    void Function(String words) onWords, {
+    void Function(double level)? onLevel,
+  }) async {
     listenCalls++;
     if (listenThrows) throw StateError('recognizer busy');
     if (refuseToStart) return;
     _onWords = onWords;
+    _onLevel = onLevel;
     if (autoReady) becomesReady();
   }
+
+  /// The microphone hears something this loud (0–1).
+  void levels(double value) => _onLevel?.call(value);
 
   /// The platform confirms it is capturing.
   void becomesReady() => _onStatus?.call('listening');
@@ -174,6 +184,18 @@ Future<({_FakeEngine engine, _RecordingChat chat})> _pumpAda(
 String _adaInput(WidgetTester tester) =>
     tester.widget<TextField>(find.byType(TextField)).controller!.text;
 
+/// Long enough for the bar ↔ pill cross-fade to finish, so exactly one of
+/// them is on screen. Only used when no start is pending — the fake engine's
+/// start timeout is shorter than this.
+Future<void> _swap(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump();
+}
+
+bool _waveformActive(WidgetTester tester) =>
+    tester.widget<VoiceWaveform>(find.byType(VoiceWaveform)).active;
+
 /// Starting is no longer instant — it waits for the platform to confirm, and
 /// then for the microphone to warm up — so the clock has to move a little.
 Future<void> _settle(WidgetTester tester) async {
@@ -186,89 +208,143 @@ void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
   group('talking to Ada', () {
-    testWidgets(
-      'spoken words fill the input, and nothing is sent until send is tapped',
-      (
-        tester,
-      ) async {
-        final t = await _pumpAda(tester);
-
-        await tester.tap(find.text('Speak'));
-        await _settle(tester);
-        expect(find.text('Listening'), findsOneWidget);
-
-        t.engine.hears('plan my week around the chemistry exam');
-        await _settle(tester);
-
-        expect(_adaInput(tester), 'plan my week around the chemistry exam');
-        expect(
-          t.chat.sent,
-          isEmpty,
-          reason: 'dictation must never send on its own',
-        );
-
-        await tester.tap(find.text('↑'));
-        await _settle(tester);
-
-        expect(t.chat.sent, ['plan my week around the chemistry exam']);
-        expect(_adaInput(tester), isEmpty);
-      },
-    );
-
-    testWidgets('a result arriving after send does not refill the box', (
+    testWidgets('tapping Speak turns the input into the recording pill', (
       tester,
     ) async {
-      // What the student would see without the cancel-before-clear ordering:
-      // the message they just sent, back in the input.
+      await _pumpAda(tester);
+
+      await tester.tap(find.text('Speak'));
+      await _swap(tester);
+
+      expect(find.byType(VoiceRecordingBar), findsOneWidget);
+      expect(find.byKey(const Key('voice-discard')), findsOneWidget);
+      expect(find.byKey(const Key('voice-stop')), findsOneWidget);
+      expect(find.byKey(const Key('voice-send')), findsOneWidget);
+      expect(_waveformActive(tester), isTrue);
+    });
+
+    testWidgets('■ stops, and the words wait in the box — nothing is sent', (
+      tester,
+    ) async {
       final t = await _pumpAda(tester);
       await tester.tap(find.text('Speak'));
+      await _swap(tester);
+      t.engine.hears('plan my week around the chemistry exam');
       await _settle(tester);
-      t.engine.hears('remind me to revise');
+
+      await tester.tap(find.byKey(const Key('voice-stop')));
       await _settle(tester);
+      t.engine.finishes();
+      await _swap(tester);
+
+      expect(t.engine.stopCalls, 1);
+      expect(find.byType(VoiceRecordingBar), findsNothing);
+      expect(_adaInput(tester), 'plan my week around the chemistry exam');
+      expect(
+        t.chat.sent,
+        isEmpty,
+        reason: 'dictation must never send on its own',
+      );
 
       await tester.tap(find.text('↑'));
       await _settle(tester);
-      t.engine.hears('remind me to revise.');
-      await _settle(tester);
-
-      expect(_adaInput(tester), isEmpty);
-      expect(
-        find.text('Speak'),
-        findsOneWidget,
-        reason: 'the mic should have closed',
-      );
+      expect(t.chat.sent, ['plan my week around the chemistry exam']);
     });
 
-    testWidgets('tapping again stops listening and keeps the words', (
+    testWidgets('↑ in the pill sends the final words, not the last partial', (
+      tester,
+    ) async {
+      // The recognizer's final result arrives a moment after it is told to
+      // stop. Sending on the tap itself would send "plan my" and drop "week".
+      final t = await _pumpAda(tester);
+      await tester.tap(find.text('Speak'));
+      await _swap(tester);
+      t.engine.hears('plan my');
+      await _settle(tester);
+
+      await tester.tap(find.byKey(const Key('voice-send')));
+      await _settle(tester);
+      expect(t.chat.sent, isEmpty, reason: 'still waiting for the last words');
+      t.engine
+        ..hears('plan my week')
+        ..finishes();
+      await _swap(tester);
+
+      expect(t.chat.sent, ['plan my week']);
+      expect(_adaInput(tester), isEmpty);
+    });
+
+    testWidgets('a word arriving after the send does not refill the box', (
       tester,
     ) async {
       final t = await _pumpAda(tester);
       await tester.tap(find.text('Speak'));
-      await _settle(tester);
-      t.engine.hears('what is due tomorrow');
-      await _settle(tester);
-
-      await tester.tap(find.text('Listening'));
+      await _swap(tester);
+      t.engine.hears('remind me to revise');
+      await tester.tap(find.byKey(const Key('voice-send')));
       await _settle(tester);
       t.engine.finishes();
+      await _swap(tester);
+
+      t.engine.hears('remind me to revise.');
+      await _swap(tester);
+
+      expect(t.chat.sent, ['remind me to revise']);
+      expect(_adaInput(tester), isEmpty);
+    });
+
+    testWidgets('✕ throws away what was said and puts the box back', (
+      tester,
+    ) async {
+      // Anything typed before the mic opened survives; only the dictation goes.
+      final t = await _pumpAda(tester);
+      await tester.enterText(find.byType(TextField), 'Plan my ');
+      await tester.tap(find.text('Speak'));
+      await _swap(tester);
+      t.engine.hears('chemistry week');
       await _settle(tester);
 
-      expect(t.engine.stopCalls, 1);
-      expect(find.text('Speak'), findsOneWidget);
-      expect(_adaInput(tester), 'what is due tomorrow');
+      await tester.tap(find.byKey(const Key('voice-discard')));
+      await _swap(tester);
+      t.engine.hears('chemistry week, late'); // must land nowhere
+      await _swap(tester);
+
+      expect(find.byType(VoiceRecordingBar), findsNothing);
+      expect(_adaInput(tester), 'Plan my ');
+      expect(t.engine.cancelCalls, 1);
       expect(t.chat.sent, isEmpty);
+    });
+
+    testWidgets('the waveform stays flat until the mic is really open', (
+      tester,
+    ) async {
+      // The skipped-words bug: Android reports "listening" before the
+      // microphone opens. A live-looking waveform would invite the student to
+      // talk into a mic that was not capturing yet.
+      final t = await _pumpAda(tester, autoReady: false);
+
+      await tester.tap(find.text('Speak'));
+      await _settle(tester);
+      expect(find.byType(VoiceRecordingBar), findsOneWidget);
+      expect(_waveformActive(tester), isFalse);
+
+      t.engine.becomesReady();
+      await _settle(tester);
+
+      expect(_waveformActive(tester), isTrue);
     });
 
     testWidgets(
       'leaving the screen mid-dictation closes the mic without an error',
-      (tester) async {
-        // Found while testing the send path: ending the session from dispose()
-        // changed provider state while the screen was still subscribed to it,
-        // and Flutter asserted on rebuilding a torn-down widget. In the app the
-        // easy way to hit it is swiping Quick Add away while talking.
+      (
+        tester,
+      ) async {
+        // Ending the session from dispose() used to change provider state while
+        // the screen was still subscribed to it, and Flutter asserted on
+        // rebuilding a torn-down widget — swiping Quick Add away mid-sentence.
         final t = await _pumpAda(tester);
         await tester.tap(find.text('Speak'));
-        await _settle(tester);
+        await _swap(tester);
         t.engine.hears('half a thought');
         await _settle(tester);
 
@@ -286,25 +362,6 @@ void main() {
       },
     );
 
-    testWidgets('the pill says Starting until the mic is really open', (
-      tester,
-    ) async {
-      // The skipped-words bug: Android reports "listening" before the
-      // microphone opens, so a pill reading Listening invited the student to
-      // talk into a mic that was not capturing yet.
-      final t = await _pumpAda(tester, autoReady: false);
-
-      await tester.tap(find.text('Speak'));
-      await _settle(tester);
-      expect(find.text('Starting'), findsOneWidget);
-      expect(find.text('Listening'), findsNothing);
-
-      t.engine.becomesReady();
-      await _settle(tester);
-
-      expect(find.text('Listening'), findsOneWidget);
-    });
-
     testWidgets('a refused microphone explains itself and offers Settings', (
       tester,
     ) async {
@@ -315,15 +372,13 @@ void main() {
 
       expect(find.textContaining('Turn it on in Settings'), findsOneWidget);
       expect(find.widgetWithText(SnackBarAction, 'Settings'), findsOneWidget);
-      // Still offered, so the student can try again after fixing it.
+      expect(find.byType(VoiceRecordingBar), findsNothing);
       expect(find.text('Speak'), findsOneWidget);
     });
 
     testWidgets(
       'a phone with no recognizer loses the control rather than failing on every tap',
-      (
-        tester,
-      ) async {
+      (tester) async {
         await _pumpAda(tester, initialises: false);
 
         await tester.tap(find.text('Speak'));
@@ -336,6 +391,91 @@ void main() {
         );
       },
     );
+  });
+
+  group('the waveform', () {
+    test('Android levels map onto the full height', () {
+      expect(normaliseSoundLevel(-2, TargetPlatform.android), 0);
+      expect(normaliseSoundLevel(10, TargetPlatform.android), 1);
+      expect(
+        normaliseSoundLevel(4, TargetPlatform.android),
+        closeTo(0.707, 0.001),
+      );
+    });
+
+    test('iOS levels are decibels below full scale, and map the same way', () {
+      expect(normaliseSoundLevel(-50, TargetPlatform.iOS), 0);
+      expect(normaliseSoundLevel(-10, TargetPlatform.iOS), 1);
+      expect(normaliseSoundLevel(-60, TargetPlatform.iOS), 0);
+      expect(normaliseSoundLevel(0, TargetPlatform.iOS), 1);
+    });
+
+    test('a silent buffer is flat, not a crash', () {
+      // iOS computes 20·log10(rms); a buffer of zeros is negative infinity.
+      expect(
+        normaliseSoundLevel(double.negativeInfinity, TargetPlatform.iOS),
+        0,
+      );
+      expect(normaliseSoundLevel(double.nan, TargetPlatform.iOS), 0);
+    });
+
+    test(
+      'the level follows the mic and falls flat when recording ends',
+      () async {
+        final t = _setUp();
+        final voice = t.container.read(voiceInputProvider.notifier);
+        await voice.start(owner: Object(), onWords: (_) {});
+
+        t.engine.levels(0.8);
+        expect(voice.level.value, 0.8);
+
+        await voice.cancel();
+        expect(voice.level.value, 0, reason: 'a stale bar must not linger');
+      },
+    );
+  });
+
+  group('stopping and waiting for the last words', () {
+    final owner = Object();
+
+    test('waits for the final result before returning', () async {
+      final t = _setUp();
+      final heard = <String>[];
+      final voice = t.container.read(voiceInputProvider.notifier);
+      await voice.start(owner: owner, onWords: heard.add);
+      t.engine.hears('plan my');
+
+      var settled = false;
+      final settling = voice
+          .stopAndSettle(owner: owner)
+          .then((_) => settled = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(settled, isFalse);
+
+      t.engine
+        ..hears('plan my week')
+        ..finishes();
+      await settling;
+
+      expect(heard.last, 'plan my week');
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+    });
+
+    test('gives up and cancels if the recognizer never reports back', () async {
+      // A send must not hang forever on a recognizer that went quiet.
+      final t = _setUp();
+      final voice = t.container.read(voiceInputProvider.notifier);
+      await voice.start(owner: owner, onWords: (_) {});
+
+      await voice.stopAndSettle(
+        owner: owner,
+        timeout: const Duration(milliseconds: 30),
+      );
+
+      expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
+      expect(t.engine.cancelCalls, 1);
+      expect(t.hold.releases, t.hold.holds);
+    });
   });
 
   group('what the field reads while dictating', () {

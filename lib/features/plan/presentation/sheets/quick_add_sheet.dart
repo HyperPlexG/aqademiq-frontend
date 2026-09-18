@@ -10,6 +10,7 @@ import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
 import '../../../../services/voice_input_service.dart';
 import '../../../../shared/widgets/voice_feedback.dart';
+import '../../../../shared/widgets/voice_recording_bar.dart';
 import '../../plan_time.dart';
 import '../../providers/plan_ui_providers.dart';
 import '../pickers/repeat_picker.dart';
@@ -66,13 +67,11 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
     super.dispose();
   }
 
-  /// Tap to talk, tap again to stop. Words go into the field; the task is only
-  /// created when the student taps send or More.
-  Future<void> _toggleVoice() async {
-    if (ref.read(voiceInputProvider).isActiveFor(this)) {
-      await _voice.stop(owner: this);
-      return;
-    }
+  /// Opens the mic; the input turns into the recording pill until it closes.
+  /// Words go into the field; the task is only created when the student taps
+  /// send or More.
+  Future<void> _startVoice() async {
+    if (ref.read(voiceInputProvider).isActiveFor(this)) return;
     _dictation.begin();
     final problem = await _voice.start(
       owner: this,
@@ -83,6 +82,21 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
       },
     );
     if (problem != null && mounted) showVoiceUnavailable(context, problem);
+  }
+
+  /// ✕ — discard what was said and put the field back.
+  void _discardVoice() {
+    unawaited(_voice.cancel(owner: this));
+    _dictation.restore();
+  }
+
+  /// ■ — stop, keeping the words to review.
+  void _stopVoice() => unawaited(_voice.stop(owner: this));
+
+  /// ↑ — stop, wait for the last words, and add the task.
+  Future<void> _sendVoice() async {
+    await _voice.stopAndSettle(owner: this);
+    if (mounted) _submit(details: false);
   }
 
   void _submit({required bool details}) {
@@ -147,13 +161,34 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
                   ),
                 ),
               ),
-              _InputPill(
-                controller: _controller,
-                colors: colors,
-                listening: voice.isListeningFor(this),
-                starting: voice.isActiveFor(this) && !voice.listening,
-                voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
-                onSpeak: () => unawaited(_toggleVoice()),
+              AnimatedSwitcher(
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 220),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.96, end: 1).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: voice.isActiveFor(this)
+                    ? VoiceRecordingBar(
+                        key: const ValueKey('recording'),
+                        listening: voice.isListeningFor(this),
+                        level: _voice.level,
+                        onDiscard: _discardVoice,
+                        onStop: _stopVoice,
+                        onSend: () => unawaited(_sendVoice()),
+                      )
+                    : _InputPill(
+                        key: const ValueKey('typing'),
+                        controller: _controller,
+                        colors: colors,
+                        voiceAvailable:
+                            voice.unavailable != VoiceUnavailable.unsupported,
+                        onSpeak: () => unawaited(_startVoice()),
+                      ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -194,20 +229,13 @@ class _InputPill extends StatelessWidget {
   const _InputPill({
     required this.controller,
     required this.colors,
-    required this.listening,
-    required this.starting,
     required this.voiceAvailable,
     required this.onSpeak,
+    super.key,
   });
 
   final TextEditingController controller;
   final AppColors colors;
-
-  /// The microphone is open for this sheet.
-  final bool listening;
-
-  /// Asked to start, but not capturing yet.
-  final bool starting;
 
   /// False only on a phone with no speech recognizer.
   final bool voiceAvailable;
@@ -242,22 +270,12 @@ class _InputPill extends StatelessWidget {
             const SizedBox(width: 10),
             Semantics(
               button: true,
-              label: listening || starting
-                  ? 'Stop voice input'
-                  : 'Add a task by voice',
+              label: 'Add a task by voice',
               excludeSemantics: true,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onSpeak,
-                child: Icon(
-                  listening ? Icons.mic : Icons.mic_none,
-                  size: 19,
-                  color: listening
-                      ? colors.accent
-                      : starting
-                      ? colors.accent.withValues(alpha: 0.45)
-                      : colors.textDim,
-                ),
+                child: Icon(Icons.mic_none, size: 19, color: colors.textDim),
               ),
             ),
           ],
