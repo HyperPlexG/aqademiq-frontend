@@ -293,6 +293,23 @@ void main() {
       expect(_adaInput(tester), isEmpty);
     });
 
+    testWidgets('the box gets the tidied words, without the ums', (
+      tester,
+    ) async {
+      final t = await _pumpAda(tester);
+      await tester.tap(find.text('Speak'));
+      await _swap(tester);
+      t.engine.hears('um I I need to revise uh chemistry');
+      await _settle(tester);
+
+      await tester.tap(find.byKey(const Key('voice-stop')));
+      await _settle(tester);
+      t.engine.finishes();
+      await _swap(tester);
+
+      expect(_adaInput(tester), 'I need to revise chemistry');
+    });
+
     testWidgets('✕ throws away what was said and puts the box back', (
       tester,
     ) async {
@@ -475,6 +492,76 @@ void main() {
       expect(t.container.read(voiceInputProvider).phase, VoicePhase.idle);
       expect(t.engine.cancelCalls, 1);
       expect(t.hold.releases, t.hold.holds);
+    });
+  });
+
+  group('tidying up what was said', () {
+    test('the ums and uhs never reach the box', () {
+      expect(tidySpeech('um I need uh to revise'), 'I need to revise');
+      expect(tidySpeech('Hmm, let me see'), 'let me see');
+      expect(tidySpeech('erm remind me eh tomorrow'), 'remind me tomorrow');
+    });
+
+    test('a word said twice in a row is typed once', () {
+      expect(tidySpeech('I I need to to revise'), 'I need to revise');
+      expect(tidySpeech('the the chemistry exam'), 'the chemistry exam');
+      // A stutter of three is still one word.
+      expect(tidySpeech('can can can you'), 'can you');
+    });
+
+    test('the repeat that carries the punctuation is the one kept', () {
+      expect(tidySpeech('plan the week week.'), 'plan the week.');
+    });
+
+    test('ordinary words are left alone', () {
+      // "like" and "so" are real words far more often than they are filler,
+      // and a student who says them means them.
+      expect(
+        tidySpeech('tasks like this one and so on'),
+        'tasks like this one and so on',
+      );
+      expect(tidySpeech('I am ahead of the reading'), 'I am ahead of the reading');
+    });
+
+    test('an utterance of nothing but noise leaves nothing behind', () {
+      expect(tidySpeech('um uh hmm'), isEmpty);
+      expect(tidySpeech('   '), isEmpty);
+    });
+
+    test('what the student typed is never tidied, only what they said', () {
+      // composeDictation joins; it does not edit. Someone who typed "um" meant
+      // to type it.
+      expect(composeDictation('um typed by hand', 'hello'), 'um typed by hand hello');
+    });
+
+    test('the filler is gone from the field as the words arrive', () async {
+      final t = _setUp();
+      final heard = <String>[];
+      await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: Object(), onWords: heard.add);
+
+      t.engine.hears('um so I I need to revise');
+
+      expect(heard.last, 'so I need to revise');
+    });
+
+    test('a word repeated across a restart is caught too', () async {
+      // Each session reports only its own words, so a recognizer that cycles
+      // mid-sentence often repeats the word it was on. Tidying the stitched
+      // text rather than each session is what catches it.
+      final t = _setUp();
+      final heard = <String>[];
+      await t.container
+          .read(voiceInputProvider.notifier)
+          .start(owner: Object(), onWords: heard.add);
+
+      t.engine.hears('remind me about chemistry');
+      t.engine.finishes();
+      await Future<void>.delayed(voiceRestartGap * 3);
+      t.engine.hears('chemistry tonight');
+
+      expect(heard.last, 'remind me about chemistry tonight');
     });
   });
 

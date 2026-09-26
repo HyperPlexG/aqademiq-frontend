@@ -457,10 +457,21 @@ class VoiceInputController extends Notifier<VoiceInputState> {
     _emit();
   }
 
-  void _emit() => _onWords?.call(composeDictation(_committed, _current));
+  /// Everything said this dictation — finished sessions plus the one running —
+  /// tidied. Tidying here rather than per session also catches a word repeated
+  /// across the seam, which happens when the recognizer restarts mid-sentence.
+  String _spokenSoFar() => tidySpeech(
+    _committed.isEmpty
+        ? _current
+        : _current.isEmpty
+        ? _committed
+        : '$_committed $_current',
+  );
+
+  void _emit() => _onWords?.call(_spokenSoFar());
 
   void _commitCurrent() {
-    _committed = composeDictation(_committed, _current);
+    _committed = _spokenSoFar();
     _current = '';
   }
 
@@ -533,6 +544,51 @@ class VoiceInputController extends Notifier<VoiceInputState> {
 /// can reach the field they are about to dispose.
 void endDictationAfterTeardown(VoiceInputController voice, Object owner) {
   scheduleMicrotask(() => unawaited(voice.cancel(owner: owner)));
+}
+
+/// The noises people make while thinking, which nobody means to type.
+///
+/// Only true disfluencies — no ordinary word that happens to be short. "Like"
+/// and "so" are left alone: a student saying "tasks like this" means it.
+const _fillerSounds = {
+  'um', 'umm', 'ummm', 'uh', 'uhh', 'uhhh', 'uhm', 'erm', 'er', 'err',
+  'ah', 'ahh', 'ahhh', 'hm', 'hmm', 'hmmm', 'mm', 'mmm', 'mhm', 'eh',
+};
+
+/// Letters and apostrophes only, for comparing two words while ignoring the
+/// punctuation the recognizer attaches to them.
+String _bareWord(String token) =>
+    token.toLowerCase().replaceAll(RegExp("[^a-z']"), '');
+
+/// Drops the "um"s and the stutters out of dictated speech.
+///
+/// Two things, both of which a student would delete by hand:
+///
+/// * filler sounds — "um", "uh", "hmm" and friends;
+/// * a word said twice in a row — "I I need" becomes "I need".
+///
+/// Deliberately literal. It does not reflow sentences, fix grammar or touch
+/// anything the student typed themselves; it only removes what was never meant
+/// to be there. When a repeat carries punctuation the fuller one is kept, so
+/// "week week." keeps the full stop.
+String tidySpeech(String spoken) {
+  final kept = <String>[];
+  for (final token in spoken.trim().split(RegExp(r'\s+'))) {
+    if (token.isEmpty) continue;
+    final bare = _bareWord(token);
+    // Punctuation on its own belongs to the sentence, not to a word.
+    if (bare.isEmpty) {
+      kept.add(token);
+      continue;
+    }
+    if (_fillerSounds.contains(bare)) continue;
+    if (kept.isNotEmpty && _bareWord(kept.last) == bare) {
+      if (token.length > kept.last.length) kept[kept.length - 1] = token;
+      continue;
+    }
+    kept.add(token);
+  }
+  return kept.join(' ');
 }
 
 /// What a field reads while dictating: whatever was typed before the mic
