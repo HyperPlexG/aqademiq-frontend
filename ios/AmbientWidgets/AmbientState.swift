@@ -14,6 +14,15 @@ enum AmbientStore {
     /// The glanceable payload, written by Dart on every publish.
     static let stateKey = "ambient_state"
 
+    /// Rung inside the app's process when a press is parked.
+    ///
+    /// A LiveActivityIntent runs in the app's process, and during a focus
+    /// session that process is alive — Prism holds an audio session — so the
+    /// press can reach the running session immediately instead of waiting for
+    /// the next foreground. Posted from the extension it reaches nobody, which
+    /// is harmless: the parked press is still drained on foreground.
+    static let pressParked = Notification.Name("com.r13.aqademiq.ambient.pressParked")
+
     static var defaults: UserDefaults? {
         UserDefaults(suiteName: appGroup)
     }
@@ -94,6 +103,19 @@ struct AmbientState {
     var todayFocusMin: Int = 0
 
     init() {}
+
+    /// What the widget gallery shows — the same task and week the design PDF
+    /// draws (§5), so the three widgets are recognisable before they exist on
+    /// anyone's home screen. Never written to the App Group; the gallery only.
+    static var gallerySample: AmbientState {
+        var state = AmbientState()
+        state.nextTaskTitle = "Ch. 4 problem set"
+        state.nextTaskTime = "14:00"
+        state.nextTaskSubject = "Linear Algebra"
+        state.nextTaskTint = "#6B5CF0"
+        state.weekDays = [true, true, false, true, false, false, false]
+        return state
+    }
 
     init(json: [String: Any]) {
         if let raw = json["session"] as? [String: Any] {

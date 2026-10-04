@@ -73,18 +73,25 @@ class AmbientBridge {
     _install();
   }
 
-  /// Tell the native side a handler exists, and only then let it deliver.
+  /// Tell the native side both handlers exist, and only then let it deliver.
   ///
   /// The presses parked by a widget or a Live Activity button are drained on
   /// `applicationDidBecomeActive`, and on a cold launch that fires before
-  /// Flutter's first frame — which is before this handler is installed. The
+  /// Flutter's first frame — which is before any handler is installed. The
   /// drain then cleared the parked press and invoked into nothing, so a Start 5
   /// from the home screen opened the app and did precisely nothing else. The
   /// press was not dropped in transit; it was consumed by a listener that did
   /// not exist yet.
   ///
-  /// Announcing readiness is the handshake that closes that race: nothing is
-  /// drained until there is somewhere for it to land.
+  /// Called by the owner once, after *both* setters, rather than from inside
+  /// each of them. Announcing from the setters sent it twice, and the first
+  /// one went out with only the action handler in place — a parked route
+  /// drained at that moment would have reached a null `_onRoute` and vanished.
+  void announceReady() {
+    if (!_supported) return;
+    unawaited(_invoke('ready', null));
+  }
+
   void _install() {
     if (!_supported) return;
     channel.setMethodCallHandler((call) async {
@@ -104,9 +111,6 @@ class AmbientBridge {
       }
       return null;
     });
-    // Fire-and-forget: if the native side has nothing parked this is a no-op,
-    // and it must not block the first frame either way.
-    unawaited(_invoke('ready', null));
   }
 
   /// Publish the glanceable data the widgets read.

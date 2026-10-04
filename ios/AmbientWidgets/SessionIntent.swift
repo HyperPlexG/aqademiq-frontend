@@ -28,6 +28,15 @@ enum PendingAction {
 
     static func park(_ action: String) {
         AmbientStore.defaults?.set(action, forKey: key)
+        // Then tell the app, if we are inside it. Parking alone meant the
+        // session only heard about the press on the next foreground, through
+        // a one-slot queue — so Freeze then Resume from the lock screen
+        // collapsed into a single Resume that did nothing to a session that
+        // had never frozen. The Live Activity had held for the duration and
+        // the app had not, and the two clocks ended up apart by exactly the
+        // length of the hold. Delivered now, every press reaches the session
+        // in order and nothing collapses.
+        NotificationCenter.default.post(name: AmbientStore.pressParked, object: nil)
     }
 
     /// Reflect the press in the shared state straight away, so the surfaces do

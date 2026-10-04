@@ -1,7 +1,10 @@
+import 'package:aqademiq/core/router/app_router.dart';
+import 'package:aqademiq/core/router/pending_launch_route.dart';
 import 'package:aqademiq/data/models/focus_session.dart';
 import 'package:aqademiq/data/repositories/focus_repository.dart';
 import 'package:aqademiq/services/ambient/ambient_bridge.dart';
 import 'package:aqademiq/services/ambient/ambient_service.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -20,8 +23,12 @@ class _RecordingChannel {
   /// own providers resolve, which is asynchronous and unrelated to the session.
   /// Counting it against the session's push budget would make these tests fail
   /// on timing rather than on behaviour.
+  ///
+  /// `ready` is excluded for the same reason it exists: it is the handshake
+  /// that tells the native side it may drain parked presses, sent once at
+  /// start-up. It redraws nothing, so it is not a push.
   List<String> get sessionCalls =>
-      calls.where((c) => c != 'publish').toList();
+      calls.where((c) => c != 'publish' && c != 'ready').toList();
 
   void install() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -58,9 +65,43 @@ void main() {
 
   Future<void> settle() => Future<void>.delayed(Duration.zero);
 
+  /// A call arriving from the native side — a widget tap or a lock-screen
+  /// press — exactly as the platform delivers it.
+  Future<void> fromNative(String method, Object? arguments) async {
+    const codec = StandardMethodCodec();
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+      AmbientBridge.channel.name,
+      codec.encodeMethodCall(MethodCall(method, arguments)),
+      (_) {},
+    );
+    await settle();
+  }
+
   test('says nothing at all while no session is running', () async {
     await settle();
-    expect(channel.calls, isEmpty);
+    expect(channel.sessionCalls, isEmpty);
+  });
+
+  // The cold-launch race. A widget tap arrives before the splash has routed,
+  // and the splash's own `go` 1.6s later would land on top of a direct
+  // navigation — which is how a Start 5 from the home screen started a session
+  // behind a screen the student could not see. Still on the splash, the
+  // destination is parked for the splash to honour instead.
+  test('a widget route that arrives during the splash is parked, not lost',
+      () async {
+    await settle();
+    await fromNative('route', 'focus');
+    expect(container.read(pendingLaunchRouteProvider), Routes.timer);
+  });
+
+  // Once, not once per setter. It used to fire from inside each of the two
+  // handler setters, so it went out twice — and the first went out with only
+  // the action handler installed, which would drop a parked widget route.
+  test('announces readiness exactly once, after both handlers are wired',
+      () async {
+    await settle();
+    expect(channel.calls.where((c) => c == 'ready'), hasLength(1));
   });
 
   test('raises the surfaces once when a session starts', () async {
@@ -70,7 +111,9 @@ void main() {
     await settle();
 
     expect(channel.sessionCalls, ['startSession']);
-    final payload = channel.payloads.first!;
+    // By method, not by position: other traffic (the start-up handshake, a
+    // publish) can land first, and `.first` silently reads the wrong payload.
+    final payload = channel.payloads[channel.calls.indexOf('startSession')]!;
     expect(payload['endsAt'], isA<String>());
     expect(payload['frozen'], isFalse);
     expect(payload['meltStage'], 0);

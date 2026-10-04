@@ -33,39 +33,54 @@ struct FocusLiveActivity: Widget {
                 // the base — which took the buttons with it. .leading and
                 // .trailing are the space beside the housing, and using them
                 // costs nothing and buys back the entire top row.
+                // Ada alone in .leading, the title in .center.
+                //
+                // .leading is only the space left of the sensor housing, about
+                // 120pt on a 6.3" phone. A 40pt disc and a title cannot share
+                // it, which is why "Focus session" came out as "Focus se…" —
+                // and a real task title would have fared worse. .center is the
+                // full width between the two side columns, directly under the
+                // housing, so the title gets the room the spec gives it.
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 10) {
-                        ZStack {
-                            Circle().fill(tint(for: context).opacity(0.20))
-                            AdaView(stage: context.state.meltStage,
-                                    frozen: context.state.frozen)
-                                .padding(5)
-                        }
-                        .frame(width: 40, height: 40)
+                    ZStack {
+                        Circle().fill(tint(for: context).opacity(0.20))
+                        AdaView(stage: context.state.meltStage,
+                                frozen: context.state.frozen)
+                            .padding(5)
+                    }
+                    .frame(width: 44, height: 44)
+                    .frame(maxHeight: .infinity, alignment: .center)
+                }
 
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(title(for: context))
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.white)
+                DynamicIslandExpandedRegion(.center) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title(for: context))
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        if let subtitle = subtitle(for: context) {
+                            Text(subtitle)
+                                .font(.system(size: 9.5, weight: .semibold))
+                                .tracking(0.8)
+                                .foregroundStyle(.white.opacity(0.45))
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                            if let subtitle = subtitle(for: context) {
-                                Text(subtitle)
-                                    .font(.system(size: 9, weight: .semibold))
-                                    .tracking(0.8)
-                                    .foregroundStyle(.white.opacity(0.45))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                            }
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
+                // A definite width, not maxWidth: .infinity. The side regions
+                // are sized from their content's ideal width, and a timer text
+                // with an infinite frame has no ideal width to offer — so once
+                // .center claimed the spare room, the clock was left about 40pt
+                // and rendered as "24…". 86pt holds "24:58" at 26pt with the
+                // scale factor kept for the rare hour-long session.
                 DynamicIslandExpandedRegion(.trailing) {
                     TimeReadout(state: context.state, size: 26, weight: .bold)
                         .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .frame(width: 86, alignment: .trailing)
+                        .frame(maxHeight: .infinity, alignment: .center)
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
@@ -394,6 +409,7 @@ struct SessionControls: View {
         .frame(maxWidth: .infinity)
         .frame(height: 40)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(fill))
+        .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -412,14 +428,25 @@ struct FreezeButton: View {
             }
         }
         .buttonStyle(.plain)
-        .background(Circle().fill(.white))
-        .foregroundStyle(.black)
     }
 
+    /// The circle is part of the button, not painted behind it.
+    ///
+    /// It used to be a `.background` on the group, outside the label — and a
+    /// plain-style button only hit-tests its label's drawn content, not the
+    /// empty frame around it. So the live target was the ~17pt snowflake glyph
+    /// in the middle of a 44pt white disc. A thumb landing anywhere else on the
+    /// disc missed the button and fell through to the activity itself, whose
+    /// default action is to open the app: the press looked like it did nothing,
+    /// or like it did the wrong thing. The Island's slabs never had this,
+    /// because their fill was always inside the label.
     private func glyph(_ name: String) -> some View {
         Image(systemName: name)
             .font(.system(size: diameter * 0.39, weight: .semibold))
+            .foregroundStyle(.black)
             .frame(width: diameter, height: diameter)
+            .background(Circle().fill(.white))
+            .contentShape(Circle())
     }
 }
 

@@ -11,12 +11,25 @@ struct AmbientEntry: TimelineEntry {
 }
 
 struct AmbientProvider: TimelineProvider {
+    /// The spec's own sample, drawn rather than redacted.
+    ///
+    /// An empty state here is what the system turns into grey bars, and §5 is
+    /// explicit that the gallery is a first impression: most apps let the OS
+    /// show a grey placeholder there, and the pick should be obvious before
+    /// anything is installed.
     func placeholder(in context: Context) -> AmbientEntry {
-        AmbientEntry(date: Date(), state: AmbientState())
+        AmbientEntry(date: Date(), state: .gallerySample)
     }
 
+    /// The gallery gets the sample; the home screen gets the truth.
+    ///
+    /// Showing the real state in the gallery sounds more honest and is worse:
+    /// the student browsing it is overwhelmingly a new one, so the real state
+    /// is "Nothing scheduled" over an empty week — the least persuasive picture
+    /// of each widget, at the one moment it is being chosen.
     func getSnapshot(in context: Context, completion: @escaping (AmbientEntry) -> Void) {
-        completion(AmbientEntry(date: Date(), state: AmbientStore.load()))
+        let state = context.isPreview ? AmbientState.gallerySample : AmbientStore.load()
+        completion(AmbientEntry(date: Date(), state: state))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<AmbientEntry>) -> Void) {
@@ -67,9 +80,11 @@ struct NextTaskView: View {
                     Circle()
                         .fill(Color(hex: state.nextTaskTint) ?? AdaPalette.accent)
                         .frame(width: 5, height: 5)
-                    Text([state.nextTaskTime, state.nextTaskSubject]
-                        .compactMap { $0 }
-                        .joined(separator: " · "))
+                    // Time only, as §5 draws it — "• 14:00". The subject is
+                    // already said by the dot's colour, and spelling it out too
+                    // truncated to "14:00 · Line…" at small size, which is
+                    // worse than either half on its own.
+                    Text(state.nextTaskTime ?? state.nextTaskSubject ?? "")
                         .font(.system(size: 10.5).monospaced())
                         .foregroundStyle(Color.widgetMeta)
                         .lineLimit(1)
@@ -138,9 +153,15 @@ struct WeekView: View {
                             } else {
                                 // A day you did not is an empty outline, never a
                                 // puddle: absence is not depletion.
-                                RoundedRectangle(cornerRadius: 7)
-                                    .stroke(Color.white.opacity(0.20), lineWidth: 1.4)
-                                    .padding(1)
+                                //
+                                // Ada's own stage-0 silhouette, stroked — §1's
+                                // "Outline · nothing happened" is literally her,
+                                // empty. A generic rounded square filled the whole
+                                // cell while her body only fills the middle 38 of
+                                // 60 units, so the empty days drew visibly larger
+                                // than the days you showed up.
+                                AdaShape(melt: 0)
+                                    .stroke(Color.white.opacity(0.22), lineWidth: 1.4)
                             }
                         }
                         .frame(width: 28, height: 28)

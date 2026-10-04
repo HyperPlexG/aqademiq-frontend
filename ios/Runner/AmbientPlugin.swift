@@ -49,6 +49,14 @@ final class AmbientPlugin: NSObject {
             self.drainPendingAction()
         }
         watch.activate()
+        // A press taken on the lock screen or the Island while the app is
+        // alive in the background: drain it now rather than on the next
+        // foreground. Main queue, because the other end is a Flutter channel.
+        NotificationCenter.default.addObserver(
+            forName: AmbientStore.pressParked, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.drainPendingAction()
+        }
     }
 
     // MARK: - Channel
