@@ -101,7 +101,7 @@
         <service
             android:name=".StartFiveTileService"
             android:exported="true"
-            android:icon="@drawable/ic_stat_notification"
+            android:icon="@drawable/ic_qs_ada"
             android:label="Focus"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>

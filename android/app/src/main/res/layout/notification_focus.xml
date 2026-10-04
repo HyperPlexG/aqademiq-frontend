@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The session card, expanded — drawn to spec §6 rather than to Android's
+  default template: Ada at her melt stage, the task, "MELTING · DEEP WORK",
+  the countdown, the puddle rail, then FREEZE and END under a hairline.
+
+  Three things here are load-bearing:
+
+  * Every colour is a resource with a values-night twin. The shade is light on
+    a light-theme phone and dark on a dark one, and the first version of this
+    card hard-coded the dark palette — white on near-white for half of users.
+  * No horizontal padding. Since Android 12 the system insets a custom view to
+    line up with the header text; adding our own pushes Ada into the middle.
+    Her drawable also carries a margin of its own (the painter's 60x60 space),
+    which is what the negative start margin on her ImageView takes back.
+  * The Chronometer is why this is a custom layout at all: with `countDown` and
+    a base of the session's end instant, the system ticks it itself, so nothing
+    in the app wakes to move the clock. Frozen swaps it for `time_static`,
+    because a system-ticked countdown cannot be paused.
+
+  FREEZE and END are views, not notification actions, because the system draws
+  actions in its own colour and case and the spec gives them theirs.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingTop="2dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/ada"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_marginStart="-5dp"
+            android:layout_marginEnd="6dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ada_stage_0" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/task"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/ambient_title" />
+
+            <TextView
+                android:id="@+id/subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:textSize="11sp"
+                android:letterSpacing="0.08"
+                android:textColor="@color/ambient_subtitle" />
+        </LinearLayout>
+
+        <Chronometer
+            android:id="@+id/time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:includeFontPadding="false"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/ambient_title" />
+
+        <TextView
+            android:id="@+id/time_static"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:includeFontPadding="false"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/ambient_frost"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/rail"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="5dp"
+        android:layout_marginTop="10dp"
+        android:max="100"
+        android:progressDrawable="@drawable/rail_progress" />
+
+    <!-- A plain View is not allowed in a RemoteViews layout; an ImageView is. -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="14dp"
+        android:contentDescription="@null"
+        android:background="@color/ambient_divider" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/action_primary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="44dp"
+            android:gravity="center_vertical"
+            android:paddingEnd="28dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:textColor="@color/ambient_frost" />
+
+        <TextView
+            android:id="@+id/action_end"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="44dp"
+            android:gravity="center_vertical"
+            android:paddingEnd="28dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:text="END"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:textColor="@color/ambient_subtitle" />
+    </LinearLayout>
+</LinearLayout>

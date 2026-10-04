@@ -6,4 +6,14 @@
          light). The system splash window uses the same one so the handover to
          Flutter is a repaint of the same colour rather than a visible cut. -->
     <color name="splash_background">#FFFFFFFF</color>
+    <!-- The session card (notification_focus*.xml), on a light shade. The spec
+         draws the card dark; these are the same roles carried onto a light
+         one — frost a shade deeper so it still reads as a colour. -->
+    <color name="ambient_title">#FF1B1B1F</color>
+    <color name="ambient_subtitle">#FF6E6A7C</color>
+    <color name="ambient_frost">#FF2C7FA8</color>
+    <color name="ambient_rail_track">#1F000000</color>
+    <color name="ambient_rail_start">#FF8FD0EE</color>
+    <color name="ambient_rail_end">#FF5BB5E0</color>
+    <color name="ambient_divider">#1F000000</color>
 </resources>

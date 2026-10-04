@@ -178,6 +178,22 @@ foreground service. It both holds the process up through a screen-off session
 card — Android makes every foreground service post a notification, so two
 services would mean two entries in the shade for one session.
 
+The card is drawn one of two ways, because Android will not promote a
+notification that has a custom layout to a status-bar chip — a phone gets the
+spec's card or the chip, never both. The default is the spec's card (§6):
+`notification_focus.xml` expanded, `notification_focus_collapsed.xml` collapsed,
+every colour a resource with a `values-night` twin (the shade is light on a
+light-theme phone; hard-coding the dark palette made the card white-on-white).
+Only a phone that actually promotes the notification gets Android's template
+instead, and "actually" is checked, not assumed: Android 16 shipped the API a
+release before the chip, so the service posts the promotable drawing, reads back
+whether the system set `FLAG_PROMOTED_ONGOING`, and falls back to the card if it
+did not. The small icon is Ada's flat silhouette (`ic_stat_ada_N`,
+`ic_stat_frost_N`), never the app logo — a status bar masks icons to one colour,
+so melt stage and frost have to survive as outline alone. All of her Android
+drawables, masks and the Quick Settings tile icon included, come out of
+`tool/generate_ada_android.py`; none are edited by hand.
+
 Widgets deep-link through `aqademiq://` and speak in intent (`focus`, `plan`,
 `stats`), not route strings, so renaming a route cannot break a widget already
 installed on someone's home screen.
