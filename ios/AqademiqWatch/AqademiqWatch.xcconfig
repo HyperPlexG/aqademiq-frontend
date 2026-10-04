@@ -1,0 +1,14 @@
+// Build settings for the watch app.
+//
+// Same reasoning as AmbientWidgets.xcconfig: ONLY Flutter's Generated.xcconfig,
+// never Flutter/Release.xcconfig — that one pulls in Pods-Runner, which links
+// iOS plugin frameworks into a watchOS binary that can neither build against
+// nor embed them.
+//
+// What is wanted from Flutter is only the version. App Store Connect rejects
+// an upload whose embedded watch app does not carry the phone app's exact
+// CFBundleVersion — "Validation failed (409) CFBundleVersion Mismatch. The
+// CFBundleVersion value '1' of watch application ... does not match ... '34'"
+// — and nothing locally catches it: the archive builds, the export signs, and
+// the failure only arrives from Transporter.
+#include "../Flutter/Generated.xcconfig"
