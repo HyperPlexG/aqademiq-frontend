@@ -81,7 +81,14 @@ unless app.source_build_phase.files_references.include?(bridge)
   app.source_build_phase.add_file_reference(bridge)
 end
 
+# Its own xcconfig, carrying Flutter's version and nothing else — see the
+# comment inside it. Without this the watch app ships as 1.0 (1) inside a phone
+# app at, say, 1.2.0 (34), and App Store Connect refuses the whole upload.
+xcconfig = group.files.find { |f| f.path == "#{TARGET_NAME}.xcconfig" } ||
+           group.new_reference("#{TARGET_NAME}.xcconfig")
+
 watch.build_configurations.each do |config|
+  config.base_configuration_reference = xcconfig
   s = config.build_settings
   s['PRODUCT_NAME'] = TARGET_NAME
   s['PRODUCT_BUNDLE_IDENTIFIER'] = "#{APP_BUNDLE_ID}.watchkitapp"
@@ -102,8 +109,10 @@ watch.build_configurations.each do |config|
   # `expected one {} but found app-store-connect`, because with no
   # ApplicationProperties the set of valid distribution methods is empty.
   s['SKIP_INSTALL'] = 'YES'
-  s['CURRENT_PROJECT_VERSION'] = '1'
-  s['MARKETING_VERSION'] = '1.0'
+  # In lockstep with the phone app, from pubspec.yaml via Generated.xcconfig.
+  # The App Store requires both to match exactly.
+  s['CURRENT_PROJECT_VERSION'] = '$(FLUTTER_BUILD_NUMBER)'
+  s['MARKETING_VERSION'] = '$(FLUTTER_BUILD_NAME)'
   # A watch app without an icon archives fine and is rejected on upload, which
   # is a slow way to find out. It reuses the phone's 1024 rather than carrying
   # a second artwork to keep in step.
