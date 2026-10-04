@@ -132,6 +132,83 @@ Android needs `RECEIVE_BOOT_COMPLETED` plus the two
 dies on reboot. Scheduling is deliberately **inexact** — exact alarms need
 `SCHEDULE_EXACT_ALARM`, which triggers a Play Store policy review.
 
+## Ambient surfaces: one state object, four renderers
+
+A focus session is the one thing the app keeps doing while it is closed, so the
+lock screen, the Dynamic Island, the home-screen widgets and the Android
+notification are not marketing surfaces — they are the session, drawn somewhere
+else. `services/ambient/` owns that, and the rules below are load-bearing.
+
+- **The clock is free; only Ada costs.** Both platforms render a countdown from
+  an absolute `endsAt` with the app asleep (Android `setUsesChronometer` +
+  `setChronometerCountDown`, iOS `Text(timerInterval:)`). Never push a
+  per-second update. `AmbientSession.differsMateriallyFrom` encodes the budget:
+  a melt stage, a freeze, or a change of task earns a redraw; a second passing
+  does not. `test/ambient_service_test.dart` walks all 1500 seconds of a
+  25-minute session and asserts at most six pushes.
+- **Freeze is a material change.** `FocusSession.frozenAt` separates held time
+  from spent time, and resume pushes `endsAt` forward by the whole hold. A
+  system countdown cannot be paused, so every frozen surface swaps the live
+  timer for static `remaining` text — unhandled, a frozen session keeps counting
+  down on a lock screen, which is worse than not shipping the surface.
+- **The Island is for a running session and nothing else.** Never a due task,
+  never a streak. No session, no activity.
+- **One Ada, three renderers.** She is a Flutter `CustomPainter`, and Flutter
+  cannot render in a WidgetKit extension, so `ios/AmbientWidgets/AdaShape.swift`
+  repeats the same interpolation with the coefficients quoted in its header.
+  Change one and change both.
+- **What crosses the boundary** is one small flat object (`ambient_state.dart`
+  ⇄ `AmbientState.swift`), through an App Group on iOS and shared prefs on
+  Android. No models, no network, no images — the extension is never asked to
+  think.
+- **Never guilt.** No decaying streak, no "you haven't studied today", no red. A
+  missed day is an empty outline, never a puddle: absence is not depletion. The
+  Live Activity is ambient and never alerts.
+
+iOS specifics: the extension target is created by `ios/add_widget_target.rb`,
+which is idempotent and checked in because a lost target still builds — it just
+silently stops shipping the lock screen. It also keeps "Embed Foundation
+Extensions" ahead of Flutter's "Thin Binary" phase, without which the build
+fails with "Cycle inside Runner". The app's deployment target stays where it is;
+only the extension is modern (16.1) and everything inside is availability gated.
+
+Android specifics: `AmbientSessionService` is the single `mediaPlayback`
+foreground service. It both holds the process up through a screen-off session
+(what `FocusKeepaliveService` used to do, now a no-op seam) and owns the session
+card — Android makes every foreground service post a notification, so two
+services would mean two entries in the shade for one session.
+
+Widgets deep-link through `aqademiq://` and speak in intent (`focus`, `plan`,
+`stats`), not route strings, so renaming a route cannot break a widget already
+installed on someone's home screen.
+
+**The watch is the one surface with a transport.** Every other renderer reads
+the shared object out of the App Group; watchOS is a separate device with its
+own container and no entitlement bridges that, so `ios/Runner/WatchLink.swift`
+mirrors the same flat dictionary over WatchConnectivity. State goes down as
+`updateApplicationContext` (coalescing — the newest replaces any older one still
+queued, which is the same budget the rest of the design keeps) and presses come
+back as `sendMessage` with a `transferUserInfo` fallback (never coalesced: two
+freezes are not one freeze). A press lands in the same `ambient_pending_action`
+slot a widget press uses, so there is one way into the session, not two.
+
+`ios/add_watch_target.rb` builds the target, idempotently, for the same reason
+the widget script exists. It shares `AdaShape.swift` with the extension rather
+than adding a third copy of her.
+
+**Embedding a watch app makes the watchOS platform a build requirement.** Xcode
+refuses any scheme that embeds one unless the matching watchOS runtime is
+installed — for device builds as well as the simulator, and the error names the
+version it wants:
+
+```sh
+xcodebuild -downloadPlatform watchOS     # several GB, once per machine
+```
+
+Without it every `flutter build ios` fails with "This scheme builds an embedded
+Apple Watch app", which reads like a project problem and is not one. A machine
+that only builds Android never needs it.
+
 ## Backend integration status
 
 Wired end-to-end behind the seams (mock + `ApiXxxSource`): tasks, subjects, tags,

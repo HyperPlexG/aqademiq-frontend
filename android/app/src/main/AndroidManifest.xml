@@ -43,7 +43,15 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Referral deep links.
+            <!-- Deep links, arriving from two directions and sharing one filter.
+
+                 The ambient surfaces speak in intent (aqademiq://focus, ://plan,
+                 ://stats) rather than in route strings, so renaming a route
+                 cannot break a widget already sitting on someone's home screen.
+                 Referrals use the same scheme (aqademiq://join?ref=CODE). The
+                 filter deliberately carries no android:host, which makes it a
+                 superset of both - a host="join" filter would have to be kept in
+                 step with every new surface that ever wants a link.
 
                  The custom scheme works the moment the app is installed and
                  needs nothing hosted, but it is not clickable in most chat
@@ -52,7 +60,7 @@
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="aqademiq" android:host="join"/>
+                <data android:scheme="aqademiq"/>
             </intent-filter>
             <!-- The shared link. android:autoVerify makes this an Android App
                  Link, which opens the app instead of the browser - but ONLY
@@ -73,6 +81,28 @@
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" />
+        <!-- The session card (services/ambient). A foreground service because
+             Android will otherwise kill the process mid-session and take Prism
+             and the timer with it — and because only a foreground service may
+             own the ongoing notification the countdown is drawn in. One
+             service, one notification: a separate keepalive would put two
+             entries in the shade for a single session. -->
+        <service
+            android:name=".AmbientSessionService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false" />
+        <!-- "Start 5" from the notification shade — Android's version of the
+             Control Centre control and the Focus widget's button. -->
+        <service
+            android:name=".StartFiveTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_stat_notification"
+            android:label="Focus"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE"/>
+            </intent-filter>
+        </service>
         <!-- flutter_local_notifications: delivers a scheduled reminder when its
              alarm fires, and re-registers the pending schedule after a reboot
              or an app update. Both are required for zonedSchedule to survive. -->
