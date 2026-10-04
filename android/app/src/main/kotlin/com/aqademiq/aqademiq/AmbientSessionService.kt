@@ -10,9 +10,10 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
-import android.os.SystemClock
-import android.widget.RemoteViews
+import android.graphics.Bitmap
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -111,7 +112,7 @@ class AmbientSessionService : Service() {
         val subject = intent.getStringExtra(EXTRA_SUBJECT)
         val prismMode = intent.getStringExtra(EXTRA_PRISM_MODE)
 
-        // "MELTING · DEEP WORK" — the material rule, said in words for the one
+        // "Melting · Deep Work" — the material rule, said in words for the one
         // surface that has room for them. Frost when held, never a pause glyph.
         val state = if (frozen) "Frozen" else "Melting"
         val subtitle = listOfNotNull(
@@ -123,26 +124,30 @@ class AmbientSessionService : Service() {
         val meltStage = intent.getIntExtra(EXTRA_MELT_STAGE, 0).coerceIn(0, 4)
         val title = taskTitle?.takeIf { it.isNotBlank() } ?: "Focus session"
 
+        // Android's own template, not a custom layout — deliberately.
+        //
+        // This card used to be a RemoteViews layout drawn to the spec. Two
+        // things were wrong with that, and neither shows in code review:
+        //
+        //  - Android 16 will not promote a notification with a custom view to
+        //    a status-bar chip, full stop. setRequestPromotedOngoing was being
+        //    ignored, so the chip — the reason this card exists on 16 — never
+        //    appeared.
+        //  - The layout hard-coded white text for a dark shade. On the default
+        //    light shade the task and the countdown were white on near-white,
+        //    and the 26sp countdown overflowed the collapsed card's 48dp and was
+        //    clipped in half.
+        //
+        // The template carries the same four things the spec asks for — Ada at
+        // her melt stage (the large icon), the task, "Melting · Deep Work", and
+        // the puddle rail (the progress bar) — and the system styles it, so it
+        // reads in light and dark and cannot clip.
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notification)
+            .setLargeIcon(adaBitmap(meltStage, frozen))
             .setContentTitle(title)
             .setContentText(subtitle)
             .setContentIntent(openApp())
-            // The spec's own card rather than Android's default template:
-            // Ada at her melt stage, the task, "MELTING · DEEP WORK", the
-            // countdown, and the puddle rail.
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setCustomContentView(
-                buildCard(
-                    title = title,
-                    subtitle = subtitle,
-                    frozen = frozen,
-                    endsAt = endsAt,
-                    remainingSec = remainingSec,
-                    durationSec = durationSec,
-                    meltStage = meltStage,
-                ),
-            )
             // Ongoing, so it cannot be swiped away mid-session by accident.
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -152,31 +157,44 @@ class AmbientSessionService : Service() {
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(0xFF6B5CF0.toInt())
+            // Colorized notifications are not eligible for promotion either.
             .setColorized(false)
             // The status-bar chip (Android 16+): Android's answer to the
-            // compact Island, and the spec's §6 ceiling. The system draws the
-            // small icon plus this text in the status bar while the session
-            // runs, so Ada's silhouette and the remaining time follow the
-            // student into every other app.
+            // compact Island. The system draws the small icon plus the time in
+            // the status bar while the session runs, so the remaining time
+            // follows the student into every other app.
             //
             // It is a request, not a guarantee — the platform decides, and
-            // demotes the chip if the notification stops qualifying (it must
-            // stay ongoing, and only a few categories are eligible). Below 16
-            // both calls are no-ops through the compat layer, which is the
-            // "feature-detect and degrade, never fork the design" line: the
-            // floor is the same ongoing notification either way.
-            .setShortCriticalText(chipText(frozen, remainingSec))
+            // the user can turn it off per app. Below 16 this is a no-op
+            // through the compat layer and the card is simply the card.
             .setRequestPromotedOngoing(true)
+
+        if (durationSec > 0) {
+            // The puddle rail: how much of the session has been spent.
+            val spent = (durationSec - remainingSec).coerceIn(0, durationSec)
+            builder.setProgress(
+                100,
+                (spent.toFloat() / durationSec * 100f).roundToInt().coerceIn(0, 100),
+                false,
+            )
+        }
 
         if (frozen) {
             // A system-rendered countdown cannot be paused. Swapping it for
             // static text is the whole difference between a frozen session that
             // reads as held and one that keeps counting down on a lock screen.
             builder.setUsesChronometer(false)
+            builder.setShowWhen(false)
             builder.setContentText("$subtitle · ${formatRemaining(remainingSec)} left")
+            // The chip says so in a word rather than showing a number that is
+            // not moving, which would read as a stuck clock at a glance.
+            builder.setShortCriticalText("Frozen")
         } else {
-            // Hand the system the end instant and let it tick. This is the
-            // "0 pushes for the clock" line in the spec, made literal.
+            // Hand the system the end instant and let it tick — in the card's
+            // header and in the chip. This is the "0 pushes for the clock" line
+            // in the spec, made literal. No short critical text here: a fixed
+            // string would freeze the chip at whatever was remaining when the
+            // card was last posted, minutes out of date.
             builder.setWhen(endsAt)
             builder.setUsesChronometer(true)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -195,67 +213,11 @@ class AmbientSessionService : Service() {
         return builder.build()
     }
 
-    /**
-     * The chip's text, which has room for almost nothing.
-     *
-     * The status bar gives a handful of characters beside the icon, so this is
-     * the remaining time and nothing else — no task, no label. Frozen sessions
-     * say so in a word rather than showing a number that is not moving, which
-     * would read as a stuck clock at a glance.
-     */
-    private fun chipText(frozen: Boolean, remainingSec: Int): String =
-        if (frozen) "Frozen" else formatRemaining(remainingSec)
-
-    /**
-     * The card itself.
-     *
-     * The Chronometer is why this is a custom layout at all: given the end
-     * instant and `countDown`, the system ticks it with the app asleep. A
-     * TextView here would mean waking up every second to move a clock the OS
-     * will move for free.
-     */
-    private fun buildCard(
-        title: String,
-        subtitle: String,
-        frozen: Boolean,
-        endsAt: Long,
-        remainingSec: Int,
-        durationSec: Int,
-        meltStage: Int,
-    ): RemoteViews {
-        val views = RemoteViews(packageName, R.layout.notification_focus)
-        views.setTextViewText(R.id.task, title)
-        views.setTextViewText(R.id.subtitle, subtitle.uppercase())
-        views.setImageViewResource(R.id.ada, adaDrawable(meltStage, frozen))
-
-        if (frozen) {
-            // A system countdown cannot be paused, so a held session shows
-            // static text — otherwise the shade keeps counting down a session
-            // that is not running, which is worse than showing no card at all.
-            views.setViewVisibility(R.id.time, android.view.View.GONE)
-            views.setViewVisibility(R.id.time_static, android.view.View.VISIBLE)
-            views.setTextViewText(R.id.time_static, formatRemaining(remainingSec))
-        } else {
-            views.setViewVisibility(R.id.time_static, android.view.View.GONE)
-            views.setViewVisibility(R.id.time, android.view.View.VISIBLE)
-            // Chronometer counts against elapsed-realtime, not wall clock.
-            val base = SystemClock.elapsedRealtime() + (endsAt - System.currentTimeMillis())
-            views.setChronometer(R.id.time, base, null, true)
-            views.setChronometerCountDown(R.id.time, true)
-        }
-
-        if (durationSec > 0) {
-            val spent = (durationSec - remainingSec).coerceIn(0, durationSec)
-            views.setProgressBar(
-                R.id.rail,
-                100,
-                (spent.toFloat() / durationSec * 100f).roundToInt().coerceIn(0, 100),
-                false,
-            )
-        } else {
-            views.setViewVisibility(R.id.rail, android.view.View.GONE)
-        }
-        return views
+    /** Ada as a bitmap, because a notification's large icon cannot be a vector. */
+    private fun adaBitmap(stage: Int, frozen: Boolean): Bitmap? {
+        val drawable = ContextCompat.getDrawable(this, adaDrawable(stage, frozen)) ?: return null
+        val px = (64 * resources.displayMetrics.density).roundToInt()
+        return drawable.toBitmap(px, px)
     }
 
     /** One Ada, generated from the painter's geometry (tool/generate_ada_android.py). */

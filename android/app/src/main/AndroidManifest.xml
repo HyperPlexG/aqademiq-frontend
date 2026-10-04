@@ -3,6 +3,11 @@
          mediaPlayback foreground service while the screen is off. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <!-- Android 16: lets the focus session's card become a status-bar chip
+         (setRequestPromotedOngoing in AmbientSessionService). A normal
+         permission — granted at install, never a prompt — but without the
+         declaration the request is silently ignored. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <!-- Locally-scheduled reminders (services/reminder_scheduler.dart) are
