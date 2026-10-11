@@ -8,18 +8,11 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.graphics.Bitmap
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -39,7 +32,12 @@ import kotlin.math.roundToInt
  * Dart. The app only ever redraws this when Ada's melt stage changes or the
  * session freezes, which is a handful of times across a whole session.
  *
- * It is drawn one of two ways, and the phone decides which — see [Surface].
+ * The card is always the spec's own layout (§6), never Android's template.
+ * That costs the Android 16 status-bar chip, which the system only grants to
+ * a notification with no custom layout: on a phone that draws the chip the
+ * choice was the chip or the card, and the template's arrangement — Ada on
+ * the right, the clock small in the header, the buttons spread across the
+ * card — is not ours to move. The card is the session, so the card won.
  */
 class AmbientSessionService : Service() {
 
@@ -69,45 +67,7 @@ class AmbientSessionService : Service() {
          */
         private const val CHANNEL_ID = "aqademiq_focus_session"
         private const val NOTIFICATION_ID = 0x4144 // 'AD'
-
-        /**
-         * `Notification.FLAG_PROMOTED_ONGOING` (API 36). The system sets it on
-         * a notification it has actually promoted; it is spelled out here so
-         * the file compiles against an SDK that predates the constant.
-         */
-        private const val FLAG_PROMOTED_ONGOING = 0x00040000
-
-        /** Long enough for the system to have posted the card and stamped it. */
-        private const val PROBE_DELAY_MS = 600L
-
-        private const val TAG = "AmbientSession"
     }
-
-    /**
-     * The two drawings of one session (spec §6: "the floor and the ceiling").
-     *
-     * The spec's card is a custom layout, and Android will not promote a
-     * notification that has a custom layout to a status-bar chip. A phone
-     * therefore gets one or the other, never both:
-     *
-     *  * [CARD] — the floor, and what almost every phone shows: the card drawn
-     *    to the spec.
-     *  * [CHIP] — the ceiling: Android's own template, which is the price of
-     *    the status-bar chip, on a phone that really does draw one.
-     *
-     * "Really does" is the hard part. Android 16 shipped the promotion API a
-     * release before it shipped the chip, so asking the SDK level, or even
-     * `canPostPromotedNotifications()`, says yes on phones that then show
-     * nothing. The only honest test is to post the promotable drawing and look
-     * at what the system did with it — see [settleSurface].
-     */
-    private enum class Surface { CARD, CHIP }
-
-    /** Null until this session has found out which drawing the phone gives it. */
-    private var surface: Surface? = null
-    private var lastCard: Intent? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private val probe = Runnable { settleSurface() }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -127,9 +87,7 @@ class AmbientSessionService : Service() {
 
     private fun showCard(intent: Intent) {
         ensureChannel()
-        lastCard = intent
-        if (surface == null && !mayBePromoted()) surface = Surface.CARD
-        val notification = buildCard(intent, asChip = surface != Surface.CARD)
+        val notification = buildCard(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
@@ -139,37 +97,9 @@ class AmbientSessionService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-        if (surface == null) {
-            handler.removeCallbacks(probe)
-            handler.postDelayed(probe, PROBE_DELAY_MS)
-        }
-    }
-
-    /** Whether it is even worth asking: Android 16+, and the user allows it. */
-    private fun mayBePromoted(): Boolean =
-        Build.VERSION.SDK_INT >= 36 &&
-            NotificationManagerCompat.from(this).canPostPromotedNotifications()
-
-    /**
-     * Looks at the card the system actually posted and keeps the chip drawing
-     * only if the system promoted it. Otherwise the session falls back to the
-     * spec's card, once, and stays there.
-     */
-    private fun settleSurface() {
-        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val posted = try {
-            manager.activeNotifications.firstOrNull { it.id == NOTIFICATION_ID }
-        } catch (e: RuntimeException) {
-            null
-        } ?: return // Not posted yet, or already gone: the next redraw asks again.
-        val promoted = (posted.notification.flags and FLAG_PROMOTED_ONGOING) != 0
-        surface = if (promoted) Surface.CHIP else Surface.CARD
-        Log.i(TAG, "session surface: $surface")
-        if (!promoted) lastCard?.let(::showCard)
     }
 
     private fun stopCard() {
-        handler.removeCallbacks(probe)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
@@ -179,12 +109,7 @@ class AmbientSessionService : Service() {
         stopSelf()
     }
 
-    override fun onDestroy() {
-        handler.removeCallbacks(probe)
-        super.onDestroy()
-    }
-
-    /** What one drawing of the session needs, read once from the intent. */
+    /** What the card needs, read once from the intent. */
     private class Session(
         val title: String,
         val subtitle: String,
@@ -204,7 +129,7 @@ class AmbientSessionService : Service() {
             }
     }
 
-    private fun buildCard(intent: Intent, asChip: Boolean): Notification {
+    private fun buildCard(intent: Intent): Notification {
         val frozen = intent.getBooleanExtra(EXTRA_FROZEN, false)
         val taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE)
         val subject = intent.getStringExtra(EXTRA_SUBJECT)
@@ -229,7 +154,7 @@ class AmbientSessionService : Service() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             // Ada, not the app's logo: a status bar masks every icon to one
             // flat colour, so this is her silhouette at her melt stage, with
-            // frost spurs when held (spec §4). It is also the chip's icon.
+            // frost spurs when held (spec §4).
             .setSmallIcon(adaMask(session.meltStage, session.frozen))
             // Title and text stay set even under the custom card: they are what
             // TalkBack, a watch and the lock screen's redacted view read.
@@ -246,21 +171,12 @@ class AmbientSessionService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(0xFF6B5CF0.toInt())
             .setColorized(false)
-
-        if (asChip) dressForChip(builder, session) else dressAsCard(builder, session)
-        return builder.build()
-    }
-
-    /**
-     * The floor: the spec's own card (§6), in the frame Android gives it.
-     *
-     * The frame is the system's and not negotiable since Android 12: its
-     * header row (icon, app name), its background, its inset. Everything
-     * inside is ours. The header reads "Aqademiq · Focus", which is as close
-     * as that row gets to the spec's "AQADEMIQ · FOCUS".
-     */
-    private fun dressAsCard(builder: NotificationCompat.Builder, session: Session) {
-        builder
+            // The spec's own card (§6), in the frame Android gives it. The
+            // frame is the system's and not negotiable since Android 12: its
+            // header row (icon, app name), its background, its inset.
+            // Everything inside is ours. The header reads "Aqademiq · Focus",
+            // which is as close as that row gets to the spec's
+            // "AQADEMIQ · FOCUS".
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomContentView(cardViews(R.layout.notification_focus_collapsed, session))
             .setCustomBigContentView(
@@ -279,6 +195,8 @@ class AmbientSessionService : Service() {
             // The card's countdown is the clock. A second one in the header
             // would be the same number twice, an inch apart.
             .setShowWhen(false)
+
+        return builder.build()
     }
 
     /**
@@ -311,61 +229,6 @@ class AmbientSessionService : Service() {
             views.setChronometerCountDown(R.id.time, true)
         }
         return views
-    }
-
-    /**
-     * The ceiling: Android's own template, for a phone that draws the chip.
-     *
-     * Android will not promote a notification with a custom layout, so here
-     * the card gives up the spec's drawing to earn the status-bar chip — the
-     * small icon plus the remaining time, following the student into every
-     * other app, which is the nearest thing Android has to the compact Island.
-     * The template still carries the same four things: Ada at her melt stage
-     * (the large icon), the task, "Melting · Deep Work", and the rail (the
-     * progress bar).
-     */
-    private fun dressForChip(builder: NotificationCompat.Builder, session: Session) {
-        builder
-            .setLargeIcon(adaBitmap(session.meltStage, session.frozen))
-            .setRequestPromotedOngoing(true)
-
-        session.spentPercent?.let { builder.setProgress(100, it, false) }
-
-        if (session.frozen) {
-            // A system-rendered countdown cannot be paused. Swapping it for
-            // static text is the whole difference between a frozen session that
-            // reads as held and one that keeps counting down on a lock screen.
-            builder.setUsesChronometer(false)
-            builder.setShowWhen(false)
-            builder.setContentText(
-                "${session.subtitle} · ${formatRemaining(session.remainingSec)} left",
-            )
-            // The chip says so in a word rather than showing a number that is
-            // not moving, which would read as a stuck clock at a glance.
-            builder.setShortCriticalText("Frozen")
-            builder.addAction(0, "Resume", actionIntent(ACTION_RESUME))
-        } else {
-            // Hand the system the end instant and let it tick — in the card's
-            // header and in the chip. This is the "0 pushes for the clock" line
-            // in the spec, made literal. No short critical text here: a fixed
-            // string would freeze the chip at whatever was remaining when the
-            // card was last posted, minutes out of date.
-            builder.setWhen(session.endsAt)
-            builder.setUsesChronometer(true)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                builder.setChronometerCountDown(true)
-            }
-            builder.setShowWhen(true)
-            builder.addAction(0, "Freeze", actionIntent(ACTION_FREEZE))
-        }
-        builder.addAction(0, "End", actionIntent(ACTION_END))
-    }
-
-    /** Ada as a bitmap, because a notification's large icon cannot be a vector. */
-    private fun adaBitmap(stage: Int, frozen: Boolean): Bitmap? {
-        val drawable = ContextCompat.getDrawable(this, adaDrawable(stage, frozen)) ?: return null
-        val px = (64 * resources.displayMetrics.density).roundToInt()
-        return drawable.toBitmap(px, px)
     }
 
     /** Her status-bar mask: the same geometry, flattened to one colour. */
