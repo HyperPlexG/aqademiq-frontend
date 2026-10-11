@@ -190,6 +190,17 @@ the template puts Ada on the right, the clock in the header and spreads the
 buttons, and none of that can be moved. Do not add `setRequestPromotedOngoing`
 back without that trade being remade.
 
+Swapping the two by lock state (the card unlocked, the promoted template from
+screen-off) was also tried on that S24 and taken out. Android promoted it —
+`FLAG_PROMOTED_ONGOING` set, the chip model built — but nothing reached the lock
+screen: Samsung's Now Bar is its own system (`OngoingActivityController`) and
+never registered the session, and that phone's lock screen shows notifications
+as icons only. All the swap did was put the template back in the lock-screen
+shade. Two things to know before trying again: `ACTION_USER_PRESENT` is sent by
+SystemUI, not the system uid, so a `RECEIVER_NOT_EXPORTED` receiver never gets
+it; and a lock-screen surface that works on Samsung will not come from
+promotion alone.
+
 The small icon is Ada's flat silhouette (`ic_stat_ada_N`, `ic_stat_frost_N`),
 never the app logo — a status bar masks icons to one colour,
 so melt stage and frost have to survive as outline alone. All of her Android

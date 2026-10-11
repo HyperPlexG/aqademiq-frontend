@@ -13,6 +13,9 @@
     line up with the header text; adding our own pushes Ada into the middle.
     Her drawable also carries a margin of its own (the painter's 60x60 space),
     which is what the negative start margin on her ImageView takes back.
+  * The row is sized for the narrowest real case, not the widest. On a 360dp
+    Samsung the app icon takes the card's left edge and leaves a 252dp column;
+    at the first sizes "MELTING · DEEP WORK" ended in an ellipsis there.
   * The Chronometer is why this is a custom layout at all: with `countDown` and
     a base of the session's end instant, the system ticks it itself, so nothing
     in the app wakes to move the clock. Frozen swaps it for `time_static`,
@@ -35,10 +38,10 @@
 
         <ImageView
             android:id="@+id/ada"
-            android:layout_width="54dp"
-            android:layout_height="54dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginStart="-5dp"
-            android:layout_marginEnd="6dp"
+            android:layout_marginEnd="2dp"
             android:contentDescription="@null"
             android:src="@drawable/ada_stage_0" />
 
@@ -67,8 +70,8 @@
                 android:maxLines="1"
                 android:ellipsize="end"
                 android:includeFontPadding="false"
-                android:textSize="11sp"
-                android:letterSpacing="0.08"
+                android:textSize="10sp"
+                android:letterSpacing="0.06"
                 android:textColor="@color/ambient_subtitle" />
         </LinearLayout>
 
@@ -76,7 +79,7 @@
             android:id="@+id/time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:includeFontPadding="false"
             android:textSize="24sp"
             android:textStyle="bold"
@@ -86,7 +89,7 @@
             android:id="@+id/time_static"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="8dp"
             android:includeFontPadding="false"
             android:textSize="24sp"
             android:textStyle="bold"
