@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ only.
+
+         From API 31 the platform draws its own splash window at every cold
+         start and stamps the launcher icon into it. Nothing in
+         launch_background.xml prevents that, which is why the icon appeared
+         for a frame before the intro animation even though that drawable is a
+         plain colour - the icon was never ours to begin with.
+
+         The window itself is mandatory and cannot be removed. What it looks
+         like can be set, so: the background is the exact colour
+         SplashScreen's Scaffold paints, and the icon is a blank vector. The
+         result is one continuous colour from process start to the first
+         Flutter frame, with no icon in between.
+
+         windowSplashScreenAnimationDuration is 0 because there is nothing to
+         animate; leaving it unset makes the system hold the blank splash for
+         its default beat. -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

@@ -8,6 +8,7 @@ import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
 import 'features/stats/providers/streak_milestone_provider.dart';
+import 'services/ambient/ambient_service.dart';
 import 'services/push_service.dart';
 import 'services/reminder_scheduler.dart';
 
@@ -32,13 +33,17 @@ class AqademiqApp extends ConsumerWidget {
     // The streak-milestone watcher rides along here for the same reason: the
     // crossing happens wherever a mood is logged, not on the screen that
     // displays the number (spec §4.5).
+    // The ambient service belongs here on the same argument: a focus session
+    // keeps running with the app closed, and the lock screen, the Island and
+    // the widgets are that session drawn somewhere else.
     ref
       ..watch(revisionSyncProvider)
       ..watch(sessionResetProvider)
       ..watch(prismAudioControllerProvider)
       ..watch(pushServiceProvider)
       ..watch(reminderSchedulerProvider)
-      ..watch(streakMilestoneProvider);
+      ..watch(streakMilestoneProvider)
+      ..watch(ambientServiceProvider);
 
     return MaterialApp.router(
       title: 'Aqademiq',

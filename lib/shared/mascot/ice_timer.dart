@@ -7,8 +7,11 @@ import '../../core/theme/app_colors.dart';
 import 'ada_mascot.dart';
 
 /// The Focus "Ice melt" timer (prototype `IceTimer`): a progress ring around the
-/// Ada cube, which melts as [progress] (0..1) advances. [frost] re-freezes the
-/// look (paused state) with a cyan arc.
+/// Ada cube, which melts as [progress] (0..1) advances.
+///
+/// [frost] is the paused session (`fc-paused`): Ada stops where she is and turns
+/// to frost, the arc goes cyan, and an inset frost glow shimmers round the ring.
+/// She keeps the melt she had — a freeze holds time, it does not give it back.
 class IceTimer extends StatefulWidget {
   const IceTimer({
     super.key,
@@ -28,28 +31,27 @@ class IceTimer extends StatefulWidget {
 }
 
 class _IceTimerState extends State<IceTimer> with SingleTickerProviderStateMixin {
-  // A slow "breathing" loop so the cube is visibly alive while the timer runs
-  // (the melt itself advances over the whole session, too subtle second-to-
-  // second). It holds still while frosted/paused (FOC-4).
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2200),
-  );
+  // One loop, two jobs. Running, it is a slow "breathing" so the cube is
+  // visibly alive (the melt itself advances over the whole session, too subtle
+  // second-to-second). Frozen, the cube holds still (FOC-4) and the same loop
+  // drives the frost shimmer instead — the prototype's `aqShimmer 2.2s`.
+  late final AnimationController _pulse = AnimationController(vsync: this);
+
+  static const _breath = Duration(milliseconds: 2200);
+  static const _shimmer = Duration(milliseconds: 1100); // reversing, so 2.2s a cycle
+
+  void _loop() => unawaited(_pulse.repeat(reverse: true, period: widget.frost ? _shimmer : _breath));
 
   @override
   void initState() {
     super.initState();
-    if (!widget.frost) unawaited(_pulse.repeat(reverse: true));
+    _loop();
   }
 
   @override
   void didUpdateWidget(covariant IceTimer old) {
     super.didUpdateWidget(old);
-    if (widget.frost && _pulse.isAnimating) {
-      _pulse.stop();
-    } else if (!widget.frost && !_pulse.isAnimating) {
-      unawaited(_pulse.repeat(reverse: true));
-    }
+    if (old.frost != widget.frost) _loop();
   }
 
   @override
@@ -92,15 +94,56 @@ class _IceTimerState extends State<IceTimer> with SingleTickerProviderStateMixin
               },
               child: AdaMascot(
                 size: widget.size * 0.6,
-                melt: widget.frost ? 0.4 : value,
+                melt: value,
                 expr: widget.expr,
+                frozen: widget.frost,
               ),
             ),
+            if (widget.frost)
+              IgnorePointer(
+                child: FadeTransition(
+                  // 0.35 → 0.7 → 0.35, as `@keyframes aqShimmer`.
+                  opacity: _pulse.drive(Tween(begin: 0.35, end: 0.7)),
+                  child: CustomPaint(
+                    size: Size.square(widget.size),
+                    painter: const _FrostGlowPainter(),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+/// The prototype's `box-shadow: inset 0 0 20px rgba(159,214,239,0.65)` on a
+/// circle: frost creeping in from the rim, gone well before the centre.
+class _FrostGlowPainter extends CustomPainter {
+  const _FrostGlowPainter();
+
+  static const _frost = Color(0xFF9FD6EF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = size.width / 2;
+    final center = size.center(Offset.zero);
+    // A 20px blur reaches about 20px in; as a fraction of the radius so the
+    // glow keeps its depth at whatever size the timer is drawn.
+    final inner = (1 - 20 / r).clamp(0.0, 1.0);
+    canvas.drawCircle(
+      center,
+      r,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [_frost.withValues(alpha: 0), _frost.withValues(alpha: 0.22), _frost.withValues(alpha: 0.65)],
+          stops: [inner, inner + (1 - inner) * 0.6, 1],
+        ).createShader(Rect.fromCircle(center: center, radius: r)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FrostGlowPainter old) => false;
 }
 
 class _RingPainter extends CustomPainter {

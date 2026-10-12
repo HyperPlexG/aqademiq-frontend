@@ -18,6 +18,13 @@ const List<AdaTone> kCubeTones = [
   AdaTone(Color(0xFF5A44F1), Color(0xFFCBBCFD), Color(0xFF31237C)),
 ];
 
+/// Ada held: a session frozen mid-melt.
+///
+/// Melting and frost are two states of matter, not two tints of one thing, so
+/// the fill, the outline and the face all change together. Mirrors `AdaPalette`
+/// in `ios/AmbientWidgets/AdaShape.swift` — change one and change both.
+const AdaTone kFrostTone = AdaTone(Color(0xFF9FD6EF), Color(0xFFD7EEF8), Color(0xFF3F6D84));
+
 /// Ada's facial expressions (CUBE_MOUTHS + happy/sad specials).
 enum AdaExpr { happy, smile, neutral, focused, meh, sad }
 
@@ -25,6 +32,12 @@ enum AdaExpr { happy, smile, neutral, focused, meh, sad }
 /// (viewBox 60×60). [melt] 0→1 morphs the crisp cube into a melted puddle and is
 /// tied to focus progress; decorative drips fade under reduced motion (handled by
 /// the caller passing a frozen [melt]).
+///
+/// [frozen] is a paused session: she keeps the melt she had, turns to frost,
+/// and is held rather than distressed — open eyes, a level mouth, and the eight
+/// spurs that say "frozen" even where colour is lost. It overrides [tone] and
+/// [expr], so the app draws the one frozen Ada the widgets, the Island and the
+/// watch already draw.
 class AdaMascot extends StatelessWidget {
   const AdaMascot({
     super.key,
@@ -37,6 +50,7 @@ class AdaMascot extends StatelessWidget {
     this.cheeks = false,
     this.sparkles = false,
     this.sweat = false,
+    this.frozen = false,
   });
 
   final double size;
@@ -48,6 +62,7 @@ class AdaMascot extends StatelessWidget {
   final bool cheeks;
   final bool sparkles;
   final bool sweat;
+  final bool frozen;
 
   @override
   Widget build(BuildContext context) {
@@ -55,13 +70,14 @@ class AdaMascot extends StatelessWidget {
       dimension: size,
       child: CustomPaint(
         painter: _CubePainter(
-          tone: tone[toneIndex.clamp(0, tone.length - 1)],
+          tone: frozen ? kFrostTone : tone[toneIndex.clamp(0, tone.length - 1)],
           melt: melt.clamp(0, 1),
           expr: expr,
           bubbles: bubbles,
           cheeks: cheeks,
           sparkles: sparkles,
           sweat: sweat,
+          frozen: frozen,
         ),
       ),
     );
@@ -77,6 +93,7 @@ class _CubePainter extends CustomPainter {
     required this.cheeks,
     required this.sparkles,
     required this.sweat,
+    required this.frozen,
   });
 
   final AdaTone tone;
@@ -86,6 +103,7 @@ class _CubePainter extends CustomPainter {
   final bool cheeks;
   final bool sparkles;
   final bool sweat;
+  final bool frozen;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -183,6 +201,10 @@ class _CubePainter extends CustomPainter {
       );
     }
 
+    // 6b. Frost spurs — what says "held" once a small size or a dimmed screen
+    // has taken the colour away.
+    if (frozen) _drawSpurs(canvas);
+
     // 7. Cheeks.
     if (cheeks) {
       final p = Paint()..color = const Color(0xFFF0A0B6).withValues(alpha: 0.72);
@@ -197,8 +219,8 @@ class _CubePainter extends CustomPainter {
     // 9. Mouth.
     _drawMouth(canvas, mY, m);
 
-    // 10. Sweat.
-    if (sweat) {
+    // 10. Sweat. Never on ice that is not melting.
+    if (sweat && !frozen) {
       final path = Path()
         ..moveTo(30 + eyeDX + 6, eyeY - 3)
         ..relativeQuadraticBezierTo(-2.4, 4, 0, 6)
@@ -253,7 +275,33 @@ class _CubePainter extends CustomPainter {
     canvas.drawPath(path, p);
   }
 
+  void _drawSpurs(Canvas canvas) {
+    final p = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..color = kFrostTone.border.withValues(alpha: 0.95);
+    // The same eight as `FrostSpurs` in AdaShape.swift, in the same 60×60 space.
+    const spurs = [
+      [30.0, 2.5, 30.0, 10.0], [30.0, 50.0, 30.0, 57.5],
+      [2.5, 30.0, 10.0, 30.0], [50.0, 30.0, 57.5, 30.0],
+      [10.0, 10.0, 15.5, 15.5], [50.0, 10.0, 44.5, 15.5],
+      [10.0, 50.0, 15.5, 44.5], [50.0, 50.0, 44.5, 44.5],
+    ];
+    for (final s in spurs) {
+      canvas.drawLine(Offset(s[0], s[1]), Offset(s[2], s[3]), p);
+    }
+  }
+
   void _drawEyes(Canvas canvas, double eyeDX, double eyeY, double eyeR, double m) {
+    if (frozen) {
+      // Open dots: held, not asleep and not upset.
+      final p = Paint()..color = tone.ink;
+      canvas
+        ..drawCircle(Offset(30 - eyeDX, eyeY), eyeR * 0.85, p)
+        ..drawCircle(Offset(30 + eyeDX, eyeY), eyeR * 0.85, p);
+      return;
+    }
     if (expr == AdaExpr.happy) {
       final p = Paint()
         ..style = PaintingStyle.stroke
@@ -291,6 +339,18 @@ class _CubePainter extends CustomPainter {
   }
 
   void _drawMouth(Canvas canvas, double mY, double m) {
+    if (frozen) {
+      // Level, not a frown — Ada is never sad about being paused.
+      canvas.drawLine(
+        Offset(30 - 4.4, mY),
+        Offset(30 + 4.4, mY),
+        Paint()
+          ..strokeWidth = 2.4 - 0.4 * m
+          ..strokeCap = StrokeCap.round
+          ..color = tone.ink,
+      );
+      return;
+    }
     if (expr == AdaExpr.happy) {
       final mouth = Path()
         ..moveTo(30 - 6.5, mY - 1)
@@ -355,7 +415,8 @@ class _CubePainter extends CustomPainter {
       old.bubbles != bubbles ||
       old.cheeks != cheeks ||
       old.sparkles != sparkles ||
-      old.sweat != sweat;
+      old.sweat != sweat ||
+      old.frozen != frozen;
 }
 
 /// AdaNavFace — the glossy gradient bead used as the center nav icon (NOT the

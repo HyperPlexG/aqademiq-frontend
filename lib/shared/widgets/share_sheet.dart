@@ -42,6 +42,11 @@ class _ShareSheet extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            // Stretch, not the default centre. An unconstrained Container in a
+            // centred Column is sized by its child, which left the gradient
+            // hero as wide as the word "Aqademiq" rather than as wide as the
+            // sheet — a tall narrow tile where the design has a broad banner.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
                 child: Container(
@@ -160,14 +165,24 @@ class _CodeBoxes extends ConsumerWidget {
     // loads). Rendered dynamically so any code length fits.
     final code = ref.watch(referralCodeProvider).value ?? '';
     final chars = code.isEmpty ? List.filled(5, '·') : code.split('');
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (var i = 0; i < chars.length; i++) ...[
-          if (i > 0) const SizedBox(width: 7),
-          _CodeCell(char: chars[i]),
+    // Scaled down to fit rather than laid out at a fixed size.
+    //
+    // The cells are 38pt with 7pt between them, so eight characters want 353pt
+    // against the 357pt this sheet actually has on a 393pt phone — and lose
+    // outright on a 375pt one, which is where the last character was landing
+    // off the right edge. The count was already dynamic; the width was not.
+    // scaleDown only ever shrinks, so shorter codes still render full size.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (var i = 0; i < chars.length; i++) ...[
+            if (i > 0) const SizedBox(width: 7),
+            _CodeCell(char: chars[i]),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

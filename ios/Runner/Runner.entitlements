@@ -14,5 +14,12 @@
 	     push payload), breaking through Focus / Scheduled Summary batching. -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
+	<!-- The only channel between the app and its widget extension: the session
+	     state the lock screen, the Island and the widgets all render from.
+	     Must match AmbientWidgets.entitlements and AmbientStore.appGroup. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.r13.aqademiq.ambient</string>
+	</array>
 </dict>
 </plist>

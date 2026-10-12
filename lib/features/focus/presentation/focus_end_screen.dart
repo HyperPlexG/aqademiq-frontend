@@ -6,8 +6,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../data/models/tag_resolve.dart';
 import '../../../data/repositories/focus_repository.dart';
+import '../../../data/repositories/tags_repository.dart';
 import '../../../shared/widgets/mood_blob.dart';
+import '../../settings/providers/prism_settings_provider.dart';
+import '../providers/linked_task_provider.dart';
 
 /// FRAMES `fc-end` — session-complete summary + mood capture, on a light
 /// gradient. Uses a fixed dark ink (independent of theme) like the prototype.
@@ -64,8 +68,28 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
 
   void _again() => unawaited(_submitThen(context.pop));
 
+  /// What this session actually was.
+  ///
+  /// Both lines on this screen were literal prototype copy until now —
+  /// "Deep Work · Prism" and "LL(1) parsing notes · CC 401" — so every student
+  /// finished every session being told they had studied LL(1) parsing for
+  /// CC 401. Resolved the same way the timer screen resolves them, so the two
+  /// screens can never describe one session differently.
+  ({String mode, String what}) _summary() {
+    final linked = ref.read(linkedTaskProvider);
+    if (linked == null) return (mode: _mode(), what: 'Focus session');
+    final tag = resolveStudyTag(ref.read(tagsByIdProvider).values, linked.tagId);
+    return (mode: _mode(), what: '${linked.title} · ${studyTagLabel(tag, linked.tagId)}');
+  }
+
+  /// The mode the session ran in, falling back to the default exactly as the
+  /// timer screen does.
+  String _mode() =>
+      ref.read(focusControllerProvider).prismMode ?? ref.read(prismDefaultModeProvider);
+
   @override
   Widget build(BuildContext context) {
+    final summary = _summary();
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -91,14 +115,14 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                       children: [
                         const Text('◈', style: TextStyle(fontSize: 11, color: Color(0xFF6B5CF0), height: 1)),
                         const SizedBox(width: 6),
-                        Text('Deep Work · Prism', style: AppText.sans(size: 10, weight: FontWeight.w700, color: _ink)),
+                        Text('${summary.mode} · Prism', style: AppText.sans(size: 10, weight: FontWeight.w700, color: _ink)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 22),
                   Text('Session done', style: AppText.sans(size: 26, weight: FontWeight.w800, color: _ink)),
                   const SizedBox(height: 5),
-                  Text('LL(1) parsing notes · CC 401', style: AppText.sans(size: 11.5, color: _inkSub)),
+                  Text(summary.what, style: AppText.sans(size: 11.5, color: _inkSub)),
                   const SizedBox(height: 18),
                   Text(_duration, style: AppText.sans(size: 48, weight: FontWeight.w800, letterSpacing: 0.5, height: 1, color: _ink)),
                   const SizedBox(height: 6),
