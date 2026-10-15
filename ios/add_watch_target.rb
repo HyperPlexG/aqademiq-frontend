@@ -17,7 +17,7 @@ ROOT = File.expand_path(__dir__)
 PROJECT = File.join(ROOT, 'Runner.xcodeproj')
 TARGET_NAME = 'AqademiqWatch'
 APP_BUNDLE_ID = 'com.r13.aqademiq'
-TEAM = 'SXN54W6F6T'
+TEAM = 'R6YW5K2YSP'
 # watchOS 10 is the floor: the screen uses .containerBackground(for: .navigation),
 # which is where the modern full-bleed watch layout starts.
 DEPLOYMENT = '10.0'

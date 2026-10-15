@@ -18,7 +18,7 @@ PROJECT = File.join(ROOT, 'Runner.xcodeproj')
 TARGET_NAME = 'AmbientWidgets'
 APP_BUNDLE_ID = 'com.r13.aqademiq'
 APP_GROUP = 'group.com.r13.aqademiq.ambient'
-TEAM = 'SXN54W6F6T'
+TEAM = 'R6YW5K2YSP'
 
 project = Xcodeproj::Project.open(PROJECT)
 app = project.targets.find { |t| t.name == 'Runner' } or abort 'Runner target missing'

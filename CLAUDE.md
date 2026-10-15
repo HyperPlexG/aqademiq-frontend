@@ -165,6 +165,15 @@ else. `services/ambient/` owns that, and the rules below are load-bearing.
   missed day is an empty outline, never a puddle: absence is not depletion. The
   Live Activity is ambient and never alerts.
 
+**The app moved Apple teams in October 2026**, from `SXN54W6F6T` to
+`R6YW5K2YSP`. Everything that signs carries the team: the Xcode project's nine
+build configurations and the `TEAM` constant in `ios/add_widget_target.rb` and
+`ios/add_watch_target.rb`, which recreate targets and would otherwise put the
+old team back. Three things are per team on Apple's side and do not move with
+an app: the APNs key Firebase pushes with, Sign in with Apple user ids (the
+`sub` Supabase stores — a returning user gets a new one unless migrated with
+Apple's transfer identifiers), and App Group registrations.
+
 iOS specifics: the extension target is created by `ios/add_widget_target.rb`,
 which is idempotent and checked in because a lost target still builds — it just
 silently stops shipping the lock screen. It also keeps "Embed Foundation
