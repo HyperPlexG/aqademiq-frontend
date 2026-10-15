@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every widget's surface. Dark by intent, not by theme: every widget in the
+     spec (§5) sits on near-black, because that is where a melting purple cube
+     reads — the same #16151C the iOS widgets use. The radius follows the
+     launcher's own from Android 12 (values-v31/dimens.xml). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_background" />
+    <corners android:radius="@dimen/widget_radius" />
+</shape>

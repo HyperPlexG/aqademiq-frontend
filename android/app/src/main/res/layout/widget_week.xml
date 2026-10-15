@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  This week (spec §5): seven marks, and no judgement. A day the student showed
+  up wears Ada's face; a day they did not is her empty outline, never a puddle,
+  because absence is not depletion. Today's letter is the only accent; today's
+  outline, if it is still empty, is brighter than the others, and the letters
+  under days shown up are lighter than the rest — both as §5's mock draws
+  them. No count, no percentage, no red.
+
+  A wide, one-row strip, as §5 draws it: seven 28dp cells with room between
+  them do not fit a small widget, and anything taller is mostly empty. The defaults are the spec's sample (Monday, Tuesday and Thursday
+  shown up, today Friday) for the gallery; WeekWidget sets every cell.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    style="@style/WidgetSurface"
+    android:clipToOutline="true"
+    android:orientation="vertical">
+
+    <TextView
+        style="@style/WidgetLabel"
+        android:text="THIS WEEK" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_0"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_stage_0" />
+
+            <TextView
+                android:id="@+id/week_letter_0"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_shown"
+                android:text="M" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_1"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_stage_0" />
+
+            <TextView
+                android:id="@+id/week_letter_1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_shown"
+                android:text="T" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_2"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_outline" />
+
+            <TextView
+                android:id="@+id/week_letter_2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_missed"
+                android:text="W" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_3"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_stage_0" />
+
+            <TextView
+                android:id="@+id/week_letter_3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_shown"
+                android:text="T" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_4"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_outline_today" />
+
+            <TextView
+                android:id="@+id/week_letter_4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_accent"
+                android:text="F" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_5"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_outline" />
+
+            <TextView
+                android:id="@+id/week_letter_5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_missed"
+                android:text="S" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/week_day_6"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ada_outline" />
+
+            <TextView
+                android:id="@+id/week_letter_6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:includeFontPadding="false"
+                android:fontFamily="monospace"
+                android:textSize="10sp"
+                android:textColor="@color/widget_letter_missed"
+                android:text="S" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>
