@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The widget gallery is a first impression (spec §5): three named
+         widgets, one line each. The same words as on iOS. -->
+    <string name="widget_next_label">Next</string>
+    <string name="widget_next_description">The one thing you\'re meant to be doing.</string>
+    <string name="widget_week_label">This week</string>
+    <string name="widget_week_description">The days you showed up. No streak, no scolding.</string>
+    <string name="widget_focus_label">Focus</string>
+    <string name="widget_focus_description">Start five minutes without opening anything.</string>
+</resources>

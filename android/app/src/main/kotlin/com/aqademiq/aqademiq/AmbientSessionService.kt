@@ -211,7 +211,7 @@ class AmbientSessionService : Service() {
         val views = RemoteViews(packageName, layout)
         views.setTextViewText(R.id.task, session.title)
         views.setTextViewText(R.id.subtitle, session.subtitle.uppercase())
-        views.setImageViewResource(R.id.ada, adaDrawable(session.meltStage, session.frozen))
+        views.setImageViewResource(R.id.ada, Ada.drawable(session.meltStage, session.frozen))
 
         if (session.frozen) {
             // A system countdown cannot be paused, so a held session shows
@@ -247,25 +247,6 @@ class AmbientSessionService : Service() {
             2 -> R.drawable.ic_stat_ada_2
             3 -> R.drawable.ic_stat_ada_3
             else -> R.drawable.ic_stat_ada_4
-        }
-    }
-
-    /** One Ada, generated from the painter's geometry (tool/generate_ada_android.py). */
-    private fun adaDrawable(stage: Int, frozen: Boolean): Int = if (frozen) {
-        when (stage) {
-            0 -> R.drawable.ada_frost_0
-            1 -> R.drawable.ada_frost_1
-            2 -> R.drawable.ada_frost_2
-            3 -> R.drawable.ada_frost_3
-            else -> R.drawable.ada_frost_4
-        }
-    } else {
-        when (stage) {
-            0 -> R.drawable.ada_stage_0
-            1 -> R.drawable.ada_stage_1
-            2 -> R.drawable.ada_stage_2
-            3 -> R.drawable.ada_stage_3
-            else -> R.drawable.ada_stage_4
         }
     }
 

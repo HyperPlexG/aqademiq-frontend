@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Next widget's subject dot. Drawn in the accent and re-coloured at
+     runtime to the subject's own tint, so a glance says which class it is
+     before the words are read. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/widget_accent" />
+    <size android:width="5dp" android:height="5dp" />
+</shape>

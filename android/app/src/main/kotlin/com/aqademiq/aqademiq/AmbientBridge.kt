@@ -61,6 +61,7 @@ object AmbientBridge {
                     return
                 }
                 sendToService(context, AmbientSessionService.ACTION_START, args)
+                storeSession(context, args)
                 result.success(null)
             }
 
@@ -69,6 +70,7 @@ object AmbientBridge {
                     Intent(context, AmbientSessionService::class.java)
                         .setAction(AmbientSessionService.ACTION_STOP),
                 )
+                storeSession(context, null)
                 result.success(null)
             }
 
@@ -120,11 +122,44 @@ object AmbientBridge {
 
     /** Store the glanceable payload where a widget can read it unaided. */
     private fun publish(context: Context, args: Map<*, *>) {
+        save(context, toJson(args))
+    }
+
+    /**
+     * Keep the running session in the same object the widgets read, so the
+     * Focus widget says "In session" instead of offering a second one. The
+     * glance is published on its own clock (a task ticked, a check-in logged),
+     * so the session cannot wait for it — the same split iOS makes.
+     */
+    private fun storeSession(context: Context, args: Map<*, *>?) {
+        val json = state(context)
+        if (args == null) json.remove("session") else json.put("session", toJson(args))
+        save(context, json)
+    }
+
+    /** The published state: what every widget draws from. Empty if none yet. */
+    fun state(context: Context): JSONObject {
+        val raw = prefs(context).getString(KEY_STATE, null) ?: return JSONObject()
+        return try {
+            JSONObject(raw)
+        } catch (e: org.json.JSONException) {
+            JSONObject()
+        }
+    }
+
+    private fun save(context: Context, json: JSONObject) {
+        // commit, not apply: the widgets are redrawn from this straight away,
+        // and must not read the version before it.
+        prefs(context).edit().putString(KEY_STATE, json.toString()).commit()
+        AmbientWidgets.refresh(context)
+    }
+
+    private fun toJson(args: Map<*, *>): JSONObject {
         val json = JSONObject()
         args.forEach { (key, value) ->
             if (key is String) json.put(key, JSONObject.wrap(value))
         }
-        prefs(context).edit().putString(KEY_STATE, json.toString()).apply()
+        return json
     }
 
     /**

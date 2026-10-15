@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One row high and four wide: §5 draws This week as a strip about half the
+     height of Next and Focus, not as a block. Resizable for anyone who wants
+     it bigger.
+
+     previewLayout is the live layout itself: its XML defaults are the spec's
+     own sample, so the gallery shows the widget as drawn in §5 rather than a
+     grey placeholder. Refreshed every 30 minutes as well as whenever the app
+     publishes, which is what moves "today" across midnight. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="40dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:resizeMode="horizontal|vertical"
+    android:minResizeHeight="40dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_week"
+    android:previewLayout="@layout/widget_week"
+    android:description="@string/widget_week_description"
+    android:widgetCategory="home_screen" />
