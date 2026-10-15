@@ -17,7 +17,11 @@ ROOT = File.expand_path(__dir__)
 PROJECT = File.join(ROOT, 'Runner.xcodeproj')
 TARGET_NAME = 'AmbientWidgets'
 APP_BUNDLE_ID = 'com.r13.aqademiq'
-APP_GROUP = 'group.com.r13.aqademiq.ambient'
+# Not "#{APP_BUNDLE_ID}.#{TARGET_NAME}" or group.com.r13.aqademiq.ambient: those
+# were registered to the team that owned the app before it was transferred
+# (October 2026) and stayed there, so Apple reports them as unavailable.
+WIDGET_BUNDLE_ID = "#{APP_BUNDLE_ID}.widget"
+APP_GROUP = 'group.com.r13.aqademiq.shared'
 TEAM = 'R6YW5K2YSP'
 
 project = Xcodeproj::Project.open(PROJECT)
@@ -110,7 +114,7 @@ end
 existing.build_configurations.each do |config|
   s = config.build_settings
   s['PRODUCT_NAME'] = '$(TARGET_NAME)'
-  s['PRODUCT_BUNDLE_IDENTIFIER'] = "#{APP_BUNDLE_ID}.#{TARGET_NAME}"
+  s['PRODUCT_BUNDLE_IDENTIFIER'] = WIDGET_BUNDLE_ID
   s['INFOPLIST_FILE'] = "#{TARGET_NAME}/Info.plist"
   s['CODE_SIGN_ENTITLEMENTS'] = "#{TARGET_NAME}/#{TARGET_NAME}.entitlements"
   s['IPHONEOS_DEPLOYMENT_TARGET'] = '16.1'
@@ -157,4 +161,4 @@ app.build_configurations.each do |config|
 end
 
 project.save
-puts "#{TARGET_NAME} target ready (bundle #{APP_BUNDLE_ID}.#{TARGET_NAME}, group #{APP_GROUP})."
+puts "#{TARGET_NAME} target ready (bundle #{WIDGET_BUNDLE_ID}, group #{APP_GROUP})."

@@ -174,6 +174,13 @@ an app: the APNs key Firebase pushes with, Sign in with Apple user ids (the
 `sub` Supabase stores — a returning user gets a new one unless migrated with
 Apple's transfer identifiers), and App Group registrations.
 
+Identifiers registered for 1.2 but never shipped did not move either, and
+Apple reserves them for the old team ("not available"): the widget extension
+is now `com.r13.aqademiq.widget` (was `.AmbientWidgets`; `.widgets` was taken too), the watch app
+`com.r13.aqademiq.watch` (was `.watchkitapp`), and the App Group
+`group.com.r13.aqademiq.shared` (was `.ambient`). The Xcode target names are
+unchanged.
+
 iOS specifics: the extension target is created by `ios/add_widget_target.rb`,
 which is idempotent and checked in because a lost target still builds — it just
 silently stops shipping the lock screen. It also keeps "Embed Foundation

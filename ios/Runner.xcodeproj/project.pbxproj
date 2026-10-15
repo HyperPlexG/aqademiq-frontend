@@ -812,7 +812,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AqademiqWatch/Info.plist;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watch;
 				PRODUCT_NAME = AqademiqWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -838,7 +838,7 @@
 				INFOPLIST_FILE = AmbientWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.AmbientWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1022,7 +1022,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AqademiqWatch/Info.plist;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watch;
 				PRODUCT_NAME = AqademiqWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1048,7 +1048,7 @@
 				INFOPLIST_FILE = AmbientWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.AmbientWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1069,7 +1069,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = AqademiqWatch/Info.plist;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.watch;
 				PRODUCT_NAME = AqademiqWatch;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -1094,7 +1094,7 @@
 				INFOPLIST_FILE = AmbientWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.AmbientWidgets;
+				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq.widget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
