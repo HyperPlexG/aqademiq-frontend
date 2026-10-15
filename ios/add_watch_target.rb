@@ -17,7 +17,7 @@ ROOT = File.expand_path(__dir__)
 PROJECT = File.join(ROOT, 'Runner.xcodeproj')
 TARGET_NAME = 'AqademiqWatch'
 APP_BUNDLE_ID = 'com.r13.aqademiq'
-TEAM = 'SXN54W6F6T'
+TEAM = 'R6YW5K2YSP'
 # watchOS 10 is the floor: the screen uses .containerBackground(for: .navigation),
 # which is where the modern full-bleed watch layout starts.
 DEPLOYMENT = '10.0'
@@ -91,7 +91,9 @@ watch.build_configurations.each do |config|
   config.base_configuration_reference = xcconfig
   s = config.build_settings
   s['PRODUCT_NAME'] = TARGET_NAME
-  s['PRODUCT_BUNDLE_IDENTIFIER'] = "#{APP_BUNDLE_ID}.watchkitapp"
+  # Not ".watchkitapp": that id stayed with the team that owned the app before
+  # its transfer (October 2026), and Apple reports it as unavailable.
+  s['PRODUCT_BUNDLE_IDENTIFIER'] = "#{APP_BUNDLE_ID}.watch"
   s['INFOPLIST_FILE'] = "#{TARGET_NAME}/Info.plist"
   s['GENERATE_INFOPLIST_FILE'] = 'NO'
   s['SDKROOT'] = 'watchos'

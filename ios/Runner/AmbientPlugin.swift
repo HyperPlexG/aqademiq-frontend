@@ -154,7 +154,7 @@ final class AmbientPlugin: NSObject {
 
     // MARK: - Shared container
 
-    private static let appGroup = "group.com.r13.aqademiq.ambient"
+    private static let appGroup = "group.com.r13.aqademiq.shared"
     private static let stateKey = "ambient_state"
     private static let pendingRouteKey = "ambient_pending_route"
 
