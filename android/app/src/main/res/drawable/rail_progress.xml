@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The puddle rail: what Ada loses, the bar gains. Drip → frost, on a track
-     that is barely there, so the filled part is the only thing read. -->
+     that is barely there, so the filled part is the only thing read. The
+     colours are resources because the shade is light or dark with the phone. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@android:id/background">
         <shape android:shape="rectangle">
             <corners android:radius="3dp" />
-            <solid android:color="#1AFFFFFF" />
+            <solid android:color="@color/ambient_rail_track" />
         </shape>
     </item>
     <item android:id="@android:id/progress">
@@ -13,8 +14,8 @@
             <shape android:shape="rectangle">
                 <corners android:radius="3dp" />
                 <gradient
-                    android:startColor="#BFE6F5"
-                    android:endColor="#9FD6EF"
+                    android:startColor="@color/ambient_rail_start"
+                    android:endColor="@color/ambient_rail_end"
                     android:angle="0" />
             </shape>
         </clip>

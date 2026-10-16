@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The session card, collapsed: the same row as the expanded card, made to fit.
+
+  A collapsed notification gives a custom view about 48dp of height. The first
+  version reused the expanded layout here, and the system simply cut it off —
+  half a countdown. So this is its own layout, with the same ids so one piece
+  of code fills both: no rail, no buttons, and everything a size down.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <ImageView
+        android:id="@+id/ada"
+        android:layout_width="38dp"
+        android:layout_height="38dp"
+        android:layout_marginStart="-4dp"
+        android:layout_marginEnd="5dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ada_stage_0" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/task"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/ambient_title" />
+
+        <TextView
+            android:id="@+id/subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:includeFontPadding="false"
+            android:textSize="10sp"
+            android:letterSpacing="0.08"
+            android:textColor="@color/ambient_subtitle" />
+    </LinearLayout>
+
+    <Chronometer
+        android:id="@+id/time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:includeFontPadding="false"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/ambient_title" />
+
+    <TextView
+        android:id="@+id/time_static"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:includeFontPadding="false"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/ambient_frost"
+        android:visibility="gone" />
+</LinearLayout>

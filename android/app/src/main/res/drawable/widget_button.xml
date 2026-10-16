@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Start 5: the one operable thing on any widget (spec §8, rule 04). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_accent" />
+    <corners android:radius="11dp" />
+</shape>

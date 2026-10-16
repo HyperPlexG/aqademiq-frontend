@@ -19,7 +19,7 @@
 	     Must match AmbientWidgets.entitlements and AmbientStore.appGroup. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.r13.aqademiq.ambient</string>
+		<string>group.com.r13.aqademiq.shared</string>
 	</array>
 </dict>
 </plist>

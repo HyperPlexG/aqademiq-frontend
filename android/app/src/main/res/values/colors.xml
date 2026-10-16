@@ -6,4 +6,25 @@
          light). The system splash window uses the same one so the handover to
          Flutter is a repaint of the same colour rather than a visible cut. -->
     <color name="splash_background">#FFFFFFFF</color>
+    <!-- The session card (notification_focus*.xml), on a light shade. The spec
+         draws the card dark; these are the same roles carried onto a light
+         one — frost a shade deeper so it still reads as a colour. -->
+    <color name="ambient_title">#FF1B1B1F</color>
+    <color name="ambient_subtitle">#FF6E6A7C</color>
+    <color name="ambient_frost">#FF2C7FA8</color>
+    <color name="ambient_rail_track">#1F000000</color>
+    <color name="ambient_rail_start">#FF8FD0EE</color>
+    <color name="ambient_rail_end">#FF5BB5E0</color>
+    <color name="ambient_divider">#1F000000</color>
+    <!-- The home-screen widgets (spec §5). Not themed: the spec draws every
+         widget on near-black, and these are the iOS widgets' own values. -->
+    <color name="widget_background">#FF16151C</color>
+    <color name="widget_label">#FF6F6C7D</color>
+    <color name="widget_meta">#FF8B8798</color>
+    <color name="widget_accent">#FF6B5CF0</color>
+    <color name="widget_frost">#FF9FD6EF</color>
+    <!-- This week's letters, as §5's mock draws them: lighter under a day the
+         student showed up, dimmer under one they did not. -->
+    <color name="widget_letter_shown">#FFA8A8A8</color>
+    <color name="widget_letter_missed">#FF696969</color>
 </resources>

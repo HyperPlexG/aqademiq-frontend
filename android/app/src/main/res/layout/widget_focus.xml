@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Focus (spec §5): Start 5. Five minutes, not twenty-five — the lowest possible
+  barrier between an idle thumb and a started session. The one operable thing
+  on any widget (§8, rule 04): it does not act on data, it starts a session.
+
+  While a session runs it says so instead of offering a second one, and Ada
+  shows her melt stage, or frost when held. Defaults are the gallery's
+  picture: Ada whole, the button ready.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    style="@style/WidgetSurface"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:gravity="center_horizontal">
+
+    <TextView
+        style="@style/WidgetLabel"
+        android:layout_width="match_parent"
+        android:text="FOCUS" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <ImageView
+        android:id="@+id/focus_ada"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:contentDescription="@null"
+        android:src="@drawable/ada_stage_0" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/focus_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/widget_button"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:textColor="#FFFFFFFF"
+        android:text="Start 5" />
+
+    <TextView
+        android:id="@+id/focus_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textStyle="bold"
+        android:textSize="12.5sp"
+        android:textColor="@color/widget_meta"
+        android:text="In session"
+        android:visibility="gone" />
+</LinearLayout>

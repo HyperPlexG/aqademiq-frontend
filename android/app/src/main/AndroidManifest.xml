@@ -96,13 +96,48 @@
         <service
             android:name=".StartFiveTileService"
             android:exported="true"
-            android:icon="@drawable/ic_stat_notification"
+            android:icon="@drawable/ic_qs_ada"
             android:label="Focus"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE"/>
             </intent-filter>
         </service>
+        <!-- The three home-screen widgets (spec §5; AmbientWidgets.kt): Next,
+             This week and Focus, drawn from the state AmbientBridge keeps. -->
+        <receiver
+            android:name=".NextWidget"
+            android:exported="true"
+            android:label="@string/widget_next_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_info"/>
+        </receiver>
+        <receiver
+            android:name=".WeekWidget"
+            android:exported="true"
+            android:label="@string/widget_week_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_info"/>
+        </receiver>
+        <receiver
+            android:name=".FocusWidget"
+            android:exported="true"
+            android:label="@string/widget_focus_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_focus_info"/>
+        </receiver>
         <!-- flutter_local_notifications: delivers a scheduled reminder when its
              alarm fires, and re-registers the pending schedule after a reboot
              or an app update. Both are required for zonedSchedule to survive. -->

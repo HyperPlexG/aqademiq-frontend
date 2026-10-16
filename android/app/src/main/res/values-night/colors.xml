@@ -2,4 +2,12 @@
 <resources>
     <!-- AppColors.surface, dark. -->
     <color name="splash_background">#FF1B1B1B</color>
+    <!-- The session card on a dark shade: the spec's own palette (§6). -->
+    <color name="ambient_title">#FFFFFFFF</color>
+    <color name="ambient_subtitle">#FF8B8798</color>
+    <color name="ambient_frost">#FF9FD6EF</color>
+    <color name="ambient_rail_track">#1AFFFFFF</color>
+    <color name="ambient_rail_start">#FFBFE6F5</color>
+    <color name="ambient_rail_end">#FF9FD6EF</color>
+    <color name="ambient_divider">#1AFFFFFF</color>
 </resources>

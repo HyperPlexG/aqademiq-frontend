@@ -9,7 +9,7 @@ import Foundation
 /// disagree with the app about what the session is.
 enum AmbientStore {
     /// Must match the App Group on both the app and the extension.
-    static let appGroup = "group.com.r13.aqademiq.ambient"
+    static let appGroup = "group.com.r13.aqademiq.shared"
 
     /// The glanceable payload, written by Dart on every publish.
     static let stateKey = "ambient_state"
