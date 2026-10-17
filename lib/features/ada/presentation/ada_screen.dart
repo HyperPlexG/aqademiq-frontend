@@ -295,6 +295,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                           focusNode: _focus,
                           compact: !chat.isEmpty,
                           onSend: _send,
+                          onAttach: chat.uploading ? null : () => unawaited(_pickAndUpload()),
                           // Only a phone with no recognizer at all loses the
                           // control; a refused permission keeps it, so the
                           // student can fix it.
@@ -1266,6 +1267,7 @@ class _InputBar extends StatelessWidget {
     required this.onSend,
     required this.onSpeak,
     required this.voiceAvailable,
+    required this.onAttach,
     super.key,
   });
   final TextEditingController controller;
@@ -1273,6 +1275,9 @@ class _InputBar extends StatelessWidget {
   final bool compact;
   final VoidCallback onSend;
   final VoidCallback onSpeak;
+
+  /// Null while a file is uploading.
+  final VoidCallback? onAttach;
 
   /// False only on a phone with no speech recognizer.
   final bool voiceAvailable;
@@ -1296,6 +1301,32 @@ class _InputBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // ADA-11: the only way to attach was a small pill up in the header,
+          // and a tester told to attach a file could not find it. Beside the
+          // text box is where everyone looks.
+          Tooltip(
+            message: 'Attach a file',
+            child: Semantics(
+              button: true,
+              enabled: onAttach != null,
+              label: 'Attach a file',
+              excludeSemantics: true,
+              child: GestureDetector(
+                onTap: onAttach,
+                behavior: HitTestBehavior.opaque,
+                child: SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: Icon(
+                    Icons.attach_file,
+                    size: 18,
+                    color: onAttach == null ? colors.textDim.withValues(alpha: 0.5) : colors.textMed,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: CallbackShortcuts(
               bindings: <ShortcutActivator, VoidCallback>{

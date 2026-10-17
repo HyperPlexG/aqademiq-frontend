@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -257,9 +258,10 @@ class _SetupSheet extends StatelessWidget {
             style: AppText.sans(size: 11.5, height: 1.55, color: colors.textMed),
           ),
           const SizedBox(height: 14),
+          // GST-3: as on the Ada prompt — an account first, then set-up.
           PrimaryButton(
-            label: 'Set up now · 2 min →',
-            onPressed: () => context.go(Routes.obAge),
+            label: 'Create free account →',
+            onPressed: () => unawaited(context.push(Routes.signup)),
           ),
           const SizedBox(height: 8),
           Center(
