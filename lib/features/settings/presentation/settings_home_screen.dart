@@ -141,7 +141,7 @@ class SettingsHomeScreen extends ConsumerWidget {
                 icon: Icons.person_add_alt,
                 showChevron: true,
                 last: true,
-                onTap: () => context.go(Routes.obAge),
+                onTap: () => unawaited(context.push(Routes.signup)),
               ),
             ],
           )

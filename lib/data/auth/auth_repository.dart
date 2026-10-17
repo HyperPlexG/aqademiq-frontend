@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -64,6 +65,10 @@ abstract interface class AuthRepository {
   /// Start email registration (`POST /auth/signup`). Does NOT sign in — the
   /// backend issues a 6-digit OTP; complete with [verifyOtp]. The pending email
   /// is remembered so [verifyOtp] needs only the code.
+  ///
+  /// From guest mode this upgrades the guest account in place instead
+  /// ([linkGuestToAccount]): a fresh account would leave everything the guest
+  /// made behind on the old id (GST-4).
   Future<AppUser> signUp({
     required String name,
     required String email,
@@ -106,13 +111,17 @@ abstract interface class AuthRepository {
     String? fullName,
   });
 
-  /// "Save progress": attach email/password to the guest account
-  /// (`POST /auth/link-guest`). Issues an OTP; finish with [verifyOtp]. Data is
-  /// preserved under the same user id.
+  /// "Save progress": attach email/password to the guest account. Issues an
+  /// OTP; finish with [verifyOtp]. Data is preserved under the same user id.
   Future<AppUser> linkGuestToAccount({
     required String email,
     required String password,
   });
+
+  /// Whether the code being waited for upgrades a guest — which decides where
+  /// the verify screen goes next: a guest who already set up the app goes back
+  /// into it, not through onboarding again.
+  bool get isGuestUpgradePending;
 
   Future<void> signOut();
 
@@ -160,9 +169,18 @@ class MockAuthRepository implements AuthRepository {
   @override
   Future<AppUser> signInAnonymously() async {
     final user = await _delayed(_guest);
+    _guestChosen = true;
     _emit(user);
     return user;
   }
+
+  /// Mock users start out as a guest before choosing anything; only someone
+  /// who actually picked guest mode is upgraded rather than signed up fresh.
+  bool _guestChosen = false;
+  bool _upgrading = false;
+
+  @override
+  bool get isGuestUpgradePending => _upgrading;
 
   @override
   Future<AppUser> signInWithEmail({
@@ -190,11 +208,26 @@ class MockAuthRepository implements AuthRepository {
     }
     _pendingEmail = email;
     _pendingName = name;
+    final current = _user;
+    if (_guestChosen && current != null && current.isGuest) {
+      _upgrading = true;
+      return _delayed(current.copyWith(email: email));
+    }
     return _delayed(AppUser(id: '', name: name, email: email));
   }
 
   @override
   Future<void> verifyOtp(String code) async {
+    if (_upgrading) {
+      // Same id, now with an address: what the live upgrade does.
+      _upgrading = false;
+      _guestChosen = false;
+      final upgraded = await _delayed(
+        (_user ?? _guest).copyWith(email: _pendingEmail, isGuest: false),
+      );
+      _emit(upgraded);
+      return;
+    }
     final user = await _delayed(
       AppUser(
         id: 'user-${(_pendingEmail ?? '').hashCode}',
@@ -309,6 +342,13 @@ class ApiAuthRepository implements AuthRepository {
   String? _pendingName;
   OtpType _pendingOtpType = OtpType.signup;
 
+  /// A guest's chosen password, held until their email is verified: Supabase
+  /// upgrades an anonymous user email first, then password.
+  String? _pendingPassword;
+
+  @override
+  bool get isGuestUpgradePending => _pendingOtpType == OtpType.emailChange;
+
   @override
   AppUser? get currentUser => _user;
 
@@ -382,6 +422,12 @@ class ApiAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    // A guest is already an account — an anonymous one, which every task and
+    // subject they made belongs to. signUp would create a second account and
+    // strand all of that on the first (GST-4); upgrading keeps the same id.
+    if (_auth.currentUser?.isAnonymous ?? false) {
+      return linkGuestToAccount(email: email, password: password);
+    }
     _pendingEmail = email;
     _pendingName = name.trim().isEmpty ? null : name.trim();
     _pendingOtpType = OtpType.signup;
@@ -415,10 +461,15 @@ class ApiAuthRepository implements AuthRepository {
       throw const AuthFailure(message: 'No pending verification. Start again.');
     }
     final res = await _auth.verifyOTP(email: email, token: code, type: _pendingOtpType);
-    if (res.session == null) {
+    var session = res.session;
+    if (_pendingOtpType == OtpType.emailChange) {
+      // A guest upgrade: the address is now theirs, so the password can go on.
+      session = await _finishGuestUpgrade() ?? session;
+    }
+    if (session == null) {
       throw const AuthFailure(message: 'Verification failed. Check the code and try again.');
     }
-    var user = await _mapSession(res.session!);
+    var user = await _mapSession(session);
     if (_pendingName != null && _pendingName!.isNotEmpty) {
       try {
         await _dio.patch<Map<String, dynamic>>('/profile', data: {'name': _pendingName});
@@ -430,6 +481,36 @@ class ApiAuthRepository implements AuthRepository {
     _pendingEmail = null;
     _pendingName = null;
     _emit(user);
+  }
+
+  /// Sets the password a guest chose at sign-up, then refreshes the session.
+  ///
+  /// The refresh matters: the API decides who is a guest from the token's
+  /// `is_anonymous` claim, and only a token minted after the upgrade says no.
+  ///
+  /// A password that fails to save does not undo anything — the email is
+  /// verified and the data is theirs — so it is retried once and then let go:
+  /// "Forgot password" sets one later. Failing here instead would leave them on
+  /// a code screen whose code has already been used.
+  Future<Session?> _finishGuestUpgrade() async {
+    final password = _pendingPassword;
+    _pendingPassword = null;
+    _pendingOtpType = OtpType.signup;
+    if (password != null && password.isNotEmpty) {
+      for (var attempt = 0; attempt < 2; attempt++) {
+        try {
+          await _auth.updateUser(UserAttributes(password: password));
+          break;
+        } on Object catch (e) {
+          debugPrint('guest upgrade: password not saved ($e)');
+        }
+      }
+    }
+    try {
+      return (await _auth.refreshSession()).session ?? _auth.currentSession;
+    } on Object {
+      return _auth.currentSession;
+    }
   }
 
   @override
@@ -461,11 +542,7 @@ class ApiAuthRepository implements AuthRepository {
 
   @override
   Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
-    final res = await _auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      nonce: nonce,
-    );
+    final res = await _signInOrLink(OAuthProvider.google, idToken, nonce);
     return _require(res.session);
   }
 
@@ -475,12 +552,34 @@ class ApiAuthRepository implements AuthRepository {
     String? nonce,
     String? fullName,
   }) async {
-    final res = await _auth.signInWithIdToken(
-      provider: OAuthProvider.apple,
-      idToken: identityToken,
-      nonce: nonce,
-    );
+    final res = await _signInOrLink(OAuthProvider.apple, identityToken, nonce);
     return _require(res.session);
+  }
+
+  /// A guest who picks Google or Apple keeps what they made: the identity is
+  /// linked to the guest account, which makes it a real one with the same id.
+  ///
+  /// Linking fails when that Google or Apple account already has an Aqademiq
+  /// account of its own, or when manual linking is switched off in Supabase.
+  /// Either way this falls back to signing in exactly as before — the person
+  /// gets their existing account, and the guest data stays where it was.
+  Future<AuthResponse> _signInOrLink(
+    OAuthProvider provider,
+    String idToken,
+    String? nonce,
+  ) async {
+    if (_auth.currentUser?.isAnonymous ?? false) {
+      try {
+        return await _auth.linkIdentityWithIdToken(
+          provider: provider,
+          idToken: idToken,
+          nonce: nonce,
+        );
+      } on AuthException catch (e) {
+        debugPrint('guest link with ${provider.name} not possible: ${e.message}');
+      }
+    }
+    return _auth.signInWithIdToken(provider: provider, idToken: idToken, nonce: nonce);
   }
 
   @override
@@ -488,9 +587,23 @@ class ApiAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    await _auth.updateUser(UserAttributes(email: email, password: password));
+    // Email first, on its own: Supabase sends a code to confirm the new address
+    // (the "Change email address" template, which must carry {{ .Token }}).
+    // The password follows once that is verified — see _finishGuestUpgrade.
+    try {
+      await _auth.updateUser(UserAttributes(email: email));
+    } on AuthException catch (e) {
+      if (e.code == 'email_exists' || e.message.contains('already been registered')) {
+        throw const AuthFailure(message: kAccountAlreadyExists);
+      }
+      rethrow;
+    }
     _pendingEmail = email;
-    _pendingOtpType = OtpType.email;
+    // The guest already has a name (or onboarding will ask); the email's
+    // local part is not a better one.
+    _pendingName = null;
+    _pendingPassword = password;
+    _pendingOtpType = OtpType.emailChange;
     final current = _user ?? const AppUser(id: '', name: 'Guest');
     return current.copyWith(email: email);
   }
