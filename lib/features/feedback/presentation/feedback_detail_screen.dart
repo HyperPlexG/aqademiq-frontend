@@ -359,13 +359,16 @@ class _PostBody extends ConsumerWidget {
               ),
             ),
             const Spacer(),
-            if (post.author.isNotEmpty)
-              Text(
-                'by ${post.author}',
-                style: AppText.sans(size: 10.5, color: colors.textDim),
-              ),
+            const _FollowPill(),
           ],
         ),
+        if (post.author.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            'by ${post.author}',
+            style: AppText.sans(size: 10.5, color: colors.textDim),
+          ),
+        ],
         const SizedBox(height: 18),
         Text(
           'COMMENTS (${post.commentCount})',
@@ -423,6 +426,66 @@ class _PostBody extends ConsumerWidget {
                 ),
         ),
       ],
+    );
+  }
+}
+
+/// Follow / Following: followers get an email when the post gets a reply or
+/// changes status. Posting or commenting follows a post automatically.
+class _FollowPill extends ConsumerWidget {
+  const _FollowPill();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final following = ref.watch(feedbackSubscriptionProvider).value ?? false;
+    return Semantics(
+      button: true,
+      toggled: following,
+      label: following ? 'Following this suggestion' : 'Follow this suggestion',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          if (ref.read(isGuestProvider)) {
+            unawaited(showCreateAccountPrompt(context, ref, reason: 'follow suggestions'));
+            return;
+          }
+          final ok = await ref.read(feedbackSubscriptionProvider.notifier).toggle();
+          if (!ok && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Couldn't update that. Try again.")),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: following ? colors.accent.withValues(alpha: 0.12) : colors.bg,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(color: following ? colors.accent : colors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                following ? Icons.notifications_active : Icons.notifications_none,
+                size: 14,
+                color: following ? colors.accent : colors.textMed,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                following ? 'Following' : 'Follow',
+                style: AppText.sans(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: following ? colors.accent : colors.textMed,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

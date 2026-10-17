@@ -23,6 +23,7 @@ import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
 import '../../focus/providers/linked_task_provider.dart';
@@ -246,7 +247,26 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   void _toggleStep(Task t, Subtask s) =>
       unawaited(ref.read(dayTasksProvider.notifier).toggleStep(t, s));
 
-  void _delete(Task t) => unawaited(ref.read(dayTasksProvider.notifier).delete(t));
+  /// Both ways to delete — the swipe action and the overflow menu — come
+  /// through here, so neither can remove a task without asking (TSK-5).
+  void _delete(Task t) => unawaited(_confirmDelete(t));
+
+  Future<void> _confirmDelete(Task t) async {
+    final title = t.title.trim().isEmpty ? 'This task' : '"${t.title.trim()}"';
+    final ok = await confirmDestructive(
+      context,
+      title: 'Delete task?',
+      // A repeating task loses only the day it was deleted from; the rest of
+      // the series stays, and saying so stops people hesitating over it.
+      message: t.repeat != null
+          ? '$title will be removed from this day. Its other days stay.'
+          : '$title will be removed from your plan.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Keep it',
+    );
+    if (!ok || !mounted) return;
+    await ref.read(dayTasksProvider.notifier).delete(t);
+  }
 
   // "Later" opens the reschedule picker so the user chooses a day, rather than
   // silently jumping the task to tomorrow.

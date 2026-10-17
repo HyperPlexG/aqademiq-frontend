@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -14,6 +16,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/tag.dart';
 import '../../../data/models/user_profile.dart';
+import '../../../data/repositories/data_export_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/settings_row.dart';
@@ -146,6 +149,7 @@ class SettingsHomeScreen extends ConsumerWidget {
           SetGroup(
             children: [
               SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
+              SettingsRow(label: 'Download my data', icon: Icons.download_outlined, showChevron: true, onTap: () => unawaited(_downloadMyData(context, ref))),
               SettingsRow(
                 label: 'Sign out',
                 icon: Icons.logout,
@@ -282,5 +286,40 @@ class _TagsCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// A copy of everything this account holds, as a JSON file handed to the share
+/// sheet — save it to Files, mail it to yourself, whatever suits (STG-7).
+Future<void> _downloadMyData(BuildContext context, WidgetRef ref) async {
+  final messenger = ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(const SnackBar(content: Text('Preparing your data…')));
+  // iPad presents the share sheet as a popover and needs an anchor; iPhone
+  // ignores it. See share_sheet.dart for what happens without one.
+  final screen = MediaQuery.sizeOf(context);
+  final origin = Rect.fromCenter(
+    center: Offset(screen.width / 2, screen.height / 2),
+    width: 1,
+    height: 1,
+  );
+  try {
+    final json = await ref.read(dataExportRepositoryProvider).exportJson();
+    messenger.hideCurrentSnackBar();
+    final day = DateTime.now().toIso8601String().substring(0, 10);
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(utf8.encode(json), mimeType: 'application/json')],
+        fileNameOverrides: ['aqademiq-data-$day.json'],
+        subject: 'My Aqademiq data',
+        sharePositionOrigin: origin,
+      ),
+    );
+  } on Object {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(content: Text("Couldn't prepare your data. Try again.")),
+      );
   }
 }

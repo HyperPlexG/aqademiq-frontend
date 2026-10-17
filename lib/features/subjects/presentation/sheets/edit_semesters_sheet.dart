@@ -7,6 +7,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import 'add_semester_sheet.dart';
@@ -57,7 +58,7 @@ class _EditSemestersBody extends ConsumerWidget {
               canDelete: semesters.length > 1,
               colors: colors,
               onRename: () => _rename(context, ref, semesters[i]),
-              onDelete: () => _delete(context, ref, semesters[i].id),
+              onDelete: () => _delete(context, ref, semesters[i]),
             ),
           ),
         const SizedBox(height: 8),
@@ -87,7 +88,34 @@ class _EditSemestersBody extends ConsumerWidget {
         .save(semester.copyWith(name: trimmed));
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref, String id) async {
+  /// Deleting a semester takes its subjects with it, and their files with
+  /// them, so it asks first and says exactly that. Tasks outlive it: they only
+  /// lose their subject.
+  Future<void> _delete(BuildContext context, WidgetRef ref, Semester semester) async {
+    final id = semester.id;
+    final inside = (ref.read(subjectsProvider).value ?? const <Subject>[])
+        .where((s) => s.semesterId == id)
+        .toList(growable: false);
+    final files = inside.fold<int>(0, (n, s) => n + s.fileCount);
+    final String message;
+    if (inside.isEmpty) {
+      message = '"${semester.name}" has no subjects, so nothing else goes with it.';
+    } else {
+      final subjects = inside.length == 1 ? '1 subject' : '${inside.length} subjects';
+      final withFiles = files == 0
+          ? ''
+          : ' and ${files == 1 ? 'its 1 file' : 'their $files files'}';
+      message = 'Its $subjects$withFiles will be deleted for good. '
+          'Tasks stay on your plan without a subject.';
+    }
+    final ok = await confirmDestructive(
+      context,
+      title: 'Delete ${semester.name}?',
+      message: message,
+      confirmLabel: 'Delete semester',
+      cancelLabel: 'Keep it',
+    );
+    if (!ok) return;
     await ref.read(semestersProvider.notifier).remove(id);
     final selected = ref.read(selectedSemesterProvider);
     if (selected == id) {

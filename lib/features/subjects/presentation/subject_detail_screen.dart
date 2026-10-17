@@ -10,6 +10,7 @@ import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import 'sheets/add_file_sheet.dart';
 import 'widgets/subject_form_sheet.dart';
@@ -61,6 +62,7 @@ class SubjectDetailScreen extends ConsumerWidget {
           color: color,
           onBack: () => context.pop(),
           onEdit: () => _editSubject(context, ref, subject),
+          onDelete: () => _deleteSubject(context, ref, subject),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -221,6 +223,41 @@ class SubjectDetailScreen extends ConsumerWidget {
     }
   }
 
+  static const _keepsHistory = 'Its tasks stay on your plan without a subject, '
+      'and past focus sessions and Ada chats keep their history.';
+
+  /// SUB-6: the API and `SubjectsController.remove` both existed; nothing on
+  /// screen called them. Confirms first and says what really happens, because
+  /// the two kinds of attached data part ways: files are deleted with the
+  /// subject, tasks keep going without one.
+  Future<void> _deleteSubject(BuildContext context, WidgetRef ref, Subject subject) async {
+    final files = subject.fileCount;
+    final ok = await confirmDestructive(
+      context,
+      title: 'Delete ${subject.name}?',
+      message: [
+        if (files > 0)
+          '${files == 1 ? 'Its file' : 'All $files of its files'} will be deleted for good.',
+        _keepsHistory,
+      ].join(' '),
+      confirmLabel: 'Delete subject',
+      cancelLabel: 'Keep it',
+    );
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    // Leave first: once the list refreshes this screen has no subject to show,
+    // and would flash "Subject not found" on its way out.
+    context.pop();
+    try {
+      await ref.read(subjectsProvider.notifier).remove(subject.id);
+      messenger.showSnackBar(SnackBar(content: Text('Deleted ${subject.name}.')));
+    } on Object {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't delete this subject. Try again.")),
+      );
+    }
+  }
+
   /// Confirm, then delete the material and refresh the list + subject file count.
   Future<void> _deleteFile(
     BuildContext context,
@@ -271,11 +308,13 @@ class _Hero extends StatelessWidget {
     required this.color,
     required this.onBack,
     required this.onEdit,
+    required this.onDelete,
   });
   final Subject subject;
   final Color color;
   final VoidCallback onBack;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -302,6 +341,20 @@ class _Hero extends StatelessWidget {
             children: [
               GestureDetector(onTap: onBack, child: const Icon(Icons.arrow_back, size: 20, color: Colors.white)),
               const Spacer(),
+              Semantics(
+                button: true,
+                label: 'Delete subject',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: onDelete,
+                  behavior: HitTestBehavior.opaque,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    child: Icon(Icons.delete_outline, size: 17, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
               GestureDetector(
                 onTap: onEdit,
                 behavior: HitTestBehavior.opaque,

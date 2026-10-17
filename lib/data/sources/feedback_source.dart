@@ -39,6 +39,14 @@ abstract interface class FeedbackSource {
   /// `POST` / `DELETE /feedback/posts/{ref}/vote` — one-per-user, idempotent.
   Future<FeedbackVoteResult> setVote(String id, {required bool voted});
 
+  /// Whether the user follows a post (`you_subscribed` on
+  /// `GET /feedback/posts/{ref}`). Followers get an email when it changes.
+  Future<bool> subscribed(String id);
+
+  /// `POST` / `DELETE /feedback/posts/{ref}/subscribe` — returns the server's
+  /// answer, which is the truth.
+  Future<bool> setSubscribed(String id, {required bool subscribed});
+
   /// Comments for a post, read from `GET /feedback/posts/{ref}`.
   Future<List<FeedbackCommentDto>> comments(String postId);
 
@@ -153,6 +161,20 @@ class MockFeedbackSource implements FeedbackSource {
     return mockDelay((votes: _posts[i].votes, voted: _posts[i].hasVoted));
   }
 
+  final Set<String> _following = {};
+
+  @override
+  Future<bool> subscribed(String id) => mockDelay(_following.contains(id));
+
+  @override
+  Future<bool> setSubscribed(String id, {required bool subscribed}) {
+    if (!_posts.any((p) => p.id == id)) {
+      throw const NotFoundFailure(message: 'Suggestion not found.');
+    }
+    subscribed ? _following.add(id) : _following.remove(id);
+    return mockDelay(subscribed);
+  }
+
   @override
   Future<List<FeedbackCommentDto>> comments(String postId) => mockDelay(
         List<FeedbackCommentDto>.unmodifiable(
@@ -248,6 +270,20 @@ class ApiFeedbackSource implements FeedbackSource {
       votes: (json['upvotes'] as num?)?.toInt() ?? 0,
       voted: json['you_voted'] as bool? ?? voted,
     );
+  }
+
+  @override
+  Future<bool> subscribed(String id) async {
+    final body = await _dio.getMap('/feedback/posts/$id');
+    return body['you_subscribed'] as bool? ?? false;
+  }
+
+  @override
+  Future<bool> setSubscribed(String id, {required bool subscribed}) async {
+    final json = subscribed
+        ? await _dio.postMap('/feedback/posts/$id/subscribe')
+        : await _dio.deleteMap('/feedback/posts/$id/subscribe');
+    return json['you_subscribed'] as bool? ?? subscribed;
   }
 
   @override
