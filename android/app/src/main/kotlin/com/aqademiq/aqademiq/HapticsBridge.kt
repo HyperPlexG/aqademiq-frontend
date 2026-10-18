@@ -84,9 +84,9 @@ object HapticsBridge {
         val amplitudes = ArrayList<Int>()
         var cursor = 0L
 
-        for (beat in beats.sortedBy { (beat(beat, "at")).toLong() }) {
-            val at = beat(beat, "at").toLong()
-            val ms = beat(beat, "ms").toLong()
+        for (beat in beats.sortedBy { intOf(it, "at") }) {
+            val at = intOf(beat, "at").toLong()
+            val ms = intOf(beat, "ms").toLong()
             if (ms <= 0) continue
             val gap = (at - cursor).coerceAtLeast(0L)
             timings.add(gap)
@@ -128,6 +128,14 @@ object HapticsBridge {
         return (intensity * 255).toInt().coerceIn(1, 255)
     }
 
-    private fun beat(beat: Map<String, Any>, key: String): Int =
+    /**
+     * Reads one millisecond field off a beat.
+     *
+     * Named `intOf` rather than `beat` so it cannot be confused with the loop
+     * variable above: a helper called `beat` taking a `beat` resolved to the
+     * function inside `sortedBy`'s lambda, where the loop variable is not yet
+     * in scope, and the compiler passed the function itself as the argument.
+     */
+    private fun intOf(beat: Map<String, Any>, key: String): Int =
         (beat[key] as? Number)?.toInt() ?: 0
 }
