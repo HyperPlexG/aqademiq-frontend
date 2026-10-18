@@ -107,3 +107,45 @@ class DialogConfirmButton extends StatelessWidget {
     );
   }
 }
+
+/// Asks before something that cannot be taken back, and returns true only when
+/// the user confirms. Closing the dialog any other way is a no.
+///
+/// [message] should say what actually happens — what goes and what stays —
+/// rather than only warn. Names the thing too: "Delete task?" alone does not
+/// say which row is about to go.
+Future<bool> confirmDestructive(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required String confirmLabel,
+  String cancelLabel = 'Cancel',
+}) async {
+  final ok = await showAppDialog<bool>(
+    context,
+    title: title,
+    subtitle: message,
+    // The dialog's own context: the caller's may sit under a nested navigator,
+    // and popping that would close the screen behind instead of the dialog.
+    child: Builder(
+      builder: (dialog) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DialogConfirmButton(
+            label: confirmLabel,
+            onPressed: () => Navigator.of(dialog).pop(true),
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: Text(
+              cancelLabel,
+              style: AppText.sans(size: 13, color: dialog.colors.textMed),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  return ok == true;
+}

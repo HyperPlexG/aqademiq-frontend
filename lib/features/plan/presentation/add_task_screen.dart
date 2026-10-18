@@ -190,13 +190,22 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       if (saved.id.isNotEmpty && _adaBreakdown != _hadBreakdown) {
         try {
           if (_adaBreakdown) {
-            await repo.breakdown(saved.id, date);
+            // The day the occurrence is on right now: a changed date is only
+            // applied by the move below, after this.
+            await repo.breakdown(saved.id, existing?.date ?? date);
           } else {
             await repo.clearSteps(saved.id);
           }
         } on Object {
           // Non-fatal.
         }
+      }
+      // TSK-3: PATCH /tasks has no date — the day is changed by its own
+      // endpoint, the one Reschedule uses. Without this an edited date was
+      // dropped while the save reported success. Last, so the update and any
+      // steps act on the occurrence where it currently is.
+      if (existing != null && saved.id.isNotEmpty && !_sameDay(existing.date, date)) {
+        await repo.move(saved, date);
       }
       // Tier 2, and only for a creation. An edit is not a new task, and Plan's
       // budget of 4 (§7) has no room for "task edited" — nor should it.
@@ -217,6 +226,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       );
     }
   }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   Future<void> _addTag() async {
     final draft = await showAddTagSheet(context);

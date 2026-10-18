@@ -292,8 +292,10 @@ class ApiTasksSource implements TasksSource {
       'title': task.title,
       'status': task.done ? 'COMPLETE' : 'PENDING',
       if (task.tagId.isNotEmpty) 'category': task.tagId,
-      if (task.subjectId != null && task.subjectId!.isNotEmpty)
-        'subject_id': task.subjectId,
+      // Always sent, null for "no subject": the edit screen's none option has
+      // to be able to clear one. Every task handed in here was read from the
+      // server, so for an untouched task this simply repeats what it holds.
+      'subject_id': (task.subjectId?.isNotEmpty ?? false) ? task.subjectId : null,
       'note': task.note ?? '',
       if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
       if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),

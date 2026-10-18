@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -51,9 +53,12 @@ class GuestAdaPrompt extends StatelessWidget {
                 const SizedBox(height: 18),
                 const _BenefitsCard(),
                 const SizedBox(height: 22),
+                // GST-2: this went straight into onboarding, so a guest set
+                // the app up without ever giving an email — and stayed a
+                // guest. The account comes first; onboarding follows it.
                 PrimaryButton(
-                  label: 'Set up Ada · 2 min →',
-                  onPressed: () => context.go(Routes.obAge),
+                  label: 'Create free account →',
+                  onPressed: () => unawaited(context.push(Routes.signup)),
                 ),
                 const SizedBox(height: 9),
                 GestureDetector(

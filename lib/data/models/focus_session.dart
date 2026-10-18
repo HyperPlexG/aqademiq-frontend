@@ -62,6 +62,14 @@ abstract class FocusSession with _$FocusSession {
     return (elapsedSec / total).clamp(0.0, 1.0);
   }
 
+  /// Whether a finished session was ended before its planned time ran out.
+  ///
+  /// Derived from the same comparison that picks the ending haptic, so the two
+  /// can never disagree. A linked task is ticked off only when this is false:
+  /// two minutes of a five-minute task is not the task done (FOC-4).
+  bool get endedEarly =>
+      status == FocusStatus.completed && elapsedSec < durationMin * 60;
+
   /// Whether the session is held. Frost, not a pause glyph.
   bool get isFrozen => status == FocusStatus.paused;
 

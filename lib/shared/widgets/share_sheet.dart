@@ -90,6 +90,8 @@ class _ShareSheet extends StatelessWidget {
               ),
               const SizedBox(height: 9),
               const _CodeBoxes(),
+              const SizedBox(height: 10),
+              const _ReferralCount(),
               const SizedBox(height: 15),
               const _ShareInviteButton(),
             ],
@@ -183,6 +185,29 @@ class _CodeBoxes extends ConsumerWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// How many people joined with this code, and the reward balance it earned.
+/// Nothing while it loads or if it fails: the code above still works.
+class _ReferralCount extends ConsumerWidget {
+  const _ReferralCount();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = context.colors;
+    final summary = ref.watch(referralSummaryProvider).value;
+    if (summary == null) return const SizedBox(height: 16);
+    final n = summary.redemptions;
+    final text = n == 0
+        ? 'Nobody has joined with your code yet'
+        : '${n == 1 ? '1 friend has' : '$n friends have'} joined with your code'
+            ' · ${summary.balance} reward points';
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.textMed),
     );
   }
 }

@@ -147,7 +147,11 @@ class SemestersController extends AsyncNotifier<List<Semester>> {
   Future<void> remove(String id) async {
     await ref.read(subjectsRepositoryProvider).deleteSemester(id);
     ref.read(hapticsProvider).destructiveConfirmed();
-    ref.invalidateSelf();
+    // The semester's subjects went with it on the server; without the second
+    // invalidate they stayed listed until something else refreshed them.
+    ref
+      ..invalidateSelf()
+      ..invalidate(subjectsProvider);
   }
 }
 

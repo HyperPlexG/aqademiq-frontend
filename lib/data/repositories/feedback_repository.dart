@@ -49,6 +49,11 @@ class FeedbackRepository {
   Future<FeedbackVoteResult> setVote(String id, {required bool voted}) =>
       _source.setVote(id, voted: voted);
 
+  Future<bool> subscribed(String id) => _source.subscribed(id);
+
+  Future<bool> setSubscribed(String id, {required bool subscribed}) =>
+      _source.setSubscribed(id, subscribed: subscribed);
+
   Future<List<FeedbackComment>> comments(String postId) async {
     final dtos = await _source.comments(postId);
     return dtos.map((d) => d.toModel()).toList(growable: false);

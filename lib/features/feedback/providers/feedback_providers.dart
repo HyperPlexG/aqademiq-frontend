@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/failure.dart';
+import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_meta.dart';
 import '../../../data/models/feedback_post.dart';
@@ -224,6 +225,43 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
       ref.invalidateSelf();
     }
     return created;
+  }
+}
+
+/// Whether the user follows the post selected in
+/// [selectedFeedbackPostIdProvider] (FBK-6: the endpoints existed, nothing in
+/// the app called them).
+final feedbackSubscriptionProvider =
+    AsyncNotifierProvider<FeedbackSubscriptionController, bool>(
+  FeedbackSubscriptionController.new,
+);
+
+class FeedbackSubscriptionController extends AsyncNotifier<bool> {
+  @override
+  Future<bool> build() {
+    final id = ref.watch(selectedFeedbackPostIdProvider);
+    // Guests cannot follow (the server answers 403), so there is nothing to ask.
+    if (id == null || ref.watch(isGuestProvider)) return Future.value(false);
+    return ref.watch(feedbackRepositoryProvider).subscribed(id);
+  }
+
+  /// Optimistic, like voting: flips at once, then takes the server's answer,
+  /// or rolls back if the request fails. Returns false on failure.
+  Future<bool> toggle() async {
+    final id = ref.read(selectedFeedbackPostIdProvider);
+    final current = state.value;
+    if (id == null || current == null) return false;
+    state = AsyncData(!current);
+    try {
+      final now = await ref
+          .read(feedbackRepositoryProvider)
+          .setSubscribed(id, subscribed: !current);
+      state = AsyncData(now);
+      return true;
+    } on Object {
+      state = AsyncData(current);
+      return false;
+    }
   }
 }
 
