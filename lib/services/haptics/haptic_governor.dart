@@ -67,8 +67,10 @@ class HapticGovernor {
     required this.play,
     DateTime Function()? clock,
     void Function(void Function() flush)? schedule,
+    Duration Function(HapticEvent event, int? rampStep)? spanOf,
   })  : _clock = clock ?? DateTime.now,
-        _schedule = schedule ?? scheduleMicrotask;
+        _schedule = schedule ?? scheduleMicrotask,
+        _spanOf = spanOf ?? hapticSpanOf;
 
   /// Hands an admitted event to the physical layer. Injected so tests can
   /// record instead of vibrate.
@@ -81,6 +83,10 @@ class HapticGovernor {
   /// stays free of Flutter bindings; tests pass a manual scheduler and drive
   /// [flush] themselves.
   final void Function(void Function() flush) _schedule;
+
+  /// How long an event occupies the motor. Injected for the same reason [play]
+  /// is — so a governor test never reaches the pattern table.
+  final Duration Function(HapticEvent event, int? rampStep) _spanOf;
 
   /// §4.4 — "a 40–60 ms floor between ticks". The midpoint.
   static const Duration minInterval = Duration(milliseconds: 50);
@@ -108,7 +114,9 @@ class HapticGovernor {
     HapticEvent.focusCompleted,
   };
 
-  DateTime? _lastPlayedAt;
+  /// When the motor is free again: the end of the last pattern, or the
+  /// interval floor past its start, whichever is later.
+  DateTime? _quietUntil;
   DateTime? _lastDetentAt;
   int _rapidDetents = 0;
 
@@ -159,14 +167,22 @@ class HapticGovernor {
     _pending = null;
     _pendingRamp = null;
 
-    // 5 — the minimum interval, measured against what actually fired rather
-    // than what was offered, so a burst of dropped events cannot starve the
-    // next real one.
+    // 5 — the quiet window, measured against what actually fired rather than
+    // what was offered, so a burst of dropped events cannot starve the next
+    // real one.
+    //
+    // Events are patterns now, not instants, so the window is the longer of
+    // [minInterval] and the pattern's own span. Without that a 420 ms
+    // `focusCompleted` would still be playing its third beat when the next
+    // detent arrives 50 ms in, and the two would be felt as one mess. A single
+    // tap's span is well under the floor, so for almost everything this is
+    // exactly the old rule.
     final now = _clock();
-    final last = _lastPlayedAt;
-    if (last != null && now.difference(last) < minInterval) return;
+    final until = _quietUntil;
+    if (until != null && now.isBefore(until)) return;
 
-    _lastPlayedAt = now;
+    final span = _spanOf(event, rampStep);
+    _quietUntil = now.add(span > minInterval ? span : minInterval);
     play(event, rampStep);
   }
 

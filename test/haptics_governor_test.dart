@@ -175,19 +175,24 @@ void main() {
       expect(h.played, [HapticEvent.taskCompleted]);
     });
 
+    // These two use `wheelItem` rather than a Tier 1 event because they are
+    // about the floor itself, and the floor is only the whole story for an
+    // event that fits inside it. A multi-beat pattern keeps the motor busy for
+    // its own span instead — see "a long celebration blocks a tick that lands
+    // inside it" in haptic_patterns_test.dart.
     test('the second fires once the floor has passed', () {
-      final h = _Harness()..fireAlone(HapticEvent.taskCompleted);
+      final h = _Harness()..fireAlone(HapticEvent.wheelItem);
       h.clock.advance(HapticGovernor.minInterval);
       h
         ..submit(HapticEvent.taskCreated)
         ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted, HapticEvent.taskCreated]);
+      expect(h.played, [HapticEvent.wheelItem, HapticEvent.taskCreated]);
     });
 
     test('a suppressed event does not restart the floor', () {
       // The floor is measured against what actually fired, so a burst of
       // dropped events cannot starve the next real one.
-      final h = _Harness()..fireAlone(HapticEvent.taskCompleted);
+      final h = _Harness()..fireAlone(HapticEvent.wheelItem);
       h.clock.advance(const Duration(milliseconds: 30));
       // Dropped by the floor.
       h
@@ -197,7 +202,7 @@ void main() {
       h
         ..submit(HapticEvent.moodLogged)
         ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted, HapticEvent.moodLogged]);
+      expect(h.played, [HapticEvent.wheelItem, HapticEvent.moodLogged]);
     });
   });
 

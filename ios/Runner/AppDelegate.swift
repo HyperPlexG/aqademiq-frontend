@@ -34,9 +34,16 @@ import UIKit
   /// the app because a focus session outlives any screen.
   private var ambient: AmbientPlugin?
 
+  /// The 23 haptic patterns. Held for the life of the app because it owns a
+  /// `CHHapticEngine`, and starting one per haptic would add latency to the
+  /// very thing that has to feel immediate.
+  private var haptics: HapticsPlugin?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    ambient = AmbientPlugin(messenger: engineBridge.applicationRegistrar.messenger())
+    let messenger = engineBridge.applicationRegistrar.messenger()
+    ambient = AmbientPlugin(messenger: messenger)
+    haptics = HapticsPlugin(messenger: messenger)
   }
 
   /// A Freeze taken on the lock screen runs in the extension, which cannot

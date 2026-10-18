@@ -26,6 +26,14 @@ class MainActivity : FlutterActivity() {
         // is already on the launch intent and would otherwise be missed.
         AmbientBridge.routeFrom(intent)
 
+        // The 23 haptic patterns. Flutter's own HapticFeedback takes no
+        // parameters, so intensity, duration and multi-beat timing all arrive
+        // through here (lib/services/haptics/haptic_driver.dart).
+        HapticsBridge.attach(
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HapticsBridge.CHANNEL),
+            applicationContext,
+        )
+
         // A permission the student refused can only be re-enabled from the app's
         // page in system Settings. iOS reaches it through a URL; Android has none,
         // so Dart asks for it here (lib/services/app_settings.dart).
@@ -54,6 +62,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         AmbientBridge.detach()
+        HapticsBridge.detach()
         super.onDestroy()
     }
 }
