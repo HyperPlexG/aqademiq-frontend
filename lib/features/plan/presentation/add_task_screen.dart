@@ -264,6 +264,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                   children: [
                     _HeaderCard(
                       controller: _title,
+                      editing: widget.existing != null,
                       saving: _saving,
                       onClose: _saving ? null : () => context.pop(),
                       onSave: _save,
@@ -474,8 +475,12 @@ class _HeaderCard extends StatelessWidget {
     required this.onSave,
     this.onClose,
     this.saving = false,
+    this.editing = false,
   });
   final TextEditingController controller;
+
+  /// Opened on an existing task, so the title says Edit rather than Add.
+  final bool editing;
   final VoidCallback? onClose;
   final VoidCallback onSave;
   final bool saving;
@@ -505,7 +510,7 @@ class _HeaderCard extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: Text('Add task', textAlign: TextAlign.center, style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text)),
+                child: Text(editing ? 'Edit task' : 'Add task', textAlign: TextAlign.center, style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text)),
               ),
               GestureDetector(
                 // Disabled while a save is in flight — the parent's `_saving`

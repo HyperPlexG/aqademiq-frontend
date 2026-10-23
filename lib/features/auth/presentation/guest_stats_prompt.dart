@@ -253,7 +253,7 @@ class _SetupSheet extends StatelessWidget {
           ),
           const SizedBox(height: 3),
           Text(
-            'Set up your profile and Ada will track your streaks, focus hours '
+            'Create a free account and Ada will track your streaks, focus hours '
             '& mood trends — then tune your plan to match.',
             style: AppText.sans(size: 11.5, height: 1.55, color: colors.textMed),
           ),

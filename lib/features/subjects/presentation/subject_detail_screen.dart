@@ -231,7 +231,9 @@ class SubjectDetailScreen extends ConsumerWidget {
   /// the two kinds of attached data part ways: files are deleted with the
   /// subject, tasks keep going without one.
   Future<void> _deleteSubject(BuildContext context, WidgetRef ref, Subject subject) async {
-    final files = subject.fileCount;
+    // The list on this screen when it has loaded: the subject's own count can
+    // lag behind it, and the warning has to name what will really go.
+    final files = ref.read(subjectFilesProvider(subject.id)).value?.length ?? subject.fileCount;
     final ok = await confirmDestructive(
       context,
       title: 'Delete ${subject.name}?',

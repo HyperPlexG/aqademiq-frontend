@@ -55,13 +55,23 @@ final class HapticsPlugin {
     do {
       let engine = try CHHapticEngine()
       engine.isAutoShutdownEnabled = true
-      engine.stoppedHandler = { [weak self] _ in
-        // Do not restart from in here; the next play() will, and restarting
-        // eagerly from a background stop just wakes the engine to idle.
-        self?.engine = nil
+      // Core Haptics calls both handlers on a queue of its own, while play()
+      // reads `engine` on the main thread. Touching it from there races the
+      // two — a stop landing just as a haptic fires (a call, Siri, going to
+      // the background) could free the engine mid-read. Both hop to main.
+      engine.stoppedHandler = { [weak self, weak engine] _ in
+        DispatchQueue.main.async {
+          // Do not restart from in here; the next play() will, and restarting
+          // eagerly from a background stop just wakes the engine to idle.
+          // Only drop the engine that stopped, not a newer one built since.
+          guard let self, self.engine === engine else { return }
+          self.engine = nil
+        }
       }
       engine.resetHandler = { [weak self] in
-        try? self?.engine?.start()
+        DispatchQueue.main.async {
+          try? self?.engine?.start()
+        }
       }
       try engine.start()
       self.engine = engine
