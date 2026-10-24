@@ -194,10 +194,13 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
             onSelect: dateCtrl.select,
           ),
           if (guest) ...[
+            // Account first, then set-up — the same path as the Ada and Stats
+            // prompts (GST-2/3). Going straight to onboarding set a guest up
+            // without ever taking an email, so they stayed a guest.
             GuestNudgeCard(
-              body: 'Set up so Ada can plan your week & track stats.',
-              ctaLabel: 'Set up now · 2 min →',
-              onCta: () => context.go(Routes.obAge),
+              body: 'Create an account so Ada can plan your week & track stats.',
+              ctaLabel: 'Create free account →',
+              onCta: () => unawaited(context.push(Routes.signup)),
             ),
             const SizedBox(height: 10),
           ],

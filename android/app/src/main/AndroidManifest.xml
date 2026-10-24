@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <!-- Haptics (HapticsBridge). Declared here rather than left to arrive
+         through flutter_local_notifications' manifest: without it every
+         vibrate() throws, the bridge swallows it, and haptics go silent. -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Locally-scheduled reminders (services/reminder_scheduler.dart) are
          alarms, and Android drops every alarm on reboot. Without this the
          week's schedule silently disappears the first time the phone restarts.

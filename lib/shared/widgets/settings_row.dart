@@ -107,7 +107,10 @@ class SettingsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final labelColor = danger ? colors.danger : colors.text;
-    final hasValue = value != null;
+    // An empty value is no value. Weekly report passes '' while it is on, and
+    // the Flexible below took half the row for nothing, leaving its chevron
+    // stranded mid-row.
+    final hasValue = value != null && value!.isNotEmpty;
 
     return InkWell(
       onTap: onTap,

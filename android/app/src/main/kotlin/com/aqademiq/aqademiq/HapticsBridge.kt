@@ -2,6 +2,7 @@ package com.aqademiq.aqademiq
 
 import android.content.Context
 import android.os.Build
+import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -111,7 +112,18 @@ object HapticsBridge {
                     // warning from a single confirmation.
                     VibrationEffect.createWaveform(timings.toLongArray(), -1)
                 }
-                device.vibrate(effect)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    // Marked as touch feedback so Android's own "Touch feedback"
+                    // switch and intensity apply, as they did for Flutter's
+                    // HapticFeedback before this bridge. Someone who turned
+                    // system haptics off should not feel the app anyway.
+                    device.vibrate(
+                        effect,
+                        VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH),
+                    )
+                } else {
+                    device.vibrate(effect)
+                }
             } else {
                 @Suppress("DEPRECATION")
                 device.vibrate(timings.toLongArray(), -1)
