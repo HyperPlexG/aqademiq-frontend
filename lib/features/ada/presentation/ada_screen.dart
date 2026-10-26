@@ -37,6 +37,9 @@ class AdaScreen extends ConsumerStatefulWidget {
 class _AdaScreenState extends ConsumerState<AdaScreen> {
   final _input = TextEditingController();
   final _focus = FocusNode();
+
+  /// Lets the "N changes waiting" bar scroll the transcript to its cards.
+  final _list = GlobalKey<_MessageListState>();
   late final _dictation = Dictation(_input);
 
   /// Held from [initState] so [dispose] can end a dictation without touching
@@ -232,6 +235,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
             child: chat.isEmpty
                 ? _EmptyState(onSuggest: _send)
                 : _MessageList(
+                    key: _list,
                     messages: chat.messages,
                     typing: chat.typing,
                     error: chat.error,
@@ -257,6 +261,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                   _DecideAllBar(
                     count: chat.outstandingActions.length,
                     busy: chat.decidingActionIds.isNotEmpty,
+                    onShow: () => _list.currentState?.scrollToFirstPending(),
                     onApproveAll: () => unawaited(_decideAll(approve: true)),
                     onRejectAll: () => unawaited(_decideAll(approve: false)),
                   ),
@@ -439,8 +444,9 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _MessageList extends StatelessWidget {
+class _MessageList extends StatefulWidget {
   const _MessageList({
+    super.key,
     required this.messages,
     required this.typing,
     required this.error,
@@ -469,25 +475,98 @@ class _MessageList extends StatelessWidget {
   final ValueChanged<AdaAction> onReject;
 
   @override
+  State<_MessageList> createState() => _MessageListState();
+}
+
+/// The transcript, kept at the newest message.
+///
+/// It never scrolled by itself: a reply with five cards landed below the fold
+/// — under the keyboard, behind the "N changes waiting" bar — and the user
+/// asked "where is it?" while the cards sat just out of sight.
+class _MessageListState extends State<_MessageList> {
+  final _scroll = ScrollController();
+  final _keys = <String, GlobalKey>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _toEnd(animate: false);
+  }
+
+  @override
+  void didUpdateWidget(_MessageList old) {
+    super.didUpdateWidget(old);
+    if (widget.messages.length != old.messages.length ||
+        widget.typing != old.typing ||
+        widget.error != old.error ||
+        _cardCount(widget) != _cardCount(old)) {
+      _toEnd(animate: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  static int _cardCount(_MessageList w) =>
+      w.actionsByMessage.values.fold(0, (n, list) => n + list.length);
+
+  void _toEnd({required bool animate}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final end = _scroll.position.maxScrollExtent;
+      if (animate && !MediaQuery.disableAnimationsOf(context)) {
+        unawaited(_scroll.animateTo(end, duration: const Duration(milliseconds: 260), curve: Curves.easeOutCubic));
+      } else {
+        _scroll.jumpTo(end);
+      }
+    });
+  }
+
+  /// Bring the oldest message with an undecided card into view.
+  void scrollToFirstPending() {
+    for (final m in widget.messages) {
+      final cards = widget.actionsByMessage[m.id] ?? const <AdaAction>[];
+      if (!cards.any((a) => a.status.isPending)) continue;
+      final target = _keys[m.id]?.currentContext;
+      if (target != null) {
+        unawaited(Scrollable.ensureVisible(target, duration: const Duration(milliseconds: 300), alignment: 0.1));
+      } else {
+        _toEnd(animate: true);
+      }
+      return;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final w = widget;
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       children: [
-        for (final m in messages)
+        for (final m in w.messages)
           _Bubble(
+            key: _keys.putIfAbsent(m.id, GlobalKey.new),
             message: m,
-            onApplyPlan: onApplyPlan,
-            actions: actionsByMessage[m.id] ?? const [],
-            decidingIds: decidingIds,
-            onApprove: onApprove,
-            onReject: onReject,
+            onApplyPlan: w.onApplyPlan,
+            // A replaced card is history, not a choice: the newer one carries it.
+            actions: [
+              for (final a in w.actionsByMessage[m.id] ?? const <AdaAction>[])
+                if (a.status != AdaActionStatus.superseded) a,
+            ],
+            decidingIds: w.decidingIds,
+            onApprove: w.onApprove,
+            onReject: w.onReject,
           ),
-        if (typing) const _TypingBubble(),
-        if (error != null)
+        if (w.typing) const _TypingBubble(),
+        if (w.error != null)
           _ErrorBubble(
-            message: error!,
-            onRetry: onRetry,
-            onDismiss: onDismissError,
+            message: w.error!,
+            onRetry: w.onRetry,
+            onDismiss: w.onDismissError,
           ),
       ],
     );
@@ -496,6 +575,7 @@ class _MessageList extends StatelessWidget {
 
 class _Bubble extends StatelessWidget {
   const _Bubble({
+    super.key,
     required this.message,
     required this.onApplyPlan,
     this.actions = const [],
@@ -854,10 +934,14 @@ class _DecideAllBar extends StatelessWidget {
     required this.busy,
     required this.onApproveAll,
     required this.onRejectAll,
+    required this.onShow,
   });
 
   final int count;
   final bool busy;
+
+  /// Scroll to the cards this bar is counting.
+  final VoidCallback onShow;
   final VoidCallback onApproveAll;
   final VoidCallback onRejectAll;
 
@@ -876,9 +960,13 @@ class _DecideAllBar extends StatelessWidget {
         child: Row(
           children: [
             Expanded(
-              child: Text(
-                '$count changes waiting',
-                style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.text),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onShow,
+                child: Text(
+                  '$count changes waiting · show',
+                  style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.text),
+                ),
               ),
             ),
             GestureDetector(

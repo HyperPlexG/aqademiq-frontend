@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -61,8 +63,10 @@ class AdaRepository {
   Future<AdaDecisionResult> rejectAction(String actionId) =>
       _source.rejectAction(actionId);
 
-  Future<AdaBulkDecision> decideAll({required bool approve}) =>
-      _source.decideAll(approve: approve);
+  Future<AdaBulkDecision> decideAll({required bool approve, List<String>? actionIds}) =>
+      _source.decideAll(approve: approve, actionIds: actionIds);
+
+  Future<List<AdaAction>> pendingActions() => _source.pendingActions();
 }
 
 final adaRepositoryProvider = Provider<AdaRepository>((ref) {
@@ -210,6 +214,7 @@ class AdaChatController extends Notifier<AdaChatState> {
             attachments: attachments,
           );
       _appendTurn(reply, typing: false);
+      unawaited(_reconcile());
     } on Object catch (e) {
       // Say what happened. This used to be `catch (_)` with no message at all:
       // the thinking indicator stopped and no reply arrived, which is
@@ -334,8 +339,12 @@ class AdaChatController extends Notifier<AdaChatState> {
           (message: result.followUp!.message.toModel(), actions: result.followUp!.actions),
         );
       }
+      unawaited(_reconcile());
       return result.action.status.isApplied;
     } on Object {
+      // Most often a 409: the card was already decided, or replaced by a newer
+      // one. It used to stay on screen as pending — and counted — for good.
+      unawaited(_reconcile());
       return false;
     } finally {
       state = state.copyWith(
@@ -353,14 +362,19 @@ class AdaChatController extends Notifier<AdaChatState> {
       decidingActionIds: {...state.decidingActionIds, ...ids},
     );
     try {
-      final result =
-          await ref.read(adaRepositoryProvider).decideAll(approve: approve);
+      // Only the cards on screen: the server used to decide every pending row
+      // in the chat, including ones the user had never been shown.
+      final result = await ref
+          .read(adaRepositoryProvider)
+          .decideAll(approve: approve, actionIds: ids.toList(growable: false));
       result.actions.forEach(_replaceAction);
       for (final turn in result.followUps) {
         _appendTurn((message: turn.message.toModel(), actions: turn.actions));
       }
+      unawaited(_reconcile());
       return result.actions.where((a) => a.status.isApplied).length;
     } on Object {
+      unawaited(_reconcile());
       return 0;
     } finally {
       state = state.copyWith(
@@ -370,14 +384,83 @@ class AdaChatController extends Notifier<AdaChatState> {
   }
 
   /// Append an assistant turn and index any cards it brought with it.
+  ///
+  /// A card can arrive again under a newer message: when Ada re-proposes a
+  /// change that is already waiting, the server reuses that card and moves it
+  /// to the latest reply. It is taken off the older message so it shows once.
   void _appendTurn(AdaReplyResult turn, {bool? typing}) {
+    final incoming = {for (final a in turn.actions) a.id};
     state = state.copyWith(
       messages: [...state.messages, turn.message],
       typing: typing ?? state.typing,
       actionsByMessage: turn.actions.isEmpty
           ? state.actionsByMessage
-          : {...state.actionsByMessage, turn.message.id: turn.actions},
+          : {
+              for (final e in state.actionsByMessage.entries)
+                e.key: [for (final a in e.value) if (!incoming.contains(a.id)) a],
+              turn.message.id: turn.actions,
+            },
     );
+  }
+
+  /// Bring the cards in line with what the server says is waiting.
+  ///
+  /// - A card pending here but not on the server was replaced, merged or
+  ///   decided elsewhere: it is marked superseded, which hides it and takes it
+  ///   out of the "N changes waiting" count.
+  /// - A card pending on the server but missing here (a check-in nudge, or a
+  ///   reply that failed to arrive) is shown under its own message, or under
+  ///   the latest reply if that message is not on screen.
+  ///
+  /// Best effort: a failure leaves the cards as they are.
+  Future<void> _reconcile() async {
+    // Only cards that existed when the request went out can be judged by its
+    // answer: a reply landing meanwhile brings cards this list predates.
+    final askedAbout = {
+      for (final list in state.actionsByMessage.values) ...list.map((a) => a.id),
+    };
+    final List<AdaAction> serverPending;
+    try {
+      serverPending = await ref.read(adaRepositoryProvider).pendingActions();
+    } on Object {
+      return;
+    }
+    final serverIds = {for (final a in serverPending) a.id};
+    final busy = state.decidingActionIds;
+    final known = <String>{};
+
+    final next = <String, List<AdaAction>>{};
+    for (final entry in state.actionsByMessage.entries) {
+      next[entry.key] = [
+        for (final a in entry.value)
+          if (a.status.isPending &&
+              askedAbout.contains(a.id) &&
+              !serverIds.contains(a.id) &&
+              !busy.contains(a.id))
+            a.copyWith(status: AdaActionStatus.superseded)
+          else
+            a,
+      ];
+      known.addAll(entry.value.map((a) => a.id));
+    }
+
+    final missing = serverPending.where((a) => !known.contains(a.id)).toList();
+    if (missing.isNotEmpty) {
+      final onScreen = {for (final m in state.messages) m.id};
+      String? latestReply;
+      for (final m in state.messages.reversed) {
+        if (m.role != AdaRole.user) {
+          latestReply = m.id;
+          break;
+        }
+      }
+      for (final a in missing) {
+        final home = (a.messageId != null && onScreen.contains(a.messageId)) ? a.messageId! : latestReply;
+        if (home == null) continue;
+        next[home] = [...?next[home], a];
+      }
+    }
+    state = state.copyWith(actionsByMessage: next);
   }
 
   /// Swap an action for its post-decision version, wherever it lives.
