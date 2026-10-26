@@ -52,8 +52,15 @@ abstract interface class AdaSource {
   /// Decline one proposed change; nothing is written.
   Future<AdaDecisionResult> rejectAction(String actionId);
 
-  /// Approve or decline every outstanding change in the active conversation.
-  Future<AdaBulkDecision> decideAll({required bool approve});
+  /// Approve or decline outstanding changes in the active conversation —
+  /// [actionIds] when given (the cards the user can see), otherwise all of them.
+  Future<AdaBulkDecision> decideAll({required bool approve, List<String>? actionIds});
+
+  /// Every change in the active conversation still waiting for a decision, as
+  /// the server has it. The app's own copy only ever learned about cards from
+  /// the reply that carried them, so one the server replaced, merged or moved
+  /// stayed on screen — and in the "N changes waiting" count — for good.
+  Future<List<AdaAction>> pendingActions();
 
   /// Switch the active conversation. `null` starts a fresh one on the next reply.
   set conversationId(String? id);
@@ -178,10 +185,17 @@ class MockAdaSource implements AdaSource {
   }
 
   @override
-  Future<AdaBulkDecision> decideAll({required bool approve}) {
+  Future<List<AdaAction>> pendingActions() => mockDelay(
+        _actions.values.where((a) => a.status.isPending).toList(growable: false),
+        ms: 150,
+      );
+
+  @override
+  Future<AdaBulkDecision> decideAll({required bool approve, List<String>? actionIds}) {
     final decided = <AdaAction>[];
     for (final entry in _actions.entries.toList()) {
       if (!entry.value.status.isPending) continue;
+      if (actionIds != null && !actionIds.contains(entry.key)) continue;
       final next = entry.value.copyWith(
         status: approve ? AdaActionStatus.executed : AdaActionStatus.rejected,
       );
@@ -414,12 +428,24 @@ class ApiAdaSource implements AdaSource {
   }
 
   @override
-  Future<AdaBulkDecision> decideAll({required bool approve}) async {
+  Future<List<AdaAction>> pendingActions() async {
+    final cid = _conversationId;
+    if (cid == null) return const <AdaAction>[];
+    final body = await _dio.getMap('/ada/pending-actions', query: {'conversation_id': cid});
+    return listOf(body, 'actions').map(AdaAction.fromJson).toList(growable: false);
+  }
+
+  @override
+  Future<AdaBulkDecision> decideAll({required bool approve, List<String>? actionIds}) async {
     final cid = _conversationId;
     if (cid == null) return (actions: const <AdaAction>[], followUps: const <AdaTurn>[]);
     final body = await _dio.postMap(
       '/ada/conversations/$cid/actions/decide',
-      <String, dynamic>{'approve': approve},
+      <String, dynamic>{
+        'approve': approve,
+        // Only the cards on screen. Older servers ignore it and decide all.
+        'action_ids': ?actionIds,
+      },
       _agentOptions,
     );
     return (
