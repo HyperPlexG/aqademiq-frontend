@@ -468,7 +468,11 @@ class ImportSession extends Notifier<ImportSessionState> {
         ];
       case ImportSourceKind.text:
         return [
-          for (final line in parseTextList(_pasted, today: today)) itemFromListLine(line, today: today),
+          // Read past the review limit, like every other source, so a very
+          // long paste is trimmed (and says so) by _load rather than silently
+          // losing its last lines here.
+          for (final line in parseTextList(_pasted, today: today, maxItems: maxReadItems + 1))
+            itemFromListLine(line, today: today),
         ];
     }
   }
@@ -499,7 +503,7 @@ class ImportSession extends Notifier<ImportSessionState> {
             state.source,
             picked,
             tagId: state.tagId,
-            onProgress: (done, total) {
+            onProgress: (done, _) {
               if (generation == _generation) state = state.copyWith(done: done);
             },
           );

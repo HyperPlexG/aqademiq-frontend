@@ -182,7 +182,10 @@ class _ReviewBody extends ConsumerWidget {
         children: [
           Expanded(
             child: Text(
-              inPlan == 0 ? '$found found' : '$found found · $inPlan already in your plan',
+              // "+" when the list was cut: there are more than it shows.
+              inPlan == 0
+                  ? '$found${s.truncated ? '+' : ''} found'
+                  : '$found${s.truncated ? '+' : ''} found · $inPlan already in your plan',
               style: AppText.sans(size: 12.5, weight: FontWeight.w700, color: colors.textMed),
             ),
           ),

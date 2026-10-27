@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -27,7 +29,9 @@ class IcsFetcher {
               BaseOptions(
                 connectTimeout: const Duration(seconds: 12),
                 receiveTimeout: const Duration(seconds: 25),
-                responseType: ResponseType.plain,
+                // Bytes, decoded below the same way a picked file is, so an
+                // older Latin-1 feed keeps its accents ("Café").
+                responseType: ResponseType.bytes,
                 headers: const {'Accept': 'text/calendar, text/plain;q=0.9, */*;q=0.5'},
               ),
             );
@@ -41,18 +45,20 @@ class IcsFetcher {
     // download has arrived.
     final cancel = CancelToken();
     var tooBig = false;
+    final List<int> bytes;
     try {
-      final response = await _dio.getUri<String>(
+      final response = await _dio.getUri<List<int>>(
         uri,
         cancelToken: cancel,
-        onReceiveProgress: (received, _) {
-          if (received > maxCalendarBytes && !tooBig) {
+        // `total` is the declared length (-1 when the server does not say).
+        onReceiveProgress: (received, total) {
+          if ((received > maxCalendarBytes || total > maxCalendarBytes) && !tooBig) {
             tooBig = true;
             cancel.cancel('too big');
           }
         },
       );
-      return response.data ?? '';
+      bytes = response.data ?? const <int>[];
     } on DioException catch (e) {
       if (tooBig) throw _tooBig;
       final status = e.response?.statusCode;
@@ -62,6 +68,14 @@ class IcsFetcher {
         );
       }
       throw const IcsFetchException("Couldn't download that calendar. Check the link and your connection.");
+    }
+    // The chunk that crossed the limit can be the last one, finishing the
+    // request before the cancel lands.
+    if (tooBig || bytes.length > maxCalendarBytes) throw _tooBig;
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      return latin1.decode(bytes);
     }
   }
 }

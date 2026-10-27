@@ -229,27 +229,39 @@ class DeviceImportPlugin :
             CalendarContract.Instances.CALENDAR_ID,
             CalendarContract.Instances.CALENDAR_DISPLAY_NAME,
             CalendarContract.Instances.STATUS,
-            CalendarContract.Instances.UID_2445,
         )
         val selection = "${CalendarContract.Instances.CALENDAR_ID} IN (${wanted.joinToString(",") { "?" }})"
         val args = wanted.map { it.toString() }.toTypedArray()
+        val order = "${CalendarContract.Instances.BEGIN} ASC"
 
         // All-day events are stored at UTC midnight, so their day is read in
         // UTC; a timed event's day is the phone's local day.
         val utcDay = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }
         val localDay = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
+        // The event's iCalendar UID (column 10) is asked for where the provider
+        // offers it on Instances. A provider that does not rejects the whole
+        // query as an invalid column, so that one is read again without it,
+        // keyed by EVENT_ID, rather than failing the import.
+        var hasUid = true
+        val cursor = try {
+            resolver.query(uri, projection + CalendarContract.Instances.UID_2445, selection, args, order)
+        } catch (e: IllegalArgumentException) {
+            hasUid = false
+            resolver.query(uri, projection, selection, args, order)
+        }
+
         val out = mutableListOf<Map<String, Any?>>()
-        resolver.query(uri, projection, selection, args, "${CalendarContract.Instances.BEGIN} ASC")?.use { c ->
+        cursor?.use { c ->
             while (c.moveToNext()) {
                 if (!c.isNull(9) && c.getInt(9) == CalendarContract.Events.STATUS_CANCELED) continue
                 val begin = c.getLong(1)
                 val allDay = !c.isNull(6) && c.getInt(6) != 0
-                // The event's iCalendar UID where the account provides one
-                // (Google, Exchange): it survives a new phone or re-adding the
-                // account. EVENT_ID is only this phone's row number, so it is
-                // the fallback for local calendars that have no UID.
-                val uid = if (c.isNull(10)) null else c.getString(10)
+                // The UID where the account provides one (Google, Exchange): it
+                // survives a new phone or re-adding the account. EVENT_ID is only
+                // this phone's row number, so it is the fallback for local
+                // calendars that have no UID.
+                val uid = if (!hasUid || c.isNull(10)) null else c.getString(10)
                 out.add(
                     mapOf(
                         "id" to (if (uid.isNullOrBlank()) c.getLong(0).toString() else uid),
