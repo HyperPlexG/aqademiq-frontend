@@ -19,6 +19,10 @@ import '../../features/focus/presentation/focus_end_screen.dart';
 import '../../features/focus/presentation/timer_screen.dart';
 import '../../features/ice_breakers/presentation/ice_breaker_screen.dart';
 import '../../features/ice_breakers/presentation/ice_breakers_screen.dart';
+import '../../features/import/presentation/calendar_import_screen.dart';
+import '../../features/import/presentation/import_review_screen.dart';
+import '../../features/import/presentation/paste_list_screen.dart';
+import '../../features/import/presentation/reminder_import_screen.dart';
 import '../../features/mood/presentation/mood_evening_screen.dart';
 import '../../features/mood/presentation/mood_morning_screen.dart';
 import '../../features/onboarding/presentation/ada_loading_screen.dart';
@@ -89,6 +93,13 @@ abstract final class Routes {
   static const settingsSounds = '/settings/prism';
   static const settingsMemories = '/settings/memories';
   static const settingsEmail = '/settings/email';
+
+  // Calendar import / Reminder import (v2). Each source screen hands off to
+  // the one review screen, which reads the import session provider.
+  static const settingsCalendarImport = '/settings/calendar-import';
+  static const settingsReminderImport = '/settings/reminder-import';
+  static const importReview = '/settings/import/review';
+  static const importPaste = '/settings/import/paste';
 
   // Feedback board (full-screen, pushed over the shell).
   // Ice Breakers — the tutorial shelf. Full-screen and pushed, not a tab, so
@@ -162,6 +173,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.settingsSounds, builder: (_, _) => const PrismSettingsScreen()),
       GoRoute(path: Routes.settingsMemories, builder: (_, _) => const SettingsMemoriesScreen()),
       GoRoute(path: Routes.settingsEmail, builder: (_, _) => const EmailSettingsScreen()),
+      GoRoute(path: Routes.settingsCalendarImport, builder: (_, _) => const CalendarImportScreen()),
+      GoRoute(path: Routes.settingsReminderImport, builder: (_, _) => const ReminderImportScreen()),
+      GoRoute(path: Routes.importReview, builder: (_, _) => const ImportReviewScreen()),
+      GoRoute(path: Routes.importPaste, builder: (_, _) => const PasteListScreen()),
       GoRoute(
       path: Routes.iceBreakers,
       builder: (_, _) => const IceBreakersScreen(),

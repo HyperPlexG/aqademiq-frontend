@@ -80,6 +80,17 @@
 	<string>Aqademiq uses the microphone so you can speak to Ada and add tasks by voice. You see the words before anything is sent.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Aqademiq turns what you say into text in the message box, so you can read and edit it before sending.</string>
+	<!-- Settings → Calendar import / Reminder import (DeviceImportPlugin.swift).
+	     iOS 17+ reads the FullAccess keys; earlier versions the plain ones. A
+	     missing key is a crash on the first request, so all four stay. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Aqademiq reads your calendars when you use Calendar import, so classes and events you pick become tasks in your plan. It never changes your calendar.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Aqademiq reads your calendars when you use Calendar import, so classes and events you pick become tasks in your plan. It never changes your calendar.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Aqademiq reads your reminders when you use Reminder import, so the ones you pick become tasks in your plan. It never changes your reminders.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Aqademiq reads your reminders when you use Reminder import, so the ones you pick become tasks in your plan. It never changes your reminders.</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -118,8 +118,8 @@ class SettingsHomeScreen extends ConsumerWidget {
               showChevron: true,
               onTap: () => unawaited(context.push(Routes.settingsReport)),
             ),
-            SettingsRow(label: 'Calendar import', icon: Icons.calendar_today, showChevron: true, onTap: () => _comingSoon(context, 'Calendar import')),
-            SettingsRow(label: 'Reminder import', icon: Icons.format_list_bulleted, showChevron: true, last: true, onTap: () => _comingSoon(context, 'Reminder import')),
+            SettingsRow(label: 'Calendar import', icon: Icons.calendar_today, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsCalendarImport))),
+            SettingsRow(label: 'Reminder import', icon: Icons.format_list_bulleted, showChevron: true, last: true, onTap: () => unawaited(context.push(Routes.settingsReminderImport))),
           ],
         ),
         const SizedBox(height: 20),
@@ -190,18 +190,6 @@ class SettingsHomeScreen extends ConsumerWidget {
       ],
     );
   }
-}
-
-void _comingSoon(BuildContext context, String feature) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
-        content: Text("$feature isn't available yet — we'll let you know the moment it lands."),
-      ),
-    );
 }
 
 class _Avatar extends StatelessWidget {

@@ -27,6 +27,7 @@
 		93476E61686B9D31D796878C /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
 		96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */; };
 		A7F3C21D9E4B06583C1D2E4F /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */; };
+		D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -121,6 +122,7 @@
 		550699B9FE5E3FD68C938C10 /* AmbientState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientState.swift; sourceTree = "<group>"; };
 		5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientPlugin.swift; sourceTree = "<group>"; };
 		B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
+		E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceImportPlugin.swift; sourceTree = "<group>"; };
 		6320E9A85CC5E9E585A4FE87 /* AqademiqWatch.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AqademiqWatch.xcconfig; sourceTree = "<group>"; };
 		63BC88FC67DAA3E60A1A6B63 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AqademiqWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -263,6 +265,7 @@
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */,
 				B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */,
+				E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */,
 				FF53A998BC55D853E629F440 /* WatchBridge.swift */,
 			);
 			path = Runner;
@@ -616,6 +619,7 @@
 				F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */,
 				96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */,
 				A7F3C21D9E4B06583C1D2E4F /* HapticsPlugin.swift in Sources */,
+				D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */,
 				59AE08FB9656EEDE6BEF8BC0 /* WatchBridge.swift in Sources */,
 				06FAB55517A4A01D85AAD19A /* SessionIntent.swift in Sources */,
 			);

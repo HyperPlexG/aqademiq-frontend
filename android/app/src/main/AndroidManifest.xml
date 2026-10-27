@@ -22,6 +22,11 @@
          speech_to_text README lists are left out on purpose — the plugin runs
          with androidNoBluetooth, so no second runtime prompt is needed. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Settings → Calendar import (DeviceImportPlugin.kt): reads the phone's
+         calendars — Google, Samsung, Outlook — so picked events become tasks.
+         Read only: there is deliberately no WRITE_CALENDAR. Asked for at the
+         moment the student taps "This phone's calendars", never at launch. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR"/>
     <application
         android:label="Aqademiq"
         android:name="${applicationName}"

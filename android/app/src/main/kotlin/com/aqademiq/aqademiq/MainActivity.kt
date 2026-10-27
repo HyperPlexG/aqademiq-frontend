@@ -34,6 +34,11 @@ class MainActivity : FlutterActivity() {
             applicationContext,
         )
 
+        // Settings → Calendar import: reads the phone's calendars (read-only).
+        // A plugin rather than an attached object because the permission
+        // prompt needs the activity's result callback.
+        flutterEngine.plugins.add(DeviceImportPlugin())
+
         // A permission the student refused can only be re-enabled from the app's
         // page in system Settings. iOS reaches it through a URL; Android has none,
         // so Dart asks for it here (lib/services/app_settings.dart).

@@ -39,11 +39,15 @@ import UIKit
   /// very thing that has to feel immediate.
   private var haptics: HapticsPlugin?
 
+  /// Calendar import and Reminder import — read-only EventKit access.
+  private var deviceImport: DeviceImportPlugin?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
     ambient = AmbientPlugin(messenger: messenger)
     haptics = HapticsPlugin(messenger: messenger)
+    deviceImport = DeviceImportPlugin(messenger: messenger)
   }
 
   /// A Freeze taken on the lock screen runs in the extension, which cannot

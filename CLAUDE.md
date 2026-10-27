@@ -262,3 +262,18 @@ focus, mood, ada, profile, onboarding, **feedback**. The live contract lives in
 Per-feature wiring notes: `FEEDBACK_BOARD_INTEGRATION.md`,
 `ONBOARDING_CONSENT_AGE_INTEGRATION.md`, `INTEGRATION.md`. `socket_io_client`
 (focus ticks/presence via `data/realtime/`) is reserved but not yet wired.
+
+## Calendar import & Reminder import (v2)
+
+Settings → Calendar import / Reminder import. The phone reads the source (EventKit,
+CalendarContract, an .ics file or link, or a pasted list), the student ticks items on
+one review screen, and `POST /v1/integrations/import` turns them into ordinary tasks.
+Full map, platform setup and limits: `CALENDAR_REMINDER_IMPORT.md`; wire contract §17.
+
+- The native bridge (`aqademiq/device_import`) is read-only by design — keep it that
+  way; an import must never change the student's own calendar.
+- Dedupe lives on the server, keyed `<source>:<external_id>`. External ids must stay
+  stable per source (`import_mapping.dart`), or re-importing will duplicate tasks.
+- `IcsFetcher` uses its own bare Dio on purpose: `dioProvider` would send the
+  Supabase token to a third-party calendar host.
+- `ImportItem` and friends are plain classes, not freezed — no build_runner step.
