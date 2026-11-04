@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../providers/feedback_providers.dart';
 
@@ -60,7 +61,7 @@ class _SortBody extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    Icon(
+                    AppIcon(
                       icon,
                       size: 21,
                       color: sort == current ? colors.accent : colors.text,
@@ -91,7 +92,7 @@ class _SortBody extends StatelessWidget {
                       ),
                     ),
                     if (sort == current)
-                      Icon(Icons.check_circle, size: 22, color: colors.accent),
+                      AppIcon(Icons.check_circle, size: 22, color: colors.accent),
                   ],
                 ),
               ),

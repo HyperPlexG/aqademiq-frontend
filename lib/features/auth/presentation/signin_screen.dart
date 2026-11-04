@@ -9,6 +9,7 @@ import '../../../core/env/env.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -188,7 +189,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                 controller: _password,
                 obscureText: _obscure,
                 suffix: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility, size: 17, color: colors.textMed),
+                  icon: AppIcon(_obscure ? Icons.visibility_off : Icons.visibility, size: 17, color: colors.textMed),
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Result of the `···` semester menu popover ([showSubjectMenu]).
 enum SubjectMenuResult {
@@ -140,7 +141,7 @@ class _SemesterRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
         child: Row(
           children: [
-            Icon(
+            AppIcon(
               Icons.check,
               size: 17,
               color: on ? colors.accent : Colors.transparent,
@@ -182,7 +183,7 @@ class _ActionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: colors.text),
+            AppIcon(icon, size: 18, color: colors.text),
             const SizedBox(width: 12),
             Text(
               label,

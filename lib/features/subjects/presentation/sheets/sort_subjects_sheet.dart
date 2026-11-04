@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_toggle.dart';
 
 /// Presents the "Sort subjects" sheet (`subj-sort`) — a bottom sheet over the
@@ -202,7 +203,7 @@ class _OptRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            AppIcon(
               option.icon,
               size: 19,
               color: active ? accent : colors.textMed,
@@ -230,7 +231,7 @@ class _OptRow extends StatelessWidget {
             ),
             if (active) ...[
               const SizedBox(width: 12),
-              Icon(Icons.check, size: 14, color: accent),
+              AppIcon(Icons.check, size: 14, color: accent),
             ],
           ],
         ),

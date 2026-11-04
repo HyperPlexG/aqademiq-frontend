@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/weekly_report.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../report_copy.dart';
 import 'widgets/core_column.dart';
 
@@ -74,7 +75,7 @@ class _ShareShapeScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.of(context).maybePop(),
-                    icon: Icon(Icons.arrow_back_ios_new, size: 18, color: colors.text),
+                    icon: AppIcon(Icons.arrow_back_ios_new, size: 18, color: colors.text),
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -135,7 +136,7 @@ class _ShareShapeScreen extends StatelessWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.lock_outline, size: 16, color: colors.textMed),
+                        AppIcon(Icons.lock_outline, size: 16, color: colors.textMed),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(

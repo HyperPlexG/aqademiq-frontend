@@ -8,6 +8,7 @@ import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/tag.dart';
 import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// FRAMES `plan-breakdown` — a planned task expanded into Ada microtasks, with a
 /// progress header and a connector-rail subtask list.
@@ -218,7 +219,7 @@ class _MicrotaskRow extends StatelessWidget {
                     border: Border.all(color: done ? colors.accent : const Color(0xFFCFCBC4), width: 1.5),
                     boxShadow: [BoxShadow(color: colors.surface, spreadRadius: 3)],
                   ),
-                  child: done ? const Icon(Icons.check, size: 8, color: Colors.white) : null,
+                  child: done ? const AppIcon(Icons.check, size: 8, color: Colors.white) : null,
                 ),
               ],
             ),

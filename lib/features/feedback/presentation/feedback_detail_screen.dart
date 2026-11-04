@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/feedback_post.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
 import 'widgets/feedback_bits.dart';
@@ -123,7 +124,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      AppIcon(
                         Icons.cloud_off_rounded,
                         size: 40,
                         color: colors.textDim,
@@ -206,7 +207,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.lock_outline, size: 14, color: colors.textMed),
+            AppIcon(Icons.lock_outline, size: 14, color: colors.textMed),
             const SizedBox(width: 6),
             Text(
               'This thread is locked',
@@ -265,7 +266,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Icon(
+                : const AppIcon(
                     Icons.arrow_upward,
                     size: 18,
                     color: Colors.white,
@@ -468,7 +469,7 @@ class _FollowPill extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              AppIcon(
                 following ? Icons.notifications_active : Icons.notifications_none,
                 size: 14,
                 color: following ? colors.accent : colors.textMed,
@@ -582,7 +583,7 @@ class _BackCircle extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: colors.cardShadow,
         ),
-        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

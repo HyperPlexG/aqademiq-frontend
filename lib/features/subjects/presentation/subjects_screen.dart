@@ -11,6 +11,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_badge.dart';
@@ -138,7 +139,7 @@ class _SubjHeader extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.ios_share, size: 15, color: colors.text),
+                  AppIcon(Icons.ios_share, size: 15, color: colors.text),
                   const SizedBox(width: 6),
                   Text('Share', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.text)),
                 ],
@@ -170,7 +171,7 @@ class _SubjHeader extends StatelessWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onAdd,
-                child: SizedBox(width: 30, height: 30, child: Icon(Icons.add, size: 21, color: colors.text)),
+                child: SizedBox(width: 30, height: 30, child: AppIcon(Icons.add, size: 21, color: colors.text)),
               ),
             ],
           ),
@@ -319,7 +320,7 @@ class _Empty extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.add, size: 17, color: Colors.white),
+                          const AppIcon(Icons.add, size: 17, color: Colors.white),
                           const SizedBox(width: 7),
                           Text('Add your first subject', style: AppText.sans(size: 12.5, weight: FontWeight.w800, color: Colors.white)),
                         ],

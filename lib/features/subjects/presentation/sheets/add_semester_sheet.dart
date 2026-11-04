@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -305,7 +306,7 @@ class _DateColumn extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(Icons.calendar_today, size: 13, color: colors.textMed),
+                AppIcon(Icons.calendar_today, size: 13, color: colors.textMed),
               ],
             ),
           ),

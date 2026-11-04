@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../icons/app_icon.dart';
 import 'app_toggle.dart';
 
 /// A label above a [SetGroup] (prototype `GroupLabel`).
@@ -81,6 +82,8 @@ class SettingsRow extends StatelessWidget {
     this.avatar,
     this.sub,
     this.value,
+    this.valueWidget,
+    this.iconColor,
     this.pill,
     this.toggle,
     this.onToggle,
@@ -95,6 +98,10 @@ class SettingsRow extends StatelessWidget {
   final Widget? avatar;
   final String? sub;
   final String? value;
+
+  /// A right-aligned widget beside [value] — a status dot and its word.
+  final Widget? valueWidget;
+  final Color? iconColor;
   final String? pill;
   final bool? toggle;
   final ValueChanged<bool>? onToggle;
@@ -125,7 +132,7 @@ class SettingsRow extends StatelessWidget {
           children: [
             if (avatar != null) ...[avatar!, const SizedBox(width: 11)],
             if (icon != null) ...[
-              Icon(icon, size: 20, color: danger ? colors.danger : colors.text),
+              AppIcon(icon, size: 20, color: danger ? colors.danger : (iconColor ?? colors.text)),
               const SizedBox(width: 11),
             ],
             Expanded(
@@ -174,6 +181,7 @@ class SettingsRow extends StatelessWidget {
                   ),
                 ),
               ),
+            if (valueWidget != null) ...[const SizedBox(width: 10), valueWidget!],
             if (pill != null) ...[const SizedBox(width: 10), TimePill(pill!)],
             if (toggle != null) ...[
               const SizedBox(width: 10),
@@ -181,7 +189,7 @@ class SettingsRow extends StatelessWidget {
             ],
             if (showChevron) ...[
               const SizedBox(width: 6),
-              Icon(Icons.chevron_right, size: 19, color: colors.textDim),
+              AppIcon(Icons.chevron_right, size: 19, color: colors.textDim),
             ],
           ],
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Shared scaffold for full-screen settings routes: a `bg` page, a back button +
 /// title header (compact, or `big` with a gear), and a scrollable body with
@@ -40,7 +41,7 @@ class SettingsScaffold extends StatelessWidget {
                         Row(
                           children: [
                             if (gear) ...[
-                              Icon(Icons.settings, size: 25, color: colors.text),
+                              AppIcon(Icons.settings, size: 25, color: colors.text),
                               const SizedBox(width: 9),
                             ],
                             Text(title, style: AppText.sans(size: 26, weight: FontWeight.w800, color: colors.text)),
@@ -83,7 +84,7 @@ class SettingsBackButton extends StatelessWidget {
         height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle, boxShadow: colors.cardShadow),
-        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

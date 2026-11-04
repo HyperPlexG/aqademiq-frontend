@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../onboarding/onboarding_gate.dart';
@@ -111,7 +112,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 controller: _password,
                 obscureText: _obscure,
                 suffix: IconButton(
-                  icon: Icon(
+                  icon: AppIcon(
                     _obscure ? Icons.visibility_off : Icons.visibility,
                     size: 17,
                     color: colors.textMed,

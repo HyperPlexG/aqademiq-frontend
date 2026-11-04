@@ -8,6 +8,7 @@ import '../../core/theme/app_text.dart';
 import '../../core/utils/referral_link.dart';
 import '../../data/repositories/referral_repository.dart';
 import '../../features/settings/providers/profile_controller.dart';
+import '../icons/app_icon.dart';
 
 /// Presents the referral / share sheet ([_ShareSheet]) over the dimmed real
 /// screen. Reused by both the Subjects section (`subj-share`) and the section 06
@@ -286,7 +287,7 @@ class _ShareInviteButton extends ConsumerWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.ios_share, size: 18, color: Color(0xFFFFFFFF)),
+            const AppIcon(Icons.ios_share, size: 18, color: Color(0xFFFFFFFF)),
             const SizedBox(width: 9),
             Text(
               'Share Invite',

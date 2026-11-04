@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Presents the "Notification sound" sheet (`settings-notif-sound`) — a bottom
 /// sheet over the dimmed Notifications screen. Lists five sound options as pill
@@ -129,7 +130,7 @@ class _OptionRow extends StatelessWidget {
                 color: selected ? accent : colors.text,
               ),
             ),
-            if (selected) Icon(Icons.check_circle, size: 20, color: accent),
+            if (selected) AppIcon(Icons.check_circle, size: 20, color: accent),
           ],
         ),
       ),

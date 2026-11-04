@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 
 const _monthNames = <String>[
@@ -200,7 +201,7 @@ class _CalendarBody extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 3),
-                  Icon(Icons.chevron_right, size: 16, color: colors.accent),
+                  AppIcon(Icons.chevron_right, size: 16, color: colors.accent),
                 ],
               ),
             ),
@@ -209,13 +210,13 @@ class _CalendarBody extends StatelessWidget {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onPrev,
-                  child: Icon(Icons.chevron_left, size: 20, color: colors.text),
+                  child: AppIcon(Icons.chevron_left, size: 20, color: colors.text),
                 ),
                 const SizedBox(width: 16),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onNext,
-                  child: Icon(Icons.chevron_right, size: 20, color: colors.text),
+                  child: AppIcon(Icons.chevron_right, size: 20, color: colors.text),
                 ),
               ],
             ),
@@ -279,7 +280,7 @@ class _WheelBodyState extends State<_WheelBody> {
                 ),
               ),
               const SizedBox(width: 3),
-              Icon(Icons.expand_less, size: 16, color: colors.accent),
+              AppIcon(Icons.expand_less, size: 16, color: colors.accent),
             ],
           ),
         ),

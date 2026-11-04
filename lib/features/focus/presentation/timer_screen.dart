@@ -13,8 +13,12 @@ import '../../../data/models/tag_resolve.dart';
 import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ice_timer.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/ic.dart';
+import '../../freeze/presentation/sheets/choose_apps_sheet.dart';
+import '../../freeze/providers/freeze_controller.dart';
 import '../../plan/providers/plan_providers.dart';
 import '../../settings/providers/prism_settings_provider.dart';
 import '../providers/linked_task_provider.dart';
@@ -52,6 +56,10 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         ? studyTagLabel(tag, linked.tagId)
         : 'No task linked';
     final defaultPrismMode = ref.watch(prismDefaultModeProvider);
+    final freeze = ref.watch(freezeControllerProvider);
+    // The ice chip (fc-ice): only once App freeze is set up, and then a bare
+    // outline when nothing is on ice — no badge, no nag, forever.
+    final iceCount = freeze.setUp ? freeze.recentApps.count : null;
     final prismMode = session.prismMode ?? defaultPrismMode;
 
     ref.listen(focusControllerProvider, (prev, next) {
@@ -90,6 +98,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               remaining: _clock(session.durationMin * 60 - session.elapsedSec),
               progress: session.progress,
               onPrism: _prism,
+              onAppFreeze: _appFreeze,
               onFreeze: ctrl.pause,
               onResume: ctrl.resume,
               onEnd: ctrl.complete,
@@ -101,7 +110,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               onLink: _link,
               onSetTime: _setTime,
               onPrism: _prism,
-              onStart: ctrl.start,
+              onAppFreeze: _appFreeze,
+              iceCount: iceCount,
+              iceKeepOnly: freeze.recentApps.keepOnly,
+              onIce: _ice,
+              onStart: () => unawaited(_start()),
             ),
     );
   }
@@ -118,6 +131,25 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
           taskId: task?.id,
           durationMin: task?.durationMin,
         );
+  }
+
+  Future<void> _start() async {
+    await ref.read(focusControllerProvider.notifier).start();
+    final endsAt = ref.read(focusControllerProvider).endsAt;
+    if (endsAt != null) ref.read(freezeControllerProvider.notifier).freezeForFocus(endsAt);
+  }
+
+  /// The App freeze pill: the intro on first tap, the hub after.
+  void _appFreeze() {
+    final setUp = ref.read(freezeControllerProvider).setUp;
+    unawaited(context.push(setUp ? Routes.freeze : Routes.freezeIntro));
+  }
+
+  /// The ice chip: what goes on ice when this session starts.
+  Future<void> _ice() async {
+    final current = ref.read(freezeControllerProvider).recentApps;
+    final picked = await chooseApps(context, current: current, owner: 'usual', title: 'The usual');
+    if (picked != null) ref.read(freezeControllerProvider.notifier).setRecentApps(picked);
   }
 
   Future<void> _setTime() async {
@@ -143,6 +175,10 @@ class _SetupView extends StatelessWidget {
     required this.onLink,
     required this.onSetTime,
     required this.onPrism,
+    required this.onAppFreeze,
+    required this.iceCount,
+    required this.iceKeepOnly,
+    required this.onIce,
     required this.onStart,
   });
 
@@ -152,6 +188,12 @@ class _SetupView extends StatelessWidget {
   final VoidCallback onLink;
   final VoidCallback onSetTime;
   final VoidCallback onPrism;
+  final VoidCallback onAppFreeze;
+
+  /// Null hides the ice chip (App freeze not set up yet).
+  final int? iceCount;
+  final bool iceKeepOnly;
+  final VoidCallback onIce;
   final VoidCallback onStart;
 
   @override
@@ -161,20 +203,40 @@ class _SetupView extends StatelessWidget {
       pills: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(child: FocusPill(glyph: '◈', label: 'Prism', onTap: onPrism)),
+          Flexible(child: FocusPill(iconName: 'prism', label: 'Prism', onTap: onPrism)),
           const SizedBox(width: 8),
-          Flexible(child: FocusPill(icon: Icons.timer, label: 'Set time', onTap: onSetTime)),
+          Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze)),
         ],
       ),
       children: [
-        Text('Focus', style: AppText.sans(size: 32, weight: FontWeight.w800, color: colors.text)),
-        const SizedBox(height: 8),
+        Text('Focus', style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2, color: colors.text)),
+        const SizedBox(height: 10),
         _TaskChip(title: taskTitle, subject: taskSubject, onTap: onLink),
-        const SizedBox(height: 12),
-        const IceTimer(),
+        if (iceCount != null) ...[
+          const SizedBox(height: 8),
+          _IceChip(count: iceCount!, keepOnly: iceKeepOnly, onTap: onIce),
+        ],
         const SizedBox(height: 14),
-        Text(durationLabel, style: AppText.sans(size: 36, weight: FontWeight.w800, letterSpacing: 0.5, color: colors.text)),
-        const SizedBox(height: 18),
+        const IceTimer(),
+        const SizedBox(height: 20),
+        // The time IS the control: tap 25:00 and the duration picker opens.
+        // Digits stay centred under the cube; the chevron is balanced by a spacer.
+        Semantics(
+          button: true,
+          label: 'Session length $durationLabel',
+          child: GestureDetector(
+            onTap: onSetTime,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(width: 30),
+                Text(durationLabel, style: AppText.sans(size: 46, weight: FontWeight.w800, letterSpacing: 0.5, height: 1.2, color: colors.text)),
+                Padding(padding: const EdgeInsets.only(top: 4), child: Ic('expand_more', size: 26, color: colors.textDim)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 21),
         _PrimaryAction(icon: Icons.play_arrow, label: 'Start focus', onTap: onStart),
       ],
     );
@@ -227,6 +289,7 @@ class _RunningView extends StatelessWidget {
     required this.remaining,
     required this.progress,
     required this.onPrism,
+    required this.onAppFreeze,
     required this.onFreeze,
     required this.onResume,
     required this.onEnd,
@@ -239,6 +302,7 @@ class _RunningView extends StatelessWidget {
   final String remaining;
   final double progress;
   final VoidCallback onPrism;
+  final VoidCallback onAppFreeze;
   final VoidCallback onFreeze;
   final VoidCallback onResume;
   final VoidCallback onEnd;
@@ -250,20 +314,20 @@ class _RunningView extends StatelessWidget {
       pills: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(child: FocusPill(glyph: '◈', label: prismMode, onTap: onPrism)),
+          Flexible(child: FocusPill(iconName: 'prism', label: prismMode, onTap: onPrism)),
           const SizedBox(width: 8),
-          const Flexible(child: FocusPill(icon: Icons.timer, label: 'Set time')),
+          Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze)),
         ],
       ),
       children: [
-        Text(paused ? 'Frozen' : 'Focus', style: AppText.sans(size: 32, weight: FontWeight.w800, color: colors.text)),
-        const SizedBox(height: 3),
-        Text('$taskSubject · $taskTitle', style: AppText.sans(size: 10.5, color: colors.textMed)),
+        Text(paused ? 'Frozen' : 'Focus', style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2, color: colors.text)),
+        const SizedBox(height: 7),
+        Text('$taskSubject · $taskTitle', style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.4, color: colors.textMed)),
         const SizedBox(height: 12),
         IceTimer(progress: progress, frost: paused),
-        const SizedBox(height: 14),
-        Text(remaining, style: AppText.sans(size: 36, weight: FontWeight.w800, letterSpacing: 0.5, color: paused ? colors.textMed : colors.text)),
-        SizedBox(height: paused ? 22 : 18),
+        const SizedBox(height: 20),
+        Text(remaining, style: AppText.sans(size: 46, weight: FontWeight.w800, letterSpacing: 0.5, height: 1.2, color: paused ? colors.textMed : colors.text)),
+        const SizedBox(height: 20),
         // Wrap, not Row: at large text scales the two buttons no longer fit side
         // by side and used to overflow the screen edge. They stack instead, and
         // each is capped at the frame width — Wrap hands its children unbounded
@@ -325,7 +389,7 @@ class _TaskChip extends StatelessWidget {
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text),
+                style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
               ),
             ),
             const SizedBox(width: 7),
@@ -334,10 +398,10 @@ class _TaskChip extends StatelessWidget {
                 subject,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.sans(size: 10.5, color: colors.textDim),
+                style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
               ),
             ),
-            Icon(Icons.expand_more, size: 16, color: colors.textDim),
+            AppIcon(Icons.expand_more, size: 20, color: colors.textDim),
           ],
         ),
       ),
@@ -358,19 +422,20 @@ class _PrimaryAction extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 13, horizontal: horizontal),
+        height: 50,
+        padding: EdgeInsets.symmetric(horizontal: horizontal),
         decoration: BoxDecoration(color: colors.ink, borderRadius: BorderRadius.circular(AppRadius.pill)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 17, color: Colors.white),
+            AppIcon(icon, size: 21, color: Colors.white),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.sans(size: 14, weight: FontWeight.w800, color: Colors.white),
+                style: AppText.sans(size: 17, weight: FontWeight.w800, color: Colors.white),
               ),
             ),
           ],
@@ -390,7 +455,8 @@ class _EndButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 28),
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 28),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -399,14 +465,14 @@ class _EndButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.stop_circle, size: 17, color: colors.danger),
+            AppIcon(Icons.stop_circle, size: 21, color: colors.danger),
             const SizedBox(width: 7),
             Flexible(
               child: Text(
                 'End',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.sans(size: 14, weight: FontWeight.w800, color: colors.danger),
+                style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.danger),
               ),
             ),
           ],
@@ -414,4 +480,89 @@ class _EndButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The ice chip (fc-ice) — mirrors the task chip exactly, one row lower. Set:
+/// "The usual · 9 on ice", frozen for exactly the session it starts. Empty: a
+/// bare dashed outline, "Nothing on ice".
+class _IceChip extends StatelessWidget {
+  const _IceChip({required this.count, required this.keepOnly, required this.onTap});
+
+  final int count;
+  final bool keepOnly;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final empty = count == 0 && !keepOnly;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: empty
+            ? CustomPaint(
+                painter: _DashedPill(color: colors.textDim),
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Ic('freeze', size: 18, color: colors.textMed),
+                      const SizedBox(width: 6),
+                      Text('Nothing on ice', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed)),
+                    ],
+                  ),
+                ),
+              )
+            : Container(
+                padding: const EdgeInsets.fromLTRB(12, 6, 10, 6),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  boxShadow: colors.cardShadow,
+                  border: Border.all(color: colors.border),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Ic('freeze', size: 18, color: Color(0xFF6B5CF0)),
+                    const SizedBox(width: 7),
+                    Text('The usual', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                    const SizedBox(width: 7),
+                    Text(
+                      keepOnly ? 'all but $count' : '$count on ice',
+                      style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
+                    ),
+                    AppIcon(Icons.expand_more, size: 20, color: colors.textDim),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _DashedPill extends CustomPainter {
+  const _DashedPill({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final r = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(size.height / 2)).deflate(0.75);
+    for (final m in (Path()..addRRect(r)).computeMetrics()) {
+      for (var d = 0.0; d < m.length; d += 7) {
+        canvas.drawPath(m.extractPath(d, d + 4 > m.length ? m.length : d + 4), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedPill old) => old.color != color;
 }

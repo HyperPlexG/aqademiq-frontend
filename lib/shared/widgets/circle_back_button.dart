@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../icons/app_icon.dart';
 
 /// 32×32 circular back button on a `bg`-filled circle (prototype auth/onboarding
 /// back affordance).
@@ -20,7 +21,7 @@ class CircleBackButton extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: Icon(icon, size: 18, color: colors.text),
+        child: AppIcon(icon, size: 18, color: colors.text),
       ),
     );
   }

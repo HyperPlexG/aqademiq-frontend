@@ -18,10 +18,15 @@ import '../../../data/models/tag.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/data_export_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
+import '../../../services/haptics/haptic_governor.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../shared/icons/app_icon.dart';
+import '../../freeze/presentation/widgets/fz_widgets.dart';
+import '../../freeze/providers/freeze_controller.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../../report/report_copy.dart';
 import '../../report/report_optout.dart';
+import '../providers/haptic_settings_provider.dart';
 import '../providers/prism_settings_provider.dart';
 import '../providers/profile_controller.dart';
 import 'sheets/add_tag_sheet.dart';
@@ -34,6 +39,46 @@ import 'widgets/settings_scaffold.dart';
 /// settings hub.
 class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
+
+  /// "2 frosts", "Paused", or nothing before App freeze is set up.
+  static String? _freezeValue(WidgetRef ref) {
+    final data = ref.watch(freezeControllerProvider);
+    if (!data.setUp) return null;
+    if (data.standdown != null) return 'Paused';
+    final n = data.frosts.length;
+    return n == 1 ? '1 frost' : '$n frosts';
+  }
+
+  /// Haptics (settings-haptics): Off / Essential / Full, in the floating sheet.
+  static Future<void> _showHapticsSheet(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(hapticSettingProvider);
+    final picked = await showFzSheet<HapticSetting>(
+      context,
+      builder: (sheet) {
+        Widget option(HapticSetting level, String icon, String sub) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: FzPick(
+                icon: icon,
+                label: level.label,
+                sub: sub,
+                selected: level == current,
+                onTap: () => Navigator.of(sheet).pop(level),
+              ),
+            );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const FzSheetTitle('Haptics'),
+            const SizedBox(height: 10),
+            option(HapticSetting.off, 'do_not_disturb_on', 'No vibration anywhere'),
+            option(HapticSetting.essential, 'vibration', 'Session start, end, and a thaw'),
+            option(HapticSetting.full, 'mi:graphic_eq', 'Every tap and toggle'),
+          ],
+        );
+      },
+    );
+    if (picked != null) ref.read(hapticSettingProvider.notifier).set(picked);
+  }
 
   static String _modeLabel(ThemeMode mode) => switch (mode) {
         ThemeMode.light => 'Light',
@@ -75,7 +120,7 @@ class SettingsHomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, size: 20, color: colors.textDim),
+                AppIcon(Icons.chevron_right, size: 20, color: colors.textDim),
               ],
             ),
           ),
@@ -106,7 +151,21 @@ class SettingsHomeScreen extends ConsumerWidget {
           children: [
             SettingsRow(label: 'Notifications', icon: Icons.notifications_none, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsNotif))),
             SettingsRow(label: 'Appearance', icon: Icons.wb_sunny, value: _modeLabel(mode), showChevron: true, onTap: () => unawaited(showAppearanceSheet(context))),
+            SettingsRow(
+              label: 'Haptics',
+              icon: Icons.vibration,
+              value: ref.watch(hapticSettingProvider).label,
+              showChevron: true,
+              onTap: () => unawaited(_showHapticsSheet(context, ref)),
+            ),
             SettingsRow(label: 'Prism', icon: Icons.graphic_eq, value: ref.watch(prismDefaultModeProvider), showChevron: true, onTap: () => unawaited(context.push(Routes.settingsSounds))),
+            SettingsRow(
+              label: 'App freeze',
+              icon: Icons.ac_unit,
+              value: _freezeValue(ref),
+              showChevron: true,
+              onTap: () => unawaited(context.push(Routes.settingsAppFreeze)),
+            ),
             SettingsRow(label: 'What Ada remembers', icon: Icons.psychology_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsMemories))),
             // A row to its own screen rather than a bare toggle here: the off
             // switch ships with the three promises that make leaving it on
@@ -181,6 +240,7 @@ class SettingsHomeScreen extends ConsumerWidget {
         const GroupLabel('About'),
         SetGroup(
           children: [
+            SettingsRow(label: 'Ice Breakers', icon: Icons.play_circle_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.iceBreakers))),
             SettingsRow(label: 'Feedback & suggestions', icon: Icons.forum_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsFeedback))),
             SettingsRow(label: 'Rate Aqademiq', icon: Icons.star_outline, showChevron: true, onTap: () => unawaited(showRateSheet(context))),
             SettingsRow(label: 'Privacy Policy', icon: Icons.description, showChevron: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/privacy-policy')))),
@@ -248,7 +308,7 @@ class _TagsCard extends ConsumerWidget {
                   GestureDetector(
                     onTap: () => unawaited(ref.read(tagsProvider.notifier).remove(t.id)),
                     behavior: HitTestBehavior.opaque,
-                    child: Icon(Icons.close, size: 13, color: colors.textDim),
+                    child: AppIcon(Icons.close, size: 13, color: colors.textDim),
                   ),
                 ],
               ),
@@ -264,7 +324,7 @@ class _TagsCard extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.add, size: 14, color: colors.accent),
+                  AppIcon(Icons.add, size: 14, color: colors.accent),
                   const SizedBox(width: 3),
                   Text('New tag', style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.accent)),
                 ],

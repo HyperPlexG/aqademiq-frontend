@@ -5,6 +5,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/subject.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Target-grade chip (prototype `GradeChip`).
 class GradeChip extends StatelessWidget {
@@ -20,7 +21,7 @@ class GradeChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.track_changes, size: 11, color: color),
+          AppIcon(Icons.track_changes, size: 11, color: color),
           const SizedBox(width: 3),
           Text(grade, style: AppText.sans(size: 10, weight: FontWeight.w800, color: color)),
         ],
@@ -75,12 +76,12 @@ class SubjectRow extends StatelessWidget {
                     Row(
                       children: [
                         if (subject.professor != null) ...[
-                          Icon(Icons.person_outline, size: 12, color: colors.textDim),
+                          AppIcon(Icons.person_outline, size: 12, color: colors.textDim),
                           const SizedBox(width: 3),
                           Text(subject.professor!, style: AppText.sans(size: 10, color: colors.textDim)),
                           const SizedBox(width: 9),
                         ],
-                        Icon(Icons.attach_file, size: 12, color: colors.textDim),
+                        AppIcon(Icons.attach_file, size: 12, color: colors.textDim),
                         const SizedBox(width: 3),
                         Text('${subject.fileCount}', style: AppText.sans(size: 10, color: colors.textDim)),
                         if (subject.nextLabel != null) ...[
@@ -155,7 +156,7 @@ class SubjectTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(Icons.attach_file, size: 11, color: colors.textMed),
+                      AppIcon(Icons.attach_file, size: 11, color: colors.textMed),
                       const SizedBox(width: 3),
                       Text('${subject.fileCount}', style: AppText.sans(size: 9.5, weight: FontWeight.w700, color: colors.textMed)),
                       if (subject.credits != null) ...[

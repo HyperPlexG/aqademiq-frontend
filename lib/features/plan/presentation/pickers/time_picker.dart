@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/primary_button.dart';
 
 /// Presents the time-of-day picker (`plan-pick-time`) as a bottom sheet.
@@ -171,7 +172,7 @@ class _OptRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            AppIcon(
               icon,
               size: 19,
               color: active ? colors.accent : colors.textMed,
@@ -203,7 +204,7 @@ class _OptRow extends StatelessWidget {
             if (trailing != null)
               trailing!
             else if (active)
-              Icon(Icons.check, size: 14, color: colors.accent),
+              AppIcon(Icons.check, size: 14, color: colors.accent),
           ],
         ),
       ),

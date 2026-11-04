@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/settings_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Opens the settings-rate sheet ("Rate Aqademiq").
 ///
@@ -99,7 +100,7 @@ class _RateSheetState extends ConsumerState<_RateSheet> {
                   if (i > 1) const SizedBox(width: 14),
                   GestureDetector(
                     onTap: () => setState(() => _rating = i),
-                    child: Icon(
+                    child: AppIcon(
                       i <= _rating ? Icons.star : Icons.star_outline,
                       size: 30,
                       color: i <= _rating

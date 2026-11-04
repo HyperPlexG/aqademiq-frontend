@@ -17,6 +17,7 @@ import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../services/reminder_scheduler.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_toggle.dart';
@@ -396,7 +397,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                             children: [
                               Padding(
                                 padding: const EdgeInsets.only(top: 2),
-                                child: Icon(Icons.notes, size: 16, color: colors.textMed),
+                                child: AppIcon(Icons.notes, size: 16, color: colors.textMed),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -623,7 +624,7 @@ class _DetailRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: colors.textMed),
+            AppIcon(icon, size: 16, color: colors.textMed),
             const SizedBox(width: 10),
             Expanded(child: Text(label, style: AppText.sans(size: 12.5, color: colors.text))),
             Container(

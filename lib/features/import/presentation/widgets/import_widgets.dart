@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// A filter / choice pill on the import screens (calendars, range, tag).
 /// Selected = accent outline on the soft accent fill, like the Plan's chips.
@@ -99,7 +100,7 @@ class ImportCheckCircle extends StatelessWidget {
         ),
       ),
       child: checked || locked
-          ? Icon(Icons.check, size: 14, color: locked ? colors.textMed : Colors.white)
+          ? AppIcon(Icons.check, size: 14, color: locked ? colors.textMed : Colors.white)
           : null,
     );
   }

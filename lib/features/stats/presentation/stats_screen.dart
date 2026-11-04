@@ -18,6 +18,7 @@ import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/profile_repository.dart';
 import '../../../data/repositories/weekly_report_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -151,7 +152,7 @@ class _CircleIcon extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(width: 30, height: 30, child: Icon(icon, size: 16, color: context.colors.text)),
+      child: SizedBox(width: 30, height: 30, child: AppIcon(icon, size: 16, color: context.colors.text)),
     );
   }
 }

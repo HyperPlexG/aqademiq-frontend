@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/primary_button.dart';
 import 'widgets/onboarding_scaffold.dart';
 
@@ -30,7 +31,7 @@ class ObBlockedScreen extends StatelessWidget {
                 color: colors.accentSoft,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.hourglass_empty_rounded,
+              child: AppIcon(Icons.hourglass_empty_rounded,
                   size: 44, color: colors.accent),
             ),
             const SizedBox(height: 28),

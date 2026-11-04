@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 enum SsoProvider { apple, google }
 
@@ -35,7 +36,7 @@ class SsoButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (isApple)
-              const Icon(Icons.apple, size: 18, color: Colors.white)
+              const AppIcon(Icons.apple, size: 18, color: Colors.white)
             else
               Text('G', style: AppText.sans(size: 18, weight: FontWeight.w800, color: const Color(0xFF4285F4))),
             SizedBox(width: isApple ? 8 : 10),

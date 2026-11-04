@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/theme/theme_controller.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// FRAMES `settings-appearance` — Light / Dark / System picker, wired to the live
 /// theme (`themeModeProvider`).
@@ -97,7 +98,7 @@ class _Option extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 21, color: selected ? colors.accent : colors.text),
+            AppIcon(icon, size: 21, color: selected ? colors.accent : colors.text),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -109,7 +110,7 @@ class _Option extends StatelessWidget {
                 ],
               ),
             ),
-            if (selected) Icon(Icons.check_circle, size: 22, color: colors.accent),
+            if (selected) AppIcon(Icons.check_circle, size: 22, color: colors.accent),
           ],
         ),
       ),

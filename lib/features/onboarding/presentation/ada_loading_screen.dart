@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/onboarding_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
@@ -208,7 +209,7 @@ class _ChecklistRow extends StatelessWidget {
                 : Border.all(color: colors.textDim, width: 1.5),
           ),
           child: done
-              ? const Icon(Icons.check, size: 10, color: Colors.white)
+              ? const AppIcon(Icons.check, size: 10, color: Colors.white)
               : SizedBox(
                   width: 10,
                   height: 10,

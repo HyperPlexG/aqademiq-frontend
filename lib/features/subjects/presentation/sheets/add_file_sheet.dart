@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// One source row in the add-file sheet (`subj-file`).
 class _FileSource {
@@ -257,7 +258,7 @@ class _SourceRow extends StatelessWidget {
                 color: source.color.alpha8(0x1C),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(source.icon, size: 19, color: source.color),
+              child: AppIcon(source.icon, size: 19, color: source.color),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -281,7 +282,7 @@ class _SourceRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Icon(Icons.chevron_right, size: 18, color: colors.textDim),
+            AppIcon(Icons.chevron_right, size: 18, color: colors.textDim),
           ],
         ),
       ),
@@ -314,7 +315,7 @@ class _OutlinePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: colors.text),
+            AppIcon(icon, size: 16, color: colors.text),
             const SizedBox(width: 6),
             Text(
               label,

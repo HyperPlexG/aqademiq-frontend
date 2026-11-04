@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
@@ -248,7 +249,7 @@ class _Stage extends StatelessWidget {
           colors: colors,
           child: Center(
             child: failed || player == null
-                ? Icon(
+                ? AppIcon(
                     Icons.videocam_off_outlined,
                     size: 26,
                     color: colors.textDim,
@@ -295,7 +296,7 @@ class _Stage extends StatelessWidget {
                             color: Colors.black.withValues(alpha: 0.55),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: AppIcon(
                             _isEnd(value) ? Icons.replay : Icons.play_arrow,
                             size: 26,
                             color: Colors.white,
@@ -365,7 +366,7 @@ class _Transport extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: Icon(
+                child: AppIcon(
                   ended
                       ? Icons.replay
                       : value.isPlaying
@@ -446,7 +447,7 @@ class _BackCircle extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: colors.cardShadow,
         ),
-        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

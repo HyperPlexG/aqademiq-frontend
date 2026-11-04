@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../icons/app_icon.dart';
 
 /// Full-width pill button (prototype `PBtn`). Filled = ink fill / white text;
 /// ghost = surface + hairline border / text color.
@@ -55,7 +56,7 @@ class PrimaryButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 18, color: fg),
+                AppIcon(icon, size: 18, color: fg),
                 const SizedBox(width: 8),
               ],
               Text(

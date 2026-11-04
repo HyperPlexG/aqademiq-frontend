@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../icons/app_icon.dart';
 
 /// The "GUEST" badge pill shown in headers while in guest mode (prototype
 /// guest-home / guest-subjects).
@@ -22,7 +23,7 @@ class GuestBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.person_outline, size: 11, color: colors.warn),
+          AppIcon(Icons.person_outline, size: 11, color: colors.warn),
           const SizedBox(width: 4),
           Text(
             'GUEST',

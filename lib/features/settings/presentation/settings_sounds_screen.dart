@@ -9,6 +9,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../services/haptics/haptic_governor.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../services/sound_settings_service.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../../focus/providers/prism_audio_provider.dart';
@@ -327,7 +328,7 @@ class _ModeOption extends StatelessWidget {
               ),
               if (selected) ...[
                 const SizedBox(width: 10),
-                Icon(Icons.check_circle, size: 20, color: colors.accent),
+                AppIcon(Icons.check_circle, size: 20, color: colors.accent),
               ],
             ],
           ),

@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/weekly_report.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/mascot/ada_mascot.dart';
 import '../../report_copy.dart';
 import 'core_column.dart';
@@ -469,7 +470,7 @@ class BeatRecovery extends StatelessWidget {
               children: [
                 _Face(label: ReportCopy.goingIn, toneIndex: beforeIdx, expr: AdaExpr.meh, melt: 0.45),
                 const SizedBox(width: 20),
-                Icon(Icons.arrow_forward, size: 18, color: colors.textMed),
+                AppIcon(Icons.arrow_forward, size: 18, color: colors.textMed),
                 const SizedBox(width: 20),
                 _Face(label: ReportCopy.comingOut, toneIndex: afterIdx, expr: AdaExpr.smile, melt: 0),
               ],
@@ -601,7 +602,7 @@ class BeatLanding extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.nightlight_round, size: 17, color: colors.accent),
+                child: AppIcon(Icons.nightlight_round, size: 17, color: colors.accent),
               ),
               const SizedBox(width: 13),
               Expanded(
@@ -645,7 +646,7 @@ class BeatLanding extends StatelessWidget {
                   // than to the unbounded width it is offered.
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.ios_share, size: 15, color: colors.text),
+                    AppIcon(Icons.ios_share, size: 15, color: colors.text),
                     const SizedBox(width: 7),
                     Text(ReportCopy.shareLabel, style: AppText.sans(size: 13.5, weight: FontWeight.w700, color: colors.text)),
                   ],
@@ -706,7 +707,7 @@ class SupportBanner extends StatelessWidget {
           ),
           IconButton(
             onPressed: onDismiss,
-            icon: Icon(Icons.close, size: 16, color: colors.textMed),
+            icon: AppIcon(Icons.close, size: 16, color: colors.textMed),
             visualDensity: VisualDensity.compact,
           ),
         ],

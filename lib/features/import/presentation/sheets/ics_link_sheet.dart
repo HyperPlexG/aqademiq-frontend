@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -64,7 +65,7 @@ class _LinkBodyState extends State<_LinkBody> {
           onSubmitted: (_) => _submit(),
           suffix: IconButton(
             tooltip: 'Paste',
-            icon: Icon(Icons.content_paste, size: 18, color: colors.textMed),
+            icon: AppIcon(Icons.content_paste, size: 18, color: colors.textMed),
             onPressed: () => unawaited(_paste()),
           ),
         ),

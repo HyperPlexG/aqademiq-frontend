@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/guest_badge.dart';
 
 /// PLAN_TIMELINE header: day + month (calendar button), and the action capsule
@@ -66,7 +67,7 @@ class PlanHeader extends StatelessWidget {
                             color: colors.textMed,
                           ),
                         ),
-                        Icon(Icons.chevron_right, size: 11, color: colors.textMed),
+                        AppIcon(Icons.chevron_right, size: 11, color: colors.textMed),
                       ],
                     ),
                   ),
@@ -151,7 +152,7 @@ class _ActionCapsule extends StatelessWidget {
           const SizedBox(width: 2),
           _CircleTap(
             onTap: onAdd,
-            child: Icon(Icons.add, size: 21, color: colors.text),
+            child: AppIcon(Icons.add, size: 21, color: colors.text),
           ),
         ],
       ),

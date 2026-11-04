@@ -13,6 +13,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_post.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/feedback_providers.dart';
@@ -326,7 +327,7 @@ class _ListBody extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 36),
             child: Column(
               children: [
-                Icon(Icons.forum_outlined, size: 34, color: colors.textDim),
+                AppIcon(Icons.forum_outlined, size: 34, color: colors.textDim),
                 const SizedBox(height: 10),
                 Text(
                   'No suggestions match',
@@ -611,7 +612,7 @@ class _ViewToggle extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
+                    AppIcon(
                       icon,
                       size: 14,
                       color: view == value ? colors.accent : colors.textMed,
@@ -661,7 +662,7 @@ class _SearchField extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.search, size: 16, color: colors.textDim),
+          AppIcon(Icons.search, size: 16, color: colors.textDim),
           const SizedBox(width: 7),
           Expanded(
             child: TextField(
@@ -682,7 +683,7 @@ class _SearchField extends StatelessWidget {
             GestureDetector(
               onTap: onClear,
               behavior: HitTestBehavior.opaque,
-              child: Icon(Icons.close, size: 14, color: colors.textDim),
+              child: AppIcon(Icons.close, size: 14, color: colors.textDim),
             ),
         ],
       ),
@@ -767,7 +768,7 @@ class _SortButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.swap_vert, size: 15, color: colors.text),
+            AppIcon(Icons.swap_vert, size: 15, color: colors.text),
             const SizedBox(width: 5),
             Text(
               sort == FeedbackSort.top ? 'Top' : 'New',
@@ -802,7 +803,7 @@ class _BoardError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            AppIcon(
               needsAuth ? Icons.lock_outline_rounded : Icons.cloud_off_rounded,
               size: 40,
               color: colors.textDim,
@@ -857,7 +858,7 @@ class _BackCircle extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: colors.cardShadow,
         ),
-        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
@@ -68,7 +69,7 @@ class IceBreakersCard extends ConsumerWidget {
                         color: colors.accent,
                       ),
                     ),
-                    Icon(Icons.chevron_right, size: 13, color: colors.accent),
+                    AppIcon(Icons.chevron_right, size: 13, color: colors.accent),
                   ],
                 ),
               ),
@@ -128,7 +129,7 @@ class IceBreakerRow extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(
+              child: AppIcon(
                 watched ? Icons.check : Icons.play_arrow,
                 size: watched ? 14 : 16,
                 color: colors.accent,

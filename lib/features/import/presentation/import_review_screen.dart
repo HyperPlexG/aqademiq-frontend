@@ -12,6 +12,7 @@ import '../../../core/utils/hex_color.dart';
 import '../../../data/models/import_item.dart';
 import '../../../data/models/tag.dart';
 import '../../../data/repositories/tags_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../../plan/providers/plan_providers.dart';
@@ -332,7 +333,7 @@ class _Notice extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 12),
       child: Column(
         children: [
-          Icon(icon, size: 30, color: colors.textDim),
+          AppIcon(icon, size: 30, color: colors.textDim),
           const SizedBox(height: 10),
           Text(
             text,
@@ -368,7 +369,7 @@ class _DoneCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.check_circle, size: 28, color: colors.success),
+          AppIcon(Icons.check_circle, size: 28, color: colors.success),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_toggle.dart';
 import '../../../settings/providers/prism_settings_provider.dart';
 
@@ -141,7 +142,7 @@ class _ModeRow extends StatelessWidget {
               ),
             ),
             if (active)
-              Icon(Icons.check, size: 12, color: colors.accent),
+              AppIcon(Icons.check, size: 12, color: colors.accent),
           ],
         ),
       ),
@@ -214,7 +215,7 @@ class _AutoplayFooter extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.music_note, size: 15, color: colors.textMed),
+          AppIcon(Icons.music_note, size: 15, color: colors.textMed),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

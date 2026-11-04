@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 
 /// FRAMES `settings-editname` / `settings-email-change` / `settings-university` /
@@ -73,7 +74,7 @@ class _InputBodyState extends State<_InputBody> {
               shape: BoxShape.circle,
               boxShadow: widget.light ? colors.cardShadow : null,
             ),
-            child: Icon(Icons.arrow_upward, size: 18, color: widget.light ? colors.text : Colors.white),
+            child: AppIcon(Icons.arrow_upward, size: 18, color: widget.light ? colors.text : Colors.white),
           ),
         ),
       ],

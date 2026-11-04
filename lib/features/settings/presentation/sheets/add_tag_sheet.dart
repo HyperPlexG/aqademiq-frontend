@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -179,7 +180,7 @@ class _Swatch extends StatelessWidget {
               : null,
         ),
         child: selected
-            ? const Icon(Icons.check, size: 16, color: Color(0xFFFFFFFF))
+            ? const AppIcon(Icons.check, size: 16, color: Color(0xFFFFFFFF))
             : null,
       ),
     );

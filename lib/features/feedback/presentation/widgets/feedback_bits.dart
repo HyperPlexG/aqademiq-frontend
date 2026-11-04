@@ -6,6 +6,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/feedback_post.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Board-column / badge styling for each [FeedbackStatus].
 extension FeedbackStatusUi on FeedbackStatus {
@@ -96,7 +97,7 @@ class VotePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.arrow_drop_up, size: compact ? 16 : 20, color: fg),
+            AppIcon(Icons.arrow_drop_up, size: compact ? 16 : 20, color: fg),
             const SizedBox(width: 1),
             Text(
               '$votes',
@@ -177,7 +178,7 @@ class CategoryChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(category.icon, size: 11, color: c),
+          AppIcon(category.icon, size: 11, color: c),
           const SizedBox(width: 3),
           Text(
             category.label,
@@ -264,7 +265,7 @@ class FeedbackPostCard extends StatelessWidget {
                     children: [
                       Flexible(child: StatusBadge(status: post.status)),
                       const SizedBox(width: 11),
-                      Icon(
+                      AppIcon(
                         Icons.chat_bubble_outline,
                         size: 11.5,
                         color: colors.textDim,
@@ -344,7 +345,7 @@ class BoardPostCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (post.commentCount > 0) ...[
-                  Icon(
+                  AppIcon(
                     Icons.chat_bubble_outline,
                     size: 10.5,
                     color: colors.textDim,

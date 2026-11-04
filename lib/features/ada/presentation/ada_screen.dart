@@ -16,6 +16,7 @@ import '../../../data/repositories/ada_repository.dart';
 import '../../../data/sources/ada_source.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../services/voice_input_service.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
@@ -343,7 +344,7 @@ class _Header extends StatelessWidget {
               height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle, boxShadow: colors.cardShadow),
-              child: Icon(Icons.menu, size: 15, color: colors.text),
+              child: AppIcon(Icons.menu, size: 15, color: colors.text),
             ),
           ),
           const SizedBox(width: 9),
@@ -677,7 +678,7 @@ class _ApplyPlanButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.playlist_add_check, size: 15, color: Colors.white),
+            const AppIcon(Icons.playlist_add_check, size: 15, color: Colors.white),
             const SizedBox(width: 6),
             Text(
               'Add to my plan',
@@ -1146,7 +1147,7 @@ class _ErrorBubble extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 3),
-            child: Icon(Icons.error_outline, size: 17, color: colors.danger),
+            child: AppIcon(Icons.error_outline, size: 17, color: colors.danger),
           ),
           const SizedBox(width: 7),
           Flexible(
@@ -1322,7 +1323,7 @@ class _AttachmentChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.attach_file, size: 13, color: colors.accent),
+          AppIcon(Icons.attach_file, size: 13, color: colors.accent),
           const SizedBox(width: 5),
           Flexible(
             child: Text(
@@ -1338,7 +1339,7 @@ class _AttachmentChip extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             child: Padding(
               padding: const EdgeInsets.all(2),
-              child: Icon(Icons.close, size: 14, color: colors.textMed),
+              child: AppIcon(Icons.close, size: 14, color: colors.textMed),
             ),
           ),
         ],
@@ -1405,7 +1406,7 @@ class _InputBar extends StatelessWidget {
                 child: SizedBox(
                   width: 30,
                   height: 30,
-                  child: Icon(
+                  child: AppIcon(
                     Icons.attach_file,
                     size: 18,
                     color: onAttach == null ? colors.textDim.withValues(alpha: 0.5) : colors.textMed,
@@ -1459,7 +1460,7 @@ class _InputBar extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: colors.border),
                         ),
-                        child: Icon(Icons.mic_none, size: 16, color: colors.textDim),
+                        child: AppIcon(Icons.mic_none, size: 16, color: colors.textDim),
                       )
                     : Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_toggle.dart';
 import '../../settings/presentation/widgets/settings_scaffold.dart';
 import '../report_copy.dart';
@@ -140,7 +141,7 @@ class _NeverRow extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 2),
-            child: Icon(icon, size: 20, color: colors.text),
+            child: AppIcon(icon, size: 20, color: colors.text),
           ),
           const SizedBox(width: 14),
           Expanded(

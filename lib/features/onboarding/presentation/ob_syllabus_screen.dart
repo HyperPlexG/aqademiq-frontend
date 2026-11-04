@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
@@ -91,7 +92,7 @@ class ObSyllabusScreen extends ConsumerWidget {
                     const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
                 child: Column(
                   children: [
-                    Icon(
+                    AppIcon(
                       hasFiles ? Icons.check_circle_outline : Icons.arrow_upward,
                       size: 26,
                       color: colors.accent,
@@ -124,7 +125,7 @@ class ObSyllabusScreen extends ConsumerWidget {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
                   children: [
-                    Icon(Icons.insert_drive_file_outlined,
+                    AppIcon(Icons.insert_drive_file_outlined,
                         size: 16, color: colors.textMed),
                     const SizedBox(width: 8),
                     Expanded(
@@ -138,7 +139,7 @@ class ObSyllabusScreen extends ConsumerWidget {
                     GestureDetector(
                       onTap: () =>
                           ref.read(onboardingProvider.notifier).removeMaterial(file),
-                      child: Icon(Icons.close, size: 16, color: colors.textMed),
+                      child: AppIcon(Icons.close, size: 16, color: colors.textMed),
                     ),
                   ],
                 ),

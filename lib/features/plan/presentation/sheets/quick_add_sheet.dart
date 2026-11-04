@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
 import '../../../../services/voice_input_service.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/voice_feedback.dart';
 import '../../../../shared/widgets/voice_recording_bar.dart';
 import '../../plan_time.dart';
@@ -275,7 +276,7 @@ class _InputPill extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onSpeak,
-                child: Icon(Icons.mic_none, size: 19, color: colors.textDim),
+                child: AppIcon(Icons.mic_none, size: 19, color: colors.textDim),
               ),
             ),
           ],
@@ -313,7 +314,7 @@ class _ContextChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 13, color: colors.textMed),
+            AppIcon(icon, size: 13, color: colors.textMed),
             const SizedBox(width: 4),
             Text(
               label,
@@ -343,7 +344,7 @@ class _MorePill extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.pill),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Icon(Icons.more_horiz, size: 15, color: colors.textMed),
+        child: AppIcon(Icons.more_horiz, size: 15, color: colors.textMed),
       ),
     );
   }
@@ -365,7 +366,7 @@ class _SendButton extends StatelessWidget {
         height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.ink, shape: BoxShape.circle),
-        child: const Icon(Icons.arrow_upward, size: 18, color: Colors.white),
+        child: const AppIcon(Icons.arrow_upward, size: 18, color: Colors.white),
       ),
     );
   }

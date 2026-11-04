@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 
 /// plan-pick-date — bottom sheet date picker (spec section-02b).
@@ -246,7 +247,7 @@ class _MonthHeader extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(Icons.chevron_left, size: 20, color: colors.text),
+                child: AppIcon(Icons.chevron_left, size: 20, color: colors.text),
               ),
             ),
             const SizedBox(width: 4),
@@ -255,7 +256,7 @@ class _MonthHeader extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               child: Padding(
                 padding: const EdgeInsets.all(4),
-                child: Icon(Icons.chevron_right, size: 20, color: colors.text),
+                child: AppIcon(Icons.chevron_right, size: 20, color: colors.text),
               ),
             ),
           ],

@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -61,7 +62,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final busy = ref.watch(authControllerProvider).isLoading;
 
     Widget eye({required bool obscure, required VoidCallback onToggle}) => IconButton(
-          icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, size: 17, color: colors.textMed),
+          icon: AppIcon(obscure ? Icons.visibility_off : Icons.visibility, size: 17, color: colors.textMed),
           onPressed: onToggle,
         );
 

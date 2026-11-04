@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 
@@ -101,7 +102,7 @@ class _AdaWithLock extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: colors.surface, width: 3),
             ),
-            child: const Icon(Icons.lock, size: 13, color: Colors.white),
+            child: const AppIcon(Icons.lock, size: 13, color: Colors.white),
           ),
         ),
       ],
@@ -144,7 +145,7 @@ class _BenefitsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, size: 15, color: colors.accent),
+                  AppIcon(Icons.check_circle, size: 15, color: colors.accent),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../ice_breaker.dart';
@@ -160,7 +161,7 @@ class _StartHereHero extends StatelessWidget {
                       color: Color(0xFF2B2B2B),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: const AppIcon(
                       Icons.play_arrow,
                       size: 12,
                       color: Colors.white,
@@ -328,7 +329,7 @@ class _WatchedDisclosureState extends State<_WatchedDisclosure> {
             padding: const EdgeInsets.symmetric(vertical: 11),
             child: Row(
               children: [
-                Icon(
+                AppIcon(
                   _open ? Icons.expand_less : Icons.expand_more,
                   size: 17,
                   color: colors.textMed,
@@ -373,7 +374,7 @@ class _BackCircle extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: colors.cardShadow,
         ),
-        child: Icon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/launch_external.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
@@ -201,7 +202,7 @@ class _RadioDot extends StatelessWidget {
             : Border.all(color: colors.textDim, width: 1.6),
       ),
       child: selected
-          ? const Icon(Icons.check, size: 15, color: Colors.white)
+          ? const AppIcon(Icons.check, size: 15, color: Colors.white)
           : null,
     );
   }
@@ -218,7 +219,7 @@ class _DeclinedWarning extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.info_outline, size: 17, color: colors.warn),
+        AppIcon(Icons.info_outline, size: 17, color: colors.warn),
         const SizedBox(width: 8),
         Expanded(
           child: Text(

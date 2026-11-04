@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
+import '../icons/app_icon.dart';
 
 /// Study-tag pill (prototype `TagChip`): dot + label + optional ✕, 1.5px solid
 /// or dashed border, full radius. Used in forms/Settings (the timeline task row
@@ -65,7 +66,7 @@ class TagChip extends StatelessWidget {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onRemove,
-                  child: Icon(Icons.close, size: 12, color: textColor),
+                  child: AppIcon(Icons.close, size: 12, color: textColor),
                 ),
               ],
             ],

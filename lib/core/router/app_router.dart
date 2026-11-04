@@ -17,6 +17,11 @@ import '../../features/feedback/presentation/feedback_board_screen.dart';
 import '../../features/feedback/presentation/feedback_detail_screen.dart';
 import '../../features/focus/presentation/focus_end_screen.dart';
 import '../../features/focus/presentation/timer_screen.dart';
+import '../../features/freeze/presentation/freeze_group_screen.dart';
+import '../../features/freeze/presentation/freeze_hub_screen.dart';
+import '../../features/freeze/presentation/freeze_settings_screens.dart';
+import '../../features/freeze/presentation/freeze_setup_screens.dart';
+import '../../features/freeze/presentation/thaw_screen.dart';
 import '../../features/ice_breakers/presentation/ice_breaker_screen.dart';
 import '../../features/ice_breakers/presentation/ice_breakers_screen.dart';
 import '../../features/import/presentation/calendar_import_screen.dart';
@@ -86,6 +91,20 @@ abstract final class Routes {
   // Focus session complete (full-screen, pushed over the shell).
   static const focusEnd = '/focus/end';
 
+  // App freeze (v2 · design §04-A). The hub and the group pages live inside
+  // the Focus tab — the design keeps the bar under them — while first run and
+  // the thaw breath are full-screen.
+  static const freeze = '/timer/freeze';
+  static const freezeAlways = '/timer/freeze/always';
+  static const freezeNever = '/timer/freeze/never';
+  static const freezeDistract = '/timer/freeze/distracting';
+  static const freezeIntro = '/freeze/intro';
+  static const freezePermission = '/freeze/permission';
+  static const freezeDenied = '/freeze/denied';
+
+  /// The breath, then how long. `extra` is a `ThawRequest`.
+  static const freezeThaw = '/freeze/thaw';
+
   // Settings (full-screen, pushed over the shell).
   static const settings = '/settings';
   static const settingsProfile = '/settings/profile';
@@ -98,6 +117,10 @@ abstract final class Routes {
   // the one review screen, which reads the import session provider.
   static const settingsCalendarImport = '/settings/calendar-import';
   static const settingsReminderImport = '/settings/reminder-import';
+
+  // Settings → App freeze, and its Thaw page.
+  static const settingsAppFreeze = '/settings/app-freeze';
+  static const settingsThaw = '/settings/app-freeze/thaw';
   static const importReview = '/settings/import/review';
   static const importPaste = '/settings/import/paste';
 
@@ -165,6 +188,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, state) => AddTaskScreen(existing: state.extra as Task?),
       ),
       GoRoute(path: Routes.focusEnd, builder: (_, _) => const FocusEndScreen()),
+      GoRoute(path: Routes.freezeIntro, builder: (_, _) => const FreezeIntroScreen()),
+      GoRoute(path: Routes.freezePermission, builder: (_, _) => const FreezePermissionScreen()),
+      GoRoute(path: Routes.freezeDenied, builder: (_, _) => const FreezeDeniedScreen()),
+      GoRoute(
+        path: Routes.freezeThaw,
+        builder: (_, state) => ThawScreen(
+          request: state.extra is ThawRequest
+              ? state.extra! as ThawRequest
+              // A thaw reached with no request (a stale link) thaws nothing in
+              // particular: the screen offers "your apps".
+              : ThawRequest(target: state.uri.queryParameters['target'] ?? '*'),
+        ),
+      ),
+      GoRoute(path: Routes.settingsAppFreeze, builder: (_, _) => const AppFreezeSettingsScreen()),
+      GoRoute(path: Routes.settingsThaw, builder: (_, _) => const ThawSettingsScreen()),
       GoRoute(path: Routes.moodMorning, builder: (_, _) => const MoodMorningScreen()),
       GoRoute(path: Routes.moodEvening, builder: (_, _) => const MoodEveningScreen()),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsHomeScreen()),
@@ -225,7 +263,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           // 2 — Timer
           StatefulShellBranch(
             routes: [
-              GoRoute(path: Routes.timer, builder: (_, _) => const TimerScreen()),
+              GoRoute(
+                path: Routes.timer,
+                builder: (_, _) => const TimerScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'freeze',
+                    builder: (_, _) => const FreezeHubScreen(),
+                    routes: [
+                      GoRoute(path: 'always', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.alwaysOpen)),
+                      GoRoute(path: 'never', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.neverOpen)),
+                      GoRoute(path: 'distracting', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.distracting)),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
           // 3 — Stats

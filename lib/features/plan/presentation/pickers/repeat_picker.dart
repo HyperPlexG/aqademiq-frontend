@@ -5,6 +5,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Presents the Repeat picker bottom sheet (`plan-pick-repeat`) and returns the
 /// chosen [RepeatRule] (recurrence the planner actually expands), or `null` if
@@ -190,7 +191,7 @@ class _OptRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: leadColor),
+            AppIcon(icon, size: 19, color: leadColor),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -428,7 +429,7 @@ class _IntervalRow extends StatelessWidget {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onDecrement,
-              child: Icon(
+              child: AppIcon(
                 Icons.remove_circle_outline,
                 size: 18,
                 color: colors.textMed,
@@ -451,7 +452,7 @@ class _IntervalRow extends StatelessWidget {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onIncrement,
-              child: Icon(Icons.add_circle, size: 18, color: colors.accent),
+              child: AppIcon(Icons.add_circle, size: 18, color: colors.accent),
             ),
           ],
         ),

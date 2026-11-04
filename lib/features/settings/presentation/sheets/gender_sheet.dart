@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// settings-gender sheet (spec §13a). Opens over the dimmed Profile screen and
 /// returns the chosen label (or `null` on dismiss).
@@ -132,7 +133,7 @@ class _OptionRow extends StatelessWidget {
                 ),
               ),
               if (selected)
-                Icon(Icons.check_circle, size: 20, color: colors.accent),
+                AppIcon(Icons.check_circle, size: 20, color: colors.accent),
             ],
           ),
         ),

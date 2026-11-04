@@ -10,6 +10,7 @@ import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import 'sheets/add_file_sheet.dart';
@@ -95,7 +96,7 @@ class SubjectDetailScreen extends ConsumerWidget {
                     child: _StatCard(
                       child: Row(
                         children: [
-                          Icon(Icons.timer, size: 20, color: color),
+                          AppIcon(Icons.timer, size: 20, color: color),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
@@ -121,7 +122,7 @@ class SubjectDetailScreen extends ConsumerWidget {
                     onTap: () => showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
                     child: Row(
                       children: [
-                        Icon(Icons.add, size: 13, color: colors.accent),
+                        AppIcon(Icons.add, size: 13, color: colors.accent),
                         const SizedBox(width: 2),
                         Text('Add file', style: AppText.sans(size: 10.5, weight: FontWeight.w800, color: colors.accent)),
                       ],
@@ -341,7 +342,7 @@ class _Hero extends StatelessWidget {
         children: [
           Row(
             children: [
-              GestureDetector(onTap: onBack, child: const Icon(Icons.arrow_back, size: 20, color: Colors.white)),
+              GestureDetector(onTap: onBack, child: const AppIcon(Icons.arrow_back, size: 20, color: Colors.white)),
               const Spacer(),
               Semantics(
                 button: true,
@@ -352,7 +353,7 @@ class _Hero extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    child: Icon(Icons.delete_outline, size: 17, color: Colors.white),
+                    child: AppIcon(Icons.delete_outline, size: 17, color: Colors.white),
                   ),
                 ),
               ),
@@ -362,7 +363,7 @@ class _Hero extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 child: Row(
                   children: [
-                    const Icon(Icons.edit, size: 15, color: Colors.white),
+                    const AppIcon(Icons.edit, size: 15, color: Colors.white),
                     const SizedBox(width: 4),
                     Text('Edit', style: AppText.sans(size: 12, weight: FontWeight.w800, color: Colors.white)),
                   ],
@@ -377,7 +378,7 @@ class _Hero extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.person_outline, size: 14, color: Colors.white.withValues(alpha: 0.92)),
+              AppIcon(Icons.person_outline, size: 14, color: Colors.white.withValues(alpha: 0.92)),
               const SizedBox(width: 4),
               Text(subject.professor ?? '', style: AppText.sans(size: 11, color: Colors.white.withValues(alpha: 0.92))),
               const SizedBox(width: 10),
@@ -388,7 +389,7 @@ class _Hero extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.track_changes, size: 11, color: Colors.white),
+                      const AppIcon(Icons.track_changes, size: 11, color: Colors.white),
                       const SizedBox(width: 3),
                       Text('Target ${subject.targetGrade}', style: AppText.sans(size: 10, weight: FontWeight.w800, color: Colors.white)),
                     ],
@@ -469,7 +470,7 @@ class _FileRow extends StatelessWidget {
               height: 30,
               alignment: Alignment.center,
               decoration: BoxDecoration(color: color.alpha8(0x18), borderRadius: BorderRadius.circular(9)),
-              child: Icon(icon, size: 16, color: color),
+              child: AppIcon(icon, size: 16, color: color),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -488,7 +489,7 @@ class _FileRow extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: Icon(Icons.delete_outline, size: 18, color: colors.textDim),
+                  child: AppIcon(Icons.delete_outline, size: 18, color: colors.textDim),
                 ),
               ),
             ],

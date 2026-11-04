@@ -8,6 +8,7 @@ import '../../../../data/models/tag.dart';
 import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 import '../../../../data/repositories/tags_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../../../plan/providers/plan_providers.dart';
 
@@ -155,13 +156,13 @@ class _NoTaskRow extends StatelessWidget {
               height: 30,
               alignment: Alignment.center,
               decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-              child: Icon(Icons.do_not_disturb_on, size: 17, color: colors.textMed),
+              child: AppIcon(Icons.do_not_disturb_on, size: 17, color: colors.textMed),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text('Focus without a task', style: AppText.sans(size: 12.5, weight: FontWeight.w700, color: colors.text)),
             ),
-            Icon(
+            AppIcon(
               selected ? Icons.check_circle : Icons.radio_button_unchecked,
               size: 19,
               color: selected ? colors.accent : _uncheckedColor,
@@ -206,7 +207,7 @@ class _TaskRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
+            AppIcon(
               selected ? Icons.check_circle : Icons.radio_button_unchecked,
               size: 19,
               color: selected ? colors.accent : _uncheckedColor,

@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -150,7 +151,7 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
                     ),
                   ),
                   if (selected == mode.name)
-                    Icon(Icons.check_circle, size: 18, color: mode.color),
+                    AppIcon(Icons.check_circle, size: 18, color: mode.color),
                 ],
               ),
             ),

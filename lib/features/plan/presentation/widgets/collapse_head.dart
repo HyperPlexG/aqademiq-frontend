@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// The light `hilite` section pill on the Plan timeline (prototype
 /// `CollapseHead`): optional leading icon, "LABEL (count)", expand/collapse
@@ -43,7 +44,7 @@ class CollapseHead extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 15, color: colors.textMed),
+                AppIcon(icon, size: 15, color: colors.textMed),
                 const SizedBox(width: 7),
               ],
               Text(
@@ -56,7 +57,7 @@ class CollapseHead extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 7),
-              Icon(
+              AppIcon(
                 open ? Icons.expand_more : Icons.expand_less,
                 size: 18,
                 color: colors.text,

@@ -8,6 +8,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/ada_memory.dart';
 import '../../../data/repositories/ada_memory_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/settings_row.dart';
 import 'widgets/settings_scaffold.dart';
@@ -157,7 +158,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          Icon(Icons.psychology_outlined, size: 34, color: colors.textDim),
+          AppIcon(Icons.psychology_outlined, size: 34, color: colors.textDim),
           const SizedBox(height: 12),
           Text(
             "Ada hasn't picked anything up yet",
@@ -277,7 +278,7 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
                   )
                 : IconButton(
                     onPressed: _forget,
-                    icon: Icon(Icons.close, size: 17, color: colors.textDim),
+                    icon: AppIcon(Icons.close, size: 17, color: colors.textDim),
                     tooltip: 'Forget this',
                     splashRadius: 18,
                   ),

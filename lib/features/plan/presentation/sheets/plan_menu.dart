@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../providers/plan_ui_providers.dart';
 
 /// The action the user picked from the Plan overflow (`···`) popover.
@@ -155,7 +156,7 @@ class _MenuRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
         child: Row(
           children: [
-            Icon(icon, size: 19, color: colors.text),
+            AppIcon(icon, size: 19, color: colors.text),
             const SizedBox(width: 13),
             Text(
               label,
@@ -193,7 +194,7 @@ class _GroupingHeader extends StatelessWidget {
                 color: colors.text,
               ),
             ),
-            Icon(
+            AppIcon(
               open ? Icons.expand_more : Icons.chevron_right,
               size: 18,
               color: colors.text,
@@ -231,10 +232,10 @@ class _GroupingOption extends StatelessWidget {
             SizedBox(
               width: 30,
               child: selected
-                  ? Icon(Icons.check, size: 18, color: colors.accent)
+                  ? AppIcon(Icons.check, size: 18, color: colors.accent)
                   : null,
             ),
-            Icon(icon, size: 19, color: colors.text),
+            AppIcon(icon, size: 19, color: colors.text),
             const SizedBox(width: 12),
             Text(
               label,

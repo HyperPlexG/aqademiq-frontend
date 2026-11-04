@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// The six in-place task operations offered by the task-overflow action sheet
 /// (section-09). Each action row pops one of these from the sheet.
@@ -237,7 +238,7 @@ class _ActionRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: tint),
+            AppIcon(icon, size: 18, color: tint),
             const SizedBox(width: 14),
             Text(
               label,

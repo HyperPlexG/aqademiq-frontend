@@ -12,7 +12,12 @@ import '../../../data/models/task.dart';
 import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
+import '../../freeze/domain/freeze_models.dart';
+import '../../freeze/presentation/freeze_apps.dart';
+import '../../freeze/presentation/sheets/choose_apps_sheet.dart';
+import '../../freeze/providers/freeze_controller.dart';
 import '../../plan/providers/plan_providers.dart';
 import '../../settings/providers/prism_settings_provider.dart';
 import '../providers/linked_task_provider.dart';
@@ -116,6 +121,20 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
     );
   }
 
+  /// Trim The usual: Android takes the app off the set; iOS, which never
+  /// says which app it was, opens the set to trim by hand.
+  Future<void> _trim(String target, {required bool ios}) async {
+    final c = ref.read(freezeControllerProvider.notifier);
+    final usual = ref.read(freezeControllerProvider).recentApps;
+    if (ios) {
+      final picked = await chooseApps(context, current: usual, owner: 'usual', title: 'The usual');
+      if (picked != null) c.setRecentApps(picked);
+    } else {
+      c.setRecentApps(usual.copyWith(packages: usual.packages.where((p) => p != target).toList()));
+    }
+    if (mounted) setState(() {});
+  }
+
   void _backToPlan() => unawaited(_submitThen(() => context.go(Routes.plan)));
 
   void _again() => unawaited(_submitThen(context.pop));
@@ -139,10 +158,30 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
   String _mode() =>
       ref.read(focusControllerProvider).prismMode ?? ref.read(prismDefaultModeProvider);
 
+  /// Thaws taken during this session (fc-end-ice). Counted and never scolded:
+  /// a numeral beside focus minutes, with no adjective attached.
+  ({int count, String? onlyTarget}) _thaws() {
+    final session = ref.read(focusControllerProvider);
+    final from = session.startedAt;
+    if (from == null) return (count: 0, onlyTarget: null);
+    final to = session.completedAt ?? DateTime.now();
+    final log = ref.read(freezeControllerProvider).thawLog.where(
+          (r) => r.minutes > 0 && !r.at.isBefore(from) && !r.at.isAfter(to),
+        );
+    final targets = {for (final r in log) r.target};
+    final only = targets.length == 1 ? targets.first : null;
+    return (count: log.length, onlyTarget: only == ThawGrant.allApps ? null : only);
+  }
+
   @override
   Widget build(BuildContext context) {
     final summary = _summary();
     final askAbout = _askAbout;
+    final thaws = _thaws();
+    final freeze = ref.watch(freezeControllerProvider);
+    final apps = ref.watch(freezeAppsProvider);
+    final trimTarget = thaws.count >= 2 ? thaws.onlyTarget : null;
+    final canTrim = trimTarget != null && (apps.ios || freeze.recentApps.packages.contains(trimTarget));
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -166,21 +205,33 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('◈', style: TextStyle(fontSize: 11, color: Color(0xFF6B5CF0), height: 1)),
+                        const Ic('prism', size: 16, color: Color(0xFF6B5CF0)),
                         const SizedBox(width: 6),
-                        Text('${summary.mode} · Prism', style: AppText.sans(size: 10, weight: FontWeight.w700, color: _ink)),
+                        Text('${summary.mode} · Prism', style: AppText.sans(size: 13, weight: FontWeight.w700, color: _ink)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 22),
-                  Text('Session done', style: AppText.sans(size: 26, weight: FontWeight.w800, color: _ink)),
+                  const SizedBox(height: 18),
+                  Text('Session done', style: AppText.sans(size: 34, weight: FontWeight.w800, color: _ink)),
                   const SizedBox(height: 5),
-                  Text(summary.what, style: AppText.sans(size: 11.5, color: _inkSub)),
-                  const SizedBox(height: 18),
-                  Text(_duration, style: AppText.sans(size: 48, weight: FontWeight.w800, letterSpacing: 0.5, height: 1, color: _ink)),
-                  const SizedBox(height: 6),
-                  Text('Focused', style: AppText.sans(size: 12, color: _inkSub)),
-                  const SizedBox(height: 18),
+                  Text(summary.what, textAlign: TextAlign.center, style: AppText.sans(size: 15, weight: FontWeight.w500, color: _inkSub)),
+                  const SizedBox(height: 14),
+                  Text(_duration, style: AppText.sans(size: 46, weight: FontWeight.w800, letterSpacing: 0.5, height: 1, color: _ink)),
+                  const SizedBox(height: 7),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Focused', style: AppText.sans(size: 17, weight: FontWeight.w600, color: _inkSub)),
+                      if (thaws.count > 0) ...[
+                        const SizedBox(width: 7),
+                        Container(width: 3, height: 3, decoration: const BoxDecoration(color: _inkSub, shape: BoxShape.circle)),
+                        const SizedBox(width: 7),
+                        Text(thaws.count == 1 ? '1 thaw' : '${thaws.count} thaws',
+                            style: AppText.sans(size: 17, weight: FontWeight.w600, color: _inkSub)),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 14),
                   if (askAbout != null) ...[
                     _FinishedCard(
                       title: askAbout.title,
@@ -190,20 +241,30 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                     const SizedBox(height: 10),
                   ],
                   _MoodCard(selected: _mood, onSelect: (i) => setState(() => _mood = i)),
-                  const SizedBox(height: 16),
+                  if (canTrim && trimTarget != null) ...[
+                    const SizedBox(height: 10),
+                    _TrimCard(
+                      count: thaws.count,
+                      appName: apps.ios ? null : apps.nameOf(trimTarget),
+                      onTrim: () => unawaited(_trim(trimTarget, ios: apps.ios)),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
                   GestureDetector(
                     onTap: _backToPlan,
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+                      height: 50,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(color: _ink, borderRadius: BorderRadius.circular(100)),
-                      child: Text('Back to today →', textAlign: TextAlign.center, style: AppText.sans(size: 14, weight: FontWeight.w700, color: Colors.white)),
+                      child: Text('Back to today →', textAlign: TextAlign.center, style: AppText.sans(size: 17, weight: FontWeight.w700, color: Colors.white)),
                     ),
                   ),
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: _again,
-                    child: Text('Start another session', style: AppText.sans(size: 11.5, color: _inkSub)),
+                    child: Text('Start another session', style: AppText.sans(size: 15, weight: FontWeight.w600, color: _inkSub)),
                   ),
                 ],
               ),
@@ -334,3 +395,48 @@ class _MoodCard extends StatelessWidget {
 /// Deliberately skippable and unselected by default: a forced rating produces
 /// compliance data rather than a signal, and the analytics treat null as "not
 /// asked" rather than as a middling score. Tapping the current value clears it.
+
+/// "One app did both thaws" (fc-end-ice). App-agnostic on iOS, because iOS
+/// genuinely never told us the name.
+class _TrimCard extends StatelessWidget {
+  const _TrimCard({required this.count, required this.appName, required this.onTrim});
+
+  final int count;
+  final String? appName;
+  final VoidCallback onTrim;
+
+  static const _ink = Color(0xFF1A1320);
+  static const _inkSub = Color.fromRGBO(36, 24, 52, 0.62);
+
+  @override
+  Widget build(BuildContext context) {
+    final both = count == 2 ? 'both thaws' : 'all $count thaws';
+    final title = appName == null ? 'One app did $both' : '$appName did $both';
+    final sub = appName == null ? "iOS won't tell us which. Trim The usual?" : 'Take it off The usual?';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.62), borderRadius: BorderRadius.circular(14)),
+      child: Row(
+        children: [
+          const Ic('freeze', size: 21, color: Color(0xFF6B5CF0)),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppText.sans(size: 15, weight: FontWeight.w800, color: _ink)),
+                const SizedBox(height: 1),
+                Text(sub, style: AppText.sans(size: 12, weight: FontWeight.w500, height: 1.45, color: _inkSub)),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onTrim,
+            child: Text('Trim', style: AppText.sans(size: 13, weight: FontWeight.w800, color: const Color(0xFF6B5CF0))),
+          ),
+        ],
+      ),
+    );
+  }
+}

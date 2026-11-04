@@ -22,6 +22,7 @@ import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -676,7 +677,7 @@ class _ShowMeHowButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.play_circle_outline, size: 16, color: colors.accent),
+            AppIcon(Icons.play_circle_outline, size: 16, color: colors.accent),
             const SizedBox(width: 8),
             Text(
               'Show me how',
@@ -687,7 +688,7 @@ class _ShowMeHowButton extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, size: 15, color: colors.textDim),
+            AppIcon(Icons.chevron_right, size: 15, color: colors.textDim),
           ],
         ),
       ),
@@ -715,7 +716,7 @@ class _PlanError extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
+          AppIcon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
           const SizedBox(height: 12),
           Text("Couldn't load your day", style: AppText.sans(size: 14, weight: FontWeight.w800, color: colors.text)),
           const SizedBox(height: 12),

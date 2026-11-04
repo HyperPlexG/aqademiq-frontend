@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
+import '../icons/app_icon.dart';
 
 /// Centered ink pill section header (prototype `SectionPill`):
 /// `icon · LABEL (count) ▾`, white-on-ink.
@@ -38,7 +39,7 @@ class SectionPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.5)),
+                AppIcon(icon, size: 12, color: Colors.white.withValues(alpha: 0.5)),
                 const SizedBox(width: 6),
               ],
               Text(

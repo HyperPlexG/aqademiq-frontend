@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/ada_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// FRAMES `ada-history` — chat-history slide-over panel. Lists the user's past
 /// Ada conversations; tapping one loads it into the chat, and the compose icon
@@ -85,7 +86,7 @@ class _ChatHistoryPanel extends ConsumerWidget {
                               shape: BoxShape.circle,
                               boxShadow: colors.cardShadow,
                             ),
-                            child: Icon(Icons.close, size: 15, color: colors.text),
+                            child: AppIcon(Icons.close, size: 15, color: colors.text),
                           ),
                         ),
                       ],
@@ -114,7 +115,7 @@ class _ChatHistoryPanel extends ConsumerWidget {
                             shape: BoxShape.circle,
                             boxShadow: colors.cardShadow,
                           ),
-                          child: Icon(Icons.edit_note, size: 17, color: colors.text),
+                          child: AppIcon(Icons.edit_note, size: 17, color: colors.text),
                         ),
                       ),
                     ],

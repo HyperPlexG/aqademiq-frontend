@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
+import '../icons/app_icon.dart';
 
 /// What an input bar turns into while the student is dictating.
 ///
@@ -58,7 +59,7 @@ class VoiceRecordingBar extends StatelessWidget {
             key: const Key('voice-discard'),
             label: 'Discard recording',
             onTap: onDiscard,
-            child: const Icon(Icons.close, size: 20, color: Colors.white),
+            child: const AppIcon(Icons.close, size: 20, color: Colors.white),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -92,7 +93,7 @@ class VoiceRecordingBar extends StatelessWidget {
             label: 'Send',
             onTap: onSend,
             background: colors.accent,
-            child: const Icon(
+            child: const AppIcon(
               Icons.arrow_upward,
               size: 18,
               color: Colors.white,

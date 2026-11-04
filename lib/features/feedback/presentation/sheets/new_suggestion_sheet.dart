@@ -7,6 +7,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/launch_external.dart';
 import '../../../../data/models/enums.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../widgets/feedback_bits.dart';
@@ -126,7 +127,7 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
             ),
             child: Row(
               children: [
-                Icon(Icons.bug_report_outlined, size: 15, color: colors.danger),
+                AppIcon(Icons.bug_report_outlined, size: 15, color: colors.danger),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -220,7 +221,7 @@ class _CategoryOption extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(category.icon, size: 14, color: fg),
+              AppIcon(category.icon, size: 14, color: fg),
               const SizedBox(width: 5),
               Text(
                 category.label,

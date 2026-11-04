@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
+import '../icons/app_icon.dart';
 import '../mascot/ada_mascot.dart';
 
 /// Stable semantic tab indices (README §4 / prototype). NOTE the order is
@@ -109,7 +110,7 @@ class _StandardTab extends StatelessWidget {
         color: active ? colors.ink : Colors.transparent,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, size: 24, color: active ? Colors.white : colors.textMed),
+      child: AppIcon(icon, size: 24, color: active ? Colors.white : colors.textMed),
     );
   }
 }
@@ -154,7 +155,7 @@ class _LockDot extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: colors.surface, width: 2),
       ),
-      child: const Icon(Icons.lock, size: 8, color: Colors.white),
+      child: const AppIcon(Icons.lock, size: 8, color: Colors.white),
     );
   }
 }

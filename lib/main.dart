@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
 import 'features/focus/providers/prism_voice_hold.dart';
+import 'features/freeze/data/freeze_store.dart';
 import 'features/report/report_optout.dart';
 import 'services/deep_link_service.dart';
 import 'services/haptics/haptic_settings_service.dart';
@@ -37,6 +38,9 @@ Future<void> _start() async {
   // before the first frame or the entry point flashes in for a student who
   // has already turned the report off.
   await ReportSettingsService.instance.init();
+  // App freeze is device-local and read synchronously by its controller, so
+  // the Focus tab's ice chip and the hub never flash empty on a cold start.
+  await FreezeStore.instance.init();
   // Started here so a cold start *from* a referral link has the code in hand
   // before onboarding renders. Best-effort inside: it never blocks startup.
   await _deepLinks.start();

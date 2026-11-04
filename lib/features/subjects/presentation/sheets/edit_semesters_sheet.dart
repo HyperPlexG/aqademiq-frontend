@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_text_field.dart';
@@ -198,7 +199,7 @@ class _SemesterRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       child: Row(
         children: [
-          Icon(Icons.drag_indicator, size: 18, color: colors.textDim),
+          AppIcon(Icons.drag_indicator, size: 18, color: colors.textDim),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -234,13 +235,13 @@ class _SemesterRow extends StatelessWidget {
           GestureDetector(
             onTap: onRename,
             behavior: HitTestBehavior.opaque,
-            child: Icon(Icons.edit, size: 17, color: colors.textMed),
+            child: AppIcon(Icons.edit, size: 17, color: colors.textMed),
           ),
           const SizedBox(width: 11),
           GestureDetector(
             onTap: canDelete ? onDelete : null,
             behavior: HitTestBehavior.opaque,
-            child: Icon(
+            child: AppIcon(
               Icons.delete_outline,
               size: 17,
               color: canDelete ? _deleteColor : colors.textDim,
@@ -302,7 +303,7 @@ class _AddSemesterButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add, size: 17, color: colors.accent),
+              AppIcon(Icons.add, size: 17, color: colors.accent),
               const SizedBox(width: 7),
               Text(
                 'Add semester',

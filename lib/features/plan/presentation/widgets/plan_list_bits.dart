@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Empty-bucket "add a task" row (prototype `AddRow`, used on plan-otherday).
 class AddRow extends StatelessWidget {
@@ -29,7 +30,7 @@ class AddRow extends StatelessWidget {
               height: 24,
               alignment: Alignment.center,
               decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-              child: Icon(Icons.add, size: 16, color: colors.textDim),
+              child: AppIcon(Icons.add, size: 16, color: colors.textDim),
             ),
           ],
         ),
@@ -76,14 +77,14 @@ class ListGroupHead extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, size: 14, color: colors.textMed),
+                  AppIcon(icon, size: 14, color: colors.textMed),
                   const SizedBox(width: 7),
                   Text(
                     '$label ($count)',
                     style: AppText.sans(size: 11.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.04, 11.5), color: colors.text),
                   ),
                   const SizedBox(width: 7),
-                  Icon(Icons.expand_more, size: 17, color: colors.text),
+                  AppIcon(Icons.expand_more, size: 17, color: colors.text),
                 ],
               ),
             ),
@@ -92,7 +93,7 @@ class ListGroupHead extends StatelessWidget {
             right: 0,
             child: GestureDetector(
               onTap: onAdd,
-              child: Icon(Icons.add, size: 19, color: colors.textDim),
+              child: AppIcon(Icons.add, size: 19, color: colors.textDim),
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// fc-duration — centered "Set time" dialog. Opened by tapping the "Set time"
 /// pill on the Focus setup screen. Returns the chosen minutes (5..120) when the
@@ -213,7 +214,7 @@ class _StepBtn extends StatelessWidget {
         height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: Icon(icon, size: 20, color: colors.text),
+        child: AppIcon(icon, size: 20, color: colors.text),
       ),
     );
   }

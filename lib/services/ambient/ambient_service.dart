@@ -171,6 +171,12 @@ class AmbientService {
       'stats' => Routes.stats,
       'subjects' => Routes.subjects,
       'ada' => Routes.ada,
+      // App freeze's ongoing notification and Ada's check-in.
+      'freeze' => Routes.freeze,
+      // The shield's Thaw. Deliberately nowhere: the same press queued a
+      // thaw_request, and FreezeEvents opens the breath from that — a `go`
+      // here would race it and could replace the breath with the hub.
+      'freeze/thaw' => null,
       _ => null,
     };
     if (destination == null) return;

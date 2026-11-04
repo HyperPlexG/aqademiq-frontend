@@ -6,6 +6,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
+import '../../../../shared/icons/app_icon.dart';
 
 /// Duration presets shown in the picker grid, paired with the minute value
 /// each cell commits when tapped (`plan-pick-duration`).
@@ -196,7 +197,7 @@ class _OptRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           child: Row(
             children: [
-              Icon(icon, size: 19, color: colors.textMed),
+              AppIcon(icon, size: 19, color: colors.textMed),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -412,7 +413,7 @@ class _StepBtn extends StatelessWidget {
         child: SizedBox(
           width: 38,
           height: 38,
-          child: Icon(icon, size: 20, color: colors.text),
+          child: AppIcon(icon, size: 20, color: colors.text),
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/weekly_report.dart';
 import '../../../data/repositories/weekly_report_repository.dart';
+import '../../../shared/icons/app_icon.dart';
 import '../report_copy.dart';
 import 'share_shape_sheet.dart';
 import 'widgets/report_beats.dart';
@@ -196,7 +197,7 @@ class _Shell extends StatelessWidget {
               // have to finish is a story that can corner someone.
               IconButton(
                 onPressed: onClose,
-                icon: Icon(Icons.close, size: 24, color: colors.textMed),
+                icon: AppIcon(Icons.close, size: 24, color: colors.textMed),
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               ),
               Expanded(child: _Dots(count: pageCount, active: page)),
