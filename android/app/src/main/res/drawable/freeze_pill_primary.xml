@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The shield's "Back to focus": the dark pill (§4, #111111 with white). -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#33FFFFFF">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/freeze_primary" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+</ripple>

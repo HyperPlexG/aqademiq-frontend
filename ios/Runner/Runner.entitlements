@@ -14,9 +14,18 @@
 	     push payload), breaking through Focus / Scheduled Summary batching. -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
+	<!-- App freeze needs com.apple.developer.family-controls here too. It is
+	     deliberately NOT in this file yet: a distribution profile only carries
+	     it once Apple has approved Family Controls for com.r13.aqademiq, and
+	     until then a TestFlight / App Store export with the key fails to sign.
+	     `ruby ios/add_freeze_targets.rb` adds it, together with the three
+	     freeze extensions (APP_FREEZE.md §5). Without it the app builds and
+	     ships as before and App freeze reports itself as off. -->
 	<!-- The only channel between the app and its widget extension: the session
 	     state the lock screen, the Island and the widgets all render from.
-	     Must match AmbientWidgets.entitlements and AmbientStore.appGroup. -->
+	     Must match AmbientWidgets.entitlements and AmbientStore.appGroup.
+	     App freeze shares it too (FreezeStore.appGroup, and the Freeze*
+	     extensions' entitlements). -->
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.r13.aqademiq.shared</string>

@@ -36,4 +36,16 @@
         <item name="android:padding">14dp</item>
         <item name="android:background">@drawable/widget_background</item>
     </style>
+
+    <!-- The frost shield (freeze/ShieldActivity). A plain platform theme: the
+         activity is not AppCompat and draws everything itself. The ground is
+         the window background so it runs under the status bar, which is
+         see-through over it. values-v23 and -v27 add dark bar icons (and,
+         from 8.1, a see-through navigation bar). -->
+    <style name="FreezeShieldTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/freeze_shield_ground</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

@@ -27,4 +27,16 @@
          student showed up, dimmer under one they did not. -->
     <color name="widget_letter_shown">#FFA8A8A8</color>
     <color name="widget_letter_missed">#FF696969</color>
+    <!-- The frost shield (freeze/ShieldActivity, APP_FREEZE.md §4): the
+         design's own ground, ink and pills. The secondary pill is
+         rgba(255,255,255,.88). -->
+    <color name="freeze_ground_top">#FFF8F6FF</color>
+    <color name="freeze_ground_mid">#FFEBE5FC</color>
+    <color name="freeze_ground_bottom">#FFDDD4F8</color>
+    <color name="freeze_ink">#FF1A1320</color>
+    <color name="freeze_line">#FF584F70</color>
+    <color name="freeze_primary">#FF111111</color>
+    <color name="freeze_on_primary">#FFFFFFFF</color>
+    <color name="freeze_secondary">#E0FFFFFF</color>
+    <color name="freeze_thaw_glyph">#FF6B5CF0</color>
 </resources>

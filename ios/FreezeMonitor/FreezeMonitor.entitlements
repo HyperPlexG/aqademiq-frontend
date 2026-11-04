@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Screen Time. Must be on the app and on all three freeze extensions.
+	     Development builds get it with automatic signing; distribution needs
+	     Apple's approval per bundle id (APP_FREEZE.md §5). -->
+	<key>com.apple.developer.family-controls</key>
+	<true/>
+	<!-- The only channel between the app and this extension: the policy, the
+	     picked selections, the thaw-request queue. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.r13.aqademiq.shared</string>
+	</array>
+</dict>
+</plist>

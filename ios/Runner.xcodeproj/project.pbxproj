@@ -28,6 +28,11 @@
 		96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */; };
 		A7F3C21D9E4B06583C1D2E4F /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */; };
 		D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */; };
+		2C01443A67AE930FA0030835 /* AppFreezePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */; };
+		BA6F1DA1921A6254A92BE886 /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
+		D7E55117D0C414C977162FD6 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
+		621BC59F474D9753F9C18653 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
+		7366DD34AC12B27E2C1C7B76 /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -123,6 +128,11 @@
 		5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientPlugin.swift; sourceTree = "<group>"; };
 		B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
 		E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceImportPlugin.swift; sourceTree = "<group>"; };
+		07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppFreezePlugin.swift; sourceTree = "<group>"; };
+		D45E2636969D02097534950F /* FreezePolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezePolicy.swift; sourceTree = "<group>"; };
+		9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeRules.swift; sourceTree = "<group>"; };
+		E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeStore.swift; sourceTree = "<group>"; };
+		A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeSchedule.swift; sourceTree = "<group>"; };
 		6320E9A85CC5E9E585A4FE87 /* AqademiqWatch.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AqademiqWatch.xcconfig; sourceTree = "<group>"; };
 		63BC88FC67DAA3E60A1A6B63 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AqademiqWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -212,6 +222,18 @@
 			path = AqademiqWatch;
 			sourceTree = SOURCE_ROOT;
 		};
+		669F0C4CFA65EFF9173123B3 /* FreezeShared */ = {
+			isa = PBXGroup;
+			children = (
+				D45E2636969D02097534950F /* FreezePolicy.swift */,
+				9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */,
+				A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */,
+				E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */,
+			);
+			name = FreezeShared;
+			path = FreezeShared;
+			sourceTree = SOURCE_ROOT;
+		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
 			isa = PBXGroup;
 			children = (
@@ -235,6 +257,7 @@
 				EAF68D2B93829D3C01212FDF /* Frameworks */,
 				B76B709933370D46FF984DFD /* AmbientWidgets */,
 				83C28780CF97255F3D200FB0 /* AqademiqWatch */,
+				669F0C4CFA65EFF9173123B3 /* FreezeShared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -266,6 +289,7 @@
 				5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */,
 				B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */,
 				E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */,
+				07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */,
 				FF53A998BC55D853E629F440 /* WatchBridge.swift */,
 			);
 			path = Runner;
@@ -622,6 +646,11 @@
 				D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */,
 				59AE08FB9656EEDE6BEF8BC0 /* WatchBridge.swift in Sources */,
 				06FAB55517A4A01D85AAD19A /* SessionIntent.swift in Sources */,
+				2C01443A67AE930FA0030835 /* AppFreezePlugin.swift in Sources */,
+				BA6F1DA1921A6254A92BE886 /* FreezePolicy.swift in Sources */,
+				D7E55117D0C414C977162FD6 /* FreezeRules.swift in Sources */,
+				621BC59F474D9753F9C18653 /* FreezeStore.swift in Sources */,
+				7366DD34AC12B27E2C1C7B76 /* FreezeSchedule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -749,6 +778,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					FamilyControls,
+					"-weak_framework",
+					ManagedSettings,
+					"-weak_framework",
+					DeviceActivity,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -986,6 +1024,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					FamilyControls,
+					"-weak_framework",
+					ManagedSettings,
+					"-weak_framework",
+					DeviceActivity,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -1009,6 +1056,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					FamilyControls,
+					"-weak_framework",
+					ManagedSettings,
+					"-weak_framework",
+					DeviceActivity,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.r13.aqademiq;
 				PRODUCT_NAME = "$(TARGET_NAME)";

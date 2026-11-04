@@ -3,6 +3,7 @@ package com.aqademiq.aqademiq
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import com.aqademiq.aqademiq.freeze.AppFreezePlugin
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -38,6 +39,12 @@ class MainActivity : FlutterActivity() {
         // A plugin rather than an attached object because the permission
         // prompt needs the activity's result callback.
         flutterEngine.plugins.add(DeviceImportPlugin())
+
+        // App freeze (APP_FREEZE.md): the grants, the app list for the picker,
+        // and the policy the monitor enforces with the app closed. A plugin for
+        // the same reason as above — Settings opens from the activity — and so
+        // the shield can tell a live engine that a Thaw is waiting.
+        flutterEngine.plugins.add(AppFreezePlugin())
 
         // A permission the student refused can only be re-enabled from the app's
         // page in system Settings. iOS reaches it through a URL; Android has none,

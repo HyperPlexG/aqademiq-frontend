@@ -10,4 +10,17 @@
     <color name="ambient_rail_start">#FFBFE6F5</color>
     <color name="ambient_rail_end">#FF9FD6EF</color>
     <color name="ambient_divider">#1AFFFFFF</color>
+    <!-- The frost shield, the same as by day on purpose: §4 draws one
+         palette, and the shield is the design's own surface (like the
+         widgets), not system chrome that follows the theme. Twins so that a
+         dark frost, if one is ever drawn, has somewhere to go. -->
+    <color name="freeze_ground_top">#FFF8F6FF</color>
+    <color name="freeze_ground_mid">#FFEBE5FC</color>
+    <color name="freeze_ground_bottom">#FFDDD4F8</color>
+    <color name="freeze_ink">#FF1A1320</color>
+    <color name="freeze_line">#FF584F70</color>
+    <color name="freeze_primary">#FF111111</color>
+    <color name="freeze_on_primary">#FFFFFFFF</color>
+    <color name="freeze_secondary">#E0FFFFFF</color>
+    <color name="freeze_thaw_glyph">#FF6B5CF0</color>
 </resources>

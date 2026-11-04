@@ -1,0 +1,20 @@
+// Build settings for the three App freeze extensions (FreezeMonitor,
+// FreezeShield, FreezeShieldAction), set as their base configuration by
+// ios/add_freeze_targets.rb.
+//
+// Same reasoning as AmbientWidgets.xcconfig: ONLY Flutter's Generated.xcconfig,
+// never Flutter/Debug.xcconfig or Release.xcconfig — those pull in Pods-Runner,
+// whose OTHER_LDFLAGS link every Flutter plugin framework, and an extension
+// that links frameworks it does not embed dies in dyld before running a line
+// ("Library not loaded: @rpath/…framework"). For these extensions that failure
+// is silent and total: no schedule, no shield copy, a Thaw button that does
+// nothing.
+//
+// What is wanted from Flutter is only the version, so the extensions and the
+// app stay in lockstep (App Store Connect rejects a mismatch, and iOS refuses
+// to install one with "Invalid placeholder attributes").
+#include "../Flutter/Generated.xcconfig"
+
+// Nothing from the app links into here.
+OTHER_LDFLAGS =
+FRAMEWORK_SEARCH_PATHS = $(inherited)

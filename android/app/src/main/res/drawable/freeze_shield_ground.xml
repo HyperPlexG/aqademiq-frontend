@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The shield's ground for its first frame (FreezeShieldTheme). The design
+     draws it at 170°; gradient XML only goes in 45° steps, so this is top to
+     bottom, and ShieldActivity swaps in the exact angle as soon as it is up. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:type="linear"
+        android:startColor="@color/freeze_ground_top"
+        android:centerColor="@color/freeze_ground_mid"
+        android:endColor="@color/freeze_ground_bottom" />
+</shape>

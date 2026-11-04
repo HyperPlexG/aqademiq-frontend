@@ -42,12 +42,19 @@ import UIKit
   /// Calendar import and Reminder import — read-only EventKit access.
   private var deviceImport: DeviceImportPlugin?
 
+  /// App freeze — Screen Time shields, Apple's app picker, and the schedule
+  /// that keeps a frost running while Aqademiq is closed. Held for the life of
+  /// the app because it also watches for the foreground, to hand Dart the thaw
+  /// requests the shield queued meanwhile.
+  private var appFreeze: AppFreezePlugin?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
     ambient = AmbientPlugin(messenger: messenger)
     haptics = HapticsPlugin(messenger: messenger)
     deviceImport = DeviceImportPlugin(messenger: messenger)
+    appFreeze = AppFreezePlugin(messenger: messenger)
   }
 
   /// A Freeze taken on the lock screen runs in the extension, which cannot
