@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../icons/app_icon.dart';
 
-/// 32×32 circular back button on a `bg`-filled circle (prototype auth/onboarding
-/// back affordance).
+/// The circular back button (v11 `BackBtn`): 44, white with the card shadow,
+/// the pack's back glyph. One look for every back affordance.
 class CircleBackButton extends StatelessWidget {
   const CircleBackButton({super.key, this.onTap, this.icon = Icons.arrow_back});
 
@@ -17,11 +17,11 @@ class CircleBackButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap ?? () => Navigator.of(context).maybePop(),
       child: Container(
-        width: 32,
-        height: 32,
+        width: 44,
+        height: 44,
         alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: AppIcon(icon, size: 18, color: colors.text),
+        decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle, boxShadow: colors.cardShadow),
+        child: AppIcon(icon, size: 24, color: colors.text),
       ),
     );
   }

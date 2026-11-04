@@ -5,8 +5,8 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
 import '../icons/app_icon.dart';
 
-/// Full-width pill button (prototype `PBtn`). Filled = ink fill / white text;
-/// ghost = surface + hairline border / text color.
+/// Full-width pill button (v11 `PBtn`: 50 high, 17/800). Filled = ink fill /
+/// white text; ghost = surface + hairline border / text color.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     super.key,
@@ -45,7 +45,9 @@ class PrimaryButton extends StatelessWidget {
         onTap: enabled ? onPressed : null,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+          constraints: const BoxConstraints(minHeight: 50),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           decoration: BoxDecoration(
             borderRadius: borderRadius,
             border: ghost
@@ -56,16 +58,19 @@ class PrimaryButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[
-                AppIcon(icon, size: 18, color: fg),
+                AppIcon(icon, size: 21, color: fg),
                 const SizedBox(width: 8),
               ],
-              Text(
-                label,
-                style: AppText.sans(
-                  size: 14,
-                  weight: FontWeight.w800,
-                  letterSpacing: AppText.em(0.01, 14),
-                  color: fg,
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: AppText.sans(
+                    size: 17,
+                    weight: FontWeight.w800,
+                    letterSpacing: AppText.em(0.01, 17),
+                    color: fg,
+                  ),
                 ),
               ),
             ],

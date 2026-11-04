@@ -71,7 +71,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
     // No code typed → same as skip (attribution optional).
     if (code.isEmpty) {
       setState(() => _error = null);
-      if (mounted) unawaited(context.push(Routes.obName));
+      if (mounted) unawaited(context.push(Routes.obSource));
       return;
     }
 
@@ -90,7 +90,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
     try {
       await ref.read(referralRepositoryProvider).validateCode(code);
       if (!mounted) return;
-      unawaited(context.push(Routes.obName));
+      unawaited(context.push(Routes.obSource));
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);
@@ -106,7 +106,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
     // No code: discard any partial entry so it isn't submitted at finish.
     ref.read(onboardingProvider.notifier).setReferral('');
     setState(() => _error = null);
-    unawaited(context.push(Routes.obName));
+    unawaited(context.push(Routes.obSource));
   }
 
   @override

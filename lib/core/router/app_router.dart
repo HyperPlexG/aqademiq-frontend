@@ -34,13 +34,14 @@ import '../../features/onboarding/presentation/ada_loading_screen.dart';
 import '../../features/onboarding/presentation/ob_age_screen.dart';
 import '../../features/onboarding/presentation/ob_blocked_screen.dart';
 import '../../features/onboarding/presentation/ob_consent_screen.dart';
+import '../../features/onboarding/presentation/ob_freeze_screens.dart';
+import '../../features/onboarding/presentation/ob_hours_screen.dart';
 import '../../features/onboarding/presentation/ob_mood_screen.dart';
 import '../../features/onboarding/presentation/ob_name_screen.dart';
-import '../../features/onboarding/presentation/ob_peak_screen.dart';
 import '../../features/onboarding/presentation/ob_prism_screen.dart';
 import '../../features/onboarding/presentation/ob_referral_screen.dart';
+import '../../features/onboarding/presentation/ob_source_screen.dart';
 import '../../features/onboarding/presentation/ob_study_screen.dart';
-import '../../features/onboarding/presentation/ob_syllabus_screen.dart';
 import '../../features/plan/presentation/add_task_screen.dart';
 import '../../features/plan/presentation/plan_screen.dart';
 import '../../features/report/presentation/report_settings_screen.dart';
@@ -75,8 +76,12 @@ abstract final class Routes {
   static const obName = '/onboarding/name';
   static const obStudy = '/onboarding/study';
   static const obMood = '/onboarding/mood';
-  static const obSyllabus = '/onboarding/syllabus';
-  static const obPeak = '/onboarding/peak';
+  // v2 (design v11): How you heard, Study hours, App freeze and its apps.
+  // The syllabus and peak-time steps are gone from the flow.
+  static const obSource = '/onboarding/source';
+  static const obHours = '/onboarding/hours';
+  static const obFreeze = '/onboarding/freeze';
+  static const obApps = '/onboarding/apps';
   static const obPrism = '/onboarding/prism';
   static const obLoading = '/onboarding/building';
 
@@ -178,8 +183,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.obName, builder: (_, _) => const ObNameScreen()),
       GoRoute(path: Routes.obStudy, builder: (_, _) => const ObStudyScreen()),
       GoRoute(path: Routes.obMood, builder: (_, _) => const ObMoodScreen()),
-      GoRoute(path: Routes.obSyllabus, builder: (_, _) => const ObSyllabusScreen()),
-      GoRoute(path: Routes.obPeak, builder: (_, _) => const ObPeakScreen()),
+      GoRoute(path: Routes.obSource, builder: (_, _) => const ObSourceScreen()),
+      GoRoute(path: Routes.obHours, builder: (_, _) => const ObHoursScreen()),
+      GoRoute(path: Routes.obFreeze, builder: (_, _) => const ObFreezeScreen()),
+      GoRoute(path: Routes.obApps, builder: (_, _) => const ObAppsScreen()),
       GoRoute(path: Routes.obPrism, builder: (_, _) => const ObPrismScreen()),
       GoRoute(path: Routes.obLoading, builder: (_, _) => const AdaLoadingScreen()),
       GoRoute(

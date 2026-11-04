@@ -18,6 +18,11 @@ class OnboardingSubmission {
     this.consentVersion,
     this.referralCode,
     this.workBestTimes,
+    this.heardFrom,
+    this.heardFromOther,
+    this.studyDays,
+    this.studyFromMin,
+    this.studyUntilMin,
   });
 
   /// PDPL data-use consent. Must be `true` or the backend rejects with 403.
@@ -36,7 +41,34 @@ class OnboardingSubmission {
   final List<OnboardingSubjectEntry> subjects;
   final String? referralCode;
   final Object? workBestTimes;
+
+  /// v2 — How did you hear about us? A slug from `heardFromSlugs`; null when
+  /// skipped. [heardFromOther] only with `other`.
+  final String? heardFrom;
+  final String? heardFromOther;
+
+  /// v2 — Study hours: ISO weekdays (1 = Monday) and minutes after midnight.
+  /// Null for "I don't have set hours".
+  final List<int>? studyDays;
+  final int? studyFromMin;
+  final int? studyUntilMin;
 }
+
+/// The ob-source chips (v11 `OB_SOURCES`) as the backend stores them
+/// (`services/onboarding_v2.ts` HEARD_FROM). Order is the design's.
+const heardFromSlugs = <String, String>{
+  'A friend or classmate': 'friend',
+  'TikTok': 'tiktok',
+  'Instagram': 'instagram',
+  'YouTube': 'youtube',
+  'Reddit': 'reddit',
+  'ChatGPT, Claude or Gemini': 'ai_assistant',
+  'App Store': 'app_store',
+  'Google search': 'google',
+  'School or uni': 'school',
+  'Discord': 'discord',
+  'Other': 'other',
+};
 
 class OnboardingSubjectEntry {
   const OnboardingSubjectEntry({
@@ -133,6 +165,15 @@ class OnboardingRepository {
           if (s.referralCode != null && s.referralCode!.isNotEmpty)
             'referral_code': s.referralCode,
           if (s.workBestTimes != null) 'work_best_times': s.workBestTimes,
+          if (s.heardFrom != null) 'heard_from': s.heardFrom,
+          if (s.heardFrom == 'other' && (s.heardFromOther?.trim().isNotEmpty ?? false))
+            'heard_from_other': s.heardFromOther!.trim(),
+          if (s.studyDays != null && s.studyDays!.isNotEmpty && s.studyFromMin != null && s.studyUntilMin != null)
+            'study_hours': {
+              'days': s.studyDays,
+              'from_min': s.studyFromMin,
+              'until_min': s.studyUntilMin,
+            },
           'subjects': [
             for (final subj in s.subjects)
               {

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 
-/// iOS-style pill toggle (prototype `Toggle`): 46×27 track, 21×21 knob, accent
+/// iOS-style pill toggle (v11 `Toggle`): 51×31 track, 27×27 knob, accent
 /// track when on, `textDim` when off.
 class AppToggle extends StatelessWidget {
   const AppToggle({super.key, required this.value, this.onChanged});
@@ -19,9 +19,9 @@ class AppToggle extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
-        width: 46,
-        height: 27,
-        padding: const EdgeInsets.all(3),
+        width: 51,
+        height: 31,
+        padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           color: value ? colors.accent : colors.textDim,
           borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -31,13 +31,13 @@ class AppToggle extends StatelessWidget {
           curve: Curves.easeOut,
           alignment: value ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
-            width: 21,
-            height: 21,
+            width: 27,
+            height: 27,
             decoration: const BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(color: Color(0x40000000), blurRadius: 3, offset: Offset(0, 1)),
+                BoxShadow(color: Color(0x33000000), blurRadius: 5, offset: Offset(0, 2)),
               ],
             ),
           ),

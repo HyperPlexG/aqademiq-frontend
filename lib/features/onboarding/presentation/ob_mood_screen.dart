@@ -38,7 +38,7 @@ class ObMoodScreen extends ConsumerWidget {
     final moods = ref.watch(onboardingProvider).subjectMoods;
 
     return OnboardingScaffold(
-      activeStep: 5,
+      activeStep: 6,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -89,7 +89,7 @@ class ObMoodScreen extends ConsumerWidget {
       ),
       footer: PrimaryButton(
         label: 'Continue →',
-        onPressed: () => unawaited(context.push(Routes.obSyllabus)),
+        onPressed: () => unawaited(context.push(Routes.obHours)),
       ),
     );
   }

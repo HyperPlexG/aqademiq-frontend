@@ -44,7 +44,7 @@ class SettingsScaffold extends StatelessWidget {
                               AppIcon(Icons.settings, size: 25, color: colors.text),
                               const SizedBox(width: 9),
                             ],
-                            Text(title, style: AppText.sans(size: 26, weight: FontWeight.w800, color: colors.text)),
+                            Text(title, style: AppText.sans(size: 34, weight: FontWeight.w800, color: colors.text)),
                           ],
                         ),
                       ],
@@ -53,7 +53,14 @@ class SettingsScaffold extends StatelessWidget {
                       children: [
                         const SettingsBackButton(),
                         const SizedBox(width: 12),
-                        Text(title, style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.text)),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
+                          ),
+                        ),
                       ],
                     ),
             ),
@@ -79,12 +86,13 @@ class SettingsBackButton extends StatelessWidget {
     final colors = context.colors;
     return GestureDetector(
       onTap: () => Navigator.of(context).maybePop(),
+      // v11 BackBtn: 44, white, the card shadow, the pack's back glyph.
       child: Container(
-        width: 38,
-        height: 38,
+        width: 44,
+        height: 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle, boxShadow: colors.cardShadow),
-        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
+        child: AppIcon(Icons.arrow_back, size: 24, color: colors.text),
       ),
     );
   }

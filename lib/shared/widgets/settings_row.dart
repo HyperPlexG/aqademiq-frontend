@@ -6,7 +6,7 @@ import '../../core/theme/app_text.dart';
 import '../icons/app_icon.dart';
 import 'app_toggle.dart';
 
-/// A label above a [SetGroup] (prototype `GroupLabel`).
+/// A label above a [SetGroup] (v11 `GroupLabel`: 17/700, muted).
 class GroupLabel extends StatelessWidget {
   const GroupLabel(this.text, {super.key});
   final String text;
@@ -18,7 +18,7 @@ class GroupLabel extends StatelessWidget {
       child: Text(
         text,
         style: AppText.sans(
-          size: 12.5,
+          size: 17,
           weight: FontWeight.w700,
           color: context.colors.textMed,
         ),
@@ -48,7 +48,7 @@ class SetGroup extends StatelessWidget {
   }
 }
 
-/// Inset value pill on the right of a row (prototype `TimePill`).
+/// Inset value pill on the right of a row (v11 `TimePill`: 36 high, 17/700).
 class TimePill extends StatelessWidget {
   const TimePill(this.label, {super.key});
   final String label;
@@ -57,14 +57,16 @@ class TimePill extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
+      height: 36,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: colors.hilite,
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
         label,
-        style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.text),
+        style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
       ),
     );
   }
@@ -119,14 +121,14 @@ class SettingsRow extends StatelessWidget {
     // stranded mid-row.
     final hasValue = value != null && value!.isNotEmpty;
 
+    // v11 SetRow: the separator starts at the text, as iOS lists do — past
+    // the icon (46) or the avatar (58), else the row's own inset (15).
+    final inset = icon != null ? 46.0 : (avatar != null ? 58.0 : 15.0);
     return InkWell(
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : Border(bottom: BorderSide(color: colors.border)),
-        ),
+        constraints: const BoxConstraints(minHeight: 52),
+        foregroundDecoration: last ? null : _InsetLine(colors.border, inset),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
         child: Row(
           children: [
@@ -144,7 +146,7 @@ class SettingsRow extends StatelessWidget {
                     maxLines: hasValue ? 1 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppText.sans(
-                      size: 13.5,
+                      size: 17,
                       height: 1.3,
                       color: labelColor,
                     ),
@@ -155,7 +157,8 @@ class SettingsRow extends StatelessWidget {
                       child: Text(
                         sub!,
                         style: AppText.sans(
-                          size: 11,
+                          size: 15,
+                          weight: FontWeight.w500,
                           height: 1.4,
                           color: colors.textMed,
                         ),
@@ -174,7 +177,7 @@ class SettingsRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppText.sans(
-                      size: 12.5,
+                      size: 17,
                       weight: FontWeight.w500,
                       color: colors.textMed,
                     ),
@@ -195,5 +198,31 @@ class SettingsRow extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A 1px hairline along the bottom edge, starting [inset] in from the left.
+class _InsetLine extends Decoration {
+  const _InsetLine(this.color, this.inset);
+
+  final Color color;
+  final double inset;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _InsetLinePainter(color, inset);
+}
+
+class _InsetLinePainter extends BoxPainter {
+  _InsetLinePainter(this.color, this.inset);
+
+  final Color color;
+  final double inset;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
+    final size = configuration.size;
+    if (size == null) return;
+    final rect = Rect.fromLTWH(offset.dx + inset, offset.dy + size.height - 1, size.width - inset, 1);
+    canvas.drawRect(rect, Paint()..color = color);
   }
 }

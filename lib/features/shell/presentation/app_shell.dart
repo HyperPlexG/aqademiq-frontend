@@ -34,7 +34,8 @@ class AppShell extends ConsumerWidget {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                  // v11: the bar floats 22 clear of the sides.
+                  padding: const EdgeInsets.fromLTRB(22, 0, 22, 8),
                   child: BottomNav(
                     currentIndex: navigationShell.currentIndex,
                     guest: guest,
