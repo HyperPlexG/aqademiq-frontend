@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
 
-/// Empty-bucket "add a task" row (prototype `AddRow`, used on plan-otherday).
+/// Empty-bucket "add a task" row (v11 `AddRow`, plan-otherday): a quiet dot,
+/// the 17 prompt and a 24 well "+", 52 high.
 class AddRow extends StatelessWidget {
   const AddRow({super.key, this.label = 'Add a task for anytime', this.onTap});
 
@@ -15,31 +16,106 @@ class AddRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
-        child: Row(
-          children: [
-            Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFFD6D3CE), shape: BoxShape.circle)),
-            const SizedBox(width: 11),
-            Expanded(child: Text(label, style: AppText.sans(size: 12.5, color: colors.textDim))),
-            Container(
-              width: 24,
-              height: 24,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-              child: AppIcon(Icons.add, size: 16, color: colors.textDim),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Row(
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: dark ? const Color(0xFFD6D3CE) : const Color(0xFFECEBE9),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(label, style: AppText.sans(size: 17, color: colors.textDim)),
+                ),
+                const SizedBox(width: 11),
+                AddCircle(onTap: onTap),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Tinted group header for the list grouping view (prototype `ListGroupHead`).
+/// The 24 well circle with a "+" that ends an empty row.
+class AddCircle extends StatelessWidget {
+  const AddCircle({super.key, this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
+        child: Ic('add', size: 16, color: colors.textDim),
+      ),
+    );
+  }
+}
+
+/// The empty planner's add line (v11 `IB_EMPTY_PLAN`): the 17 prompt and a
+/// bare 21 "+", no dot and no well.
+class AddLine extends StatelessWidget {
+  const AddLine({super.key, required this.label, this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+                ),
+              ),
+              Ic('add', size: 21, color: colors.textDim),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tinted group header for the list grouping view (v11 `ListGroupHead`): a
+/// centred pill (tint at 18%) with the bucket icon, "LABEL (count)" and a
+/// chevron, and a bare "+" at the right edge that adds to that bucket.
 class ListGroupHead extends StatelessWidget {
   const ListGroupHead({
     super.key,
@@ -47,14 +123,19 @@ class ListGroupHead extends StatelessWidget {
     required this.label,
     required this.count,
     this.tint,
+    this.open = true,
     this.onTap,
     this.onAdd,
   });
 
-  final IconData icon;
+  /// A design icon name (`wb_twilight`), drawn from the icon pack.
+  final String icon;
   final String label;
   final int count;
   final Color? tint;
+
+  /// Down chevron while the group shows its tasks, up while collapsed.
+  final bool open;
   final VoidCallback? onTap;
   final VoidCallback? onAdd;
 
@@ -77,23 +158,40 @@ class ListGroupHead extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AppIcon(icon, size: 14, color: colors.textMed),
+                  Ic(icon, size: 18, color: colors.textMed),
                   const SizedBox(width: 7),
                   Text(
                     '$label ($count)',
-                    style: AppText.sans(size: 11.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.04, 11.5), color: colors.text),
+                    style: AppText.sans(
+                      size: 13,
+                      weight: FontWeight.w800,
+                      letterSpacing: AppText.em(0.04, 13),
+                      color: colors.text,
+                    ),
                   ),
                   const SizedBox(width: 7),
-                  AppIcon(Icons.expand_more, size: 17, color: colors.text),
+                  Ic(open ? 'chevron_down' : 'expand_less', size: 21, color: colors.text),
                 ],
               ),
             ),
           ),
           Positioned(
             right: 0,
-            child: GestureDetector(
-              onTap: onAdd,
-              child: AppIcon(Icons.add, size: 19, color: colors.textDim),
+            child: Semantics(
+              button: true,
+              label: 'Add to ${label.toLowerCase()}',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onAdd,
+                child: SizedBox(
+                  width: 44,
+                  height: 36,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Ic('add', size: 19, color: colors.textDim),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

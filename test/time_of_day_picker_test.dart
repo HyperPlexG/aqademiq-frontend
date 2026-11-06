@@ -1,6 +1,7 @@
 import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/features/plan/presentation/pickers/time_picker.dart';
+import 'package:aqademiq/shared/widgets/ic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,6 +25,10 @@ Future<void> _openWith(WidgetTester tester, {String? current}) async {
   await tester.pumpAndSettle();
 }
 
+/// The check a chosen option ends with (drawn from the icon pack, so it is an
+/// [Ic], not a Material [Icon]).
+final Finder _check = find.byWidgetPredicate((w) => w is Ic && w.name == 'check');
+
 /// The row (GestureDetector) that wraps a given option label.
 Finder _rowOf(String label) =>
     find.ancestor(of: find.text(label), matching: find.byType(GestureDetector)).first;
@@ -37,12 +42,12 @@ void main() {
       await _openWith(tester, current: 'Afternoon');
 
       expect(
-        find.descendant(of: _rowOf('Afternoon'), matching: find.byIcon(Icons.check)),
+        find.descendant(of: _rowOf('Afternoon'), matching: _check),
         findsOneWidget,
         reason: 'the previously-chosen bucket must be checked',
       );
       expect(
-        find.descendant(of: _rowOf('Anytime'), matching: find.byIcon(Icons.check)),
+        find.descendant(of: _rowOf('Anytime'), matching: _check),
         findsNothing,
         reason: 'Anytime must not be checked when Afternoon is selected',
       );
@@ -52,11 +57,11 @@ void main() {
       await _openWith(tester);
 
       expect(
-        find.descendant(of: _rowOf('Anytime'), matching: find.byIcon(Icons.check)),
+        find.descendant(of: _rowOf('Anytime'), matching: _check),
         findsOneWidget,
       );
       expect(
-        find.descendant(of: _rowOf('Afternoon'), matching: find.byIcon(Icons.check)),
+        find.descendant(of: _rowOf('Afternoon'), matching: _check),
         findsNothing,
       );
     });
@@ -68,7 +73,7 @@ void main() {
       expect(find.text('2:30 PM'), findsOneWidget);
       // No bucket is checked.
       expect(
-        find.descendant(of: _rowOf('Anytime'), matching: find.byIcon(Icons.check)),
+        find.descendant(of: _rowOf('Anytime'), matching: _check),
         findsNothing,
       );
     });

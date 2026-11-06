@@ -8,13 +8,16 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
+import '../../../../data/repositories/tags_repository.dart';
 import '../../../../services/voice_input_service.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/voice_feedback.dart';
 import '../../../../shared/widgets/voice_recording_bar.dart';
 import '../../plan_time.dart';
+import '../../providers/plan_providers.dart';
 import '../../providers/plan_ui_providers.dart';
 import '../pickers/repeat_picker.dart';
+import '../pickers/tag_picker.dart';
 import '../pickers/time_picker.dart';
 
 /// Outcome of the Quick-add sheet: the [TaskDraft] entered, and whether the
@@ -22,8 +25,9 @@ import '../pickers/time_picker.dart';
 /// or quick-create now (`details: false` via send).
 typedef QuickAddResult = ({TaskDraft draft, bool details});
 
-/// Presents the lightweight "Quick add" bar (`plan-quickadd`). Returns the
-/// [QuickAddResult] on send/More, or `null` if dismissed. Keyboard-aware.
+/// Presents the lightweight "Quick add" bar (`plan-quickadd`): docked to the
+/// keyboard (radius 22 on top), riding whatever inset the OS reports. Returns
+/// the [QuickAddResult] on send/More, or `null` if dismissed.
 Future<QuickAddResult?> showQuickAddSheet(BuildContext context) {
   return showModalBottomSheet<QuickAddResult>(
     context: context,
@@ -54,6 +58,10 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
   String? _timeLabel;
   DayPart? _dayPart;
   RepeatRule? _repeat;
+
+  /// The study tag picked with the Tag chip. Null until one is picked: the task
+  /// then gets the first tag, exactly as Quick-add always did.
+  String? _tagId;
 
   @override
   void initState() {
@@ -109,13 +117,14 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
         dayPart: _dayPart,
         timeLabel: _timeLabel,
         repeat: _repeat,
+        tagId: _tagId,
       ),
       details: details,
     ));
   }
 
   Future<void> _pickTime() async {
-    final v = await showTimeOfDayPicker(context);
+    final v = await showTimeOfDayPicker(context, current: _timeLabel);
     if (v == null) return;
     // Anchor to an arbitrary date — only the clock / day-part matters here; the
     // real calendar day is applied in create / Add-task.
@@ -126,8 +135,17 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
     });
   }
 
+  Future<void> _pickTag() async {
+    final v = await showTagPicker(context, current: _tagId);
+    if (v != null && mounted) setState(() => _tagId = v);
+  }
+
   Future<void> _pickRepeat() async {
-    final v = await showRepeatPicker(context);
+    final v = await showRepeatPicker(
+      context,
+      current: _repeat,
+      date: ref.read(selectedDateProvider),
+    );
     if (v != null) setState(() => _repeat = v);
   }
 
@@ -135,14 +153,16 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final voice = ref.watch(voiceInputProvider);
+    // A tag deleted elsewhere while this sheet is open falls back to "Tag".
+    final tag = _tagId == null ? null : ref.watch(tagsByIdProvider)[_tagId];
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
-          boxShadow: colors.sheetShadow,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: const [BoxShadow(color: Color(0x29000000), blurRadius: 40, offset: Offset(0, -8))],
         ),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
         child: SafeArea(
@@ -200,13 +220,20 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
                       child: Row(
                         children: [
                           _ContextChip(
-                            icon: Icons.schedule,
+                            icon: 'schedule',
                             label: _timeLabel ?? 'Anytime',
                             colors: colors,
                             onTap: _pickTime,
                           ),
                           const SizedBox(width: 6),
-                          _ContextChip(icon: Icons.repeat, label: repeatRuleLabel(_repeat), colors: colors, onTap: _pickRepeat),
+                          _ContextChip(
+                            icon: 'sell',
+                            label: tag?.label ?? 'Tag',
+                            colors: colors,
+                            onTap: _pickTag,
+                          ),
+                          const SizedBox(width: 6),
+                          _ContextChip(icon: 'repeat', label: repeatRuleLabel(_repeat), colors: colors, onTap: _pickRepeat),
                         ],
                       ),
                     ),
@@ -257,13 +284,13 @@ class _InputPill extends StatelessWidget {
               controller: controller,
               autofocus: true,
               cursorColor: colors.accent,
-              style: AppText.sans(size: 14, color: colors.text),
+              style: AppText.sans(size: 17, color: colors.text),
               decoration: InputDecoration(
                 isDense: true,
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: 'Just one thing to do…',
-                hintStyle: AppText.sans(size: 14, color: colors.textDim),
+                hintStyle: AppText.sans(size: 17, color: colors.textDim),
               ),
             ),
           ),
@@ -276,7 +303,7 @@ class _InputPill extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onSpeak,
-                child: AppIcon(Icons.mic_none, size: 19, color: colors.textDim),
+                child: Ic('mic', size: 19, color: colors.accent),
               ),
             ),
           ],
@@ -295,32 +322,39 @@ class _ContextChip extends StatelessWidget {
     this.onTap,
   });
 
-  final IconData icon;
+  /// A design icon name (`schedule`).
+  final String icon;
   final String label;
   final AppColors colors;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(icon, size: 13, color: colors.textMed),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppText.sans(size: 10.5, weight: FontWeight.w700, color: colors.textMed),
-            ),
-          ],
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          decoration: BoxDecoration(
+            color: colors.bg,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Ic(icon, size: 16, color: colors.textMed),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textMed),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -336,15 +370,22 @@ class _MorePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
+    return Semantics(
+      button: true,
+      label: 'More options',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          decoration: BoxDecoration(
+            color: colors.bg,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          child: Ic('more', size: 19, color: colors.textMed),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: AppIcon(Icons.more_horiz, size: 15, color: colors.textMed),
       ),
     );
   }
@@ -359,14 +400,19 @@ class _SendButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.ink, shape: BoxShape.circle),
-        child: const AppIcon(Icons.arrow_upward, size: 18, color: Colors.white),
+    return Semantics(
+      button: true,
+      label: 'Add task',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: colors.ink, shape: BoxShape.circle),
+          child: const Ic('send', size: 18, color: Colors.white),
+        ),
       ),
     );
   }

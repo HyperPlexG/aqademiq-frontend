@@ -27,6 +27,7 @@ import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../focus/providers/linked_task_provider.dart';
 import '../plan_time.dart';
 import '../providers/plan_providers.dart';
@@ -86,10 +87,13 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
             dayPart: draft.dayPart ?? DayPart.anytime,
             startTime: null,
           );
+    // The tag picked with Quick-add's Tag chip; without one, the first tag, as
+    // before the chip existed.
+    final picked = draft.tagId;
     final task = Task(
       id: '',
       title: draft.title,
-      tagId: tags.isNotEmpty ? tags.first.id : '',
+      tagId: (picked != null && picked.isNotEmpty) ? picked : (tags.isNotEmpty ? tags.first.id : ''),
       date: date,
       dayPart: resolved.dayPart,
       startTime: resolved.startTime,
@@ -221,7 +225,13 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   );
                 }
                 if (tasks.isEmpty) {
-                  return _OtherDayEmpty(onAdd: _add);
+                  // Today's empty planner (v11 ib-empty-plan) and another
+                  // day's (plan-otherday) differ only in what fills the middle;
+                  // both keep the add rows and the Ice Breakers door.
+                  return _EmptyDay(
+                    isToday: AppDate.sameDay(selected, AppDate.today()),
+                    onAdd: _add,
+                  );
                 }
                 return _PlanTimeline(
                   tasks: tasks,
@@ -353,6 +363,16 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     context.go(Routes.timer);
   }
 
+  /// "35 min · Ada generated · 3 microtasks" — what the sheet's header says
+  /// under the title, from the task itself (it used to be that string, fixed).
+  static String _overflowSubtitle(Task t) {
+    final steps = t.subtasks.length;
+    return [
+      if (t.durationMin != null) '${t.durationMin} min',
+      if (steps > 0) ...['Ada generated', steps == 1 ? '1 microtask' : '$steps microtasks'],
+    ].join(' · ');
+  }
+
   Future<void> _overflow(Task t) async {
     // Spec Finding 04 — the only long-press in the app, and until now it was
     // functionally broken: nothing told the user the gesture had registered.
@@ -366,6 +386,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       title: t.title,
       subjectCode: studyTagLabelFromTags(ref.read(tagsByIdProvider).values, t.tagId),
       subjectColor: color,
+      subtitle: _overflowSubtitle(t),
+      done: t.done,
+      hasSteps: t.subtasks.isNotEmpty,
     );
     if (!mounted || action == null) return;
     switch (action) {
@@ -427,7 +450,16 @@ class _PlanTimeline extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        CollapseHead(label: 'ANYTIME', count: anytime.length, open: anytimeOpen, icon: Icons.schedule, onTap: onToggleAnytime),
+        Padding(
+          padding: EdgeInsets.only(bottom: anytimeOpen ? 10 : 12),
+          child: CollapseHead(
+            label: 'ANYTIME',
+            count: anytime.length,
+            open: anytimeOpen,
+            icon: 'schedule',
+            onTap: onToggleAnytime,
+          ),
+        ),
         if (anytimeOpen)
           for (final t in anytime)
             // Anytime tasks expand exactly like planned ones. This branch used
@@ -457,17 +489,14 @@ class _PlanTimeline extends StatelessWidget {
                   ),
                 ),
               ),
-        const SizedBox(height: 8),
-        CollapseHead(label: 'PLANNED', count: planned.length, open: plannedOpen, onTap: onTogglePlanned),
+        // The last anytime card brings its own 8; the head adds 2 under it.
+        Padding(
+          padding: const EdgeInsets.only(bottom: 2),
+          child: CollapseHead(label: 'PLANNED', count: planned.length, open: plannedOpen, onTap: onTogglePlanned),
+        ),
         if (plannedOpen)
           for (final t in planned) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 10, bottom: 7),
-              child: Text(
-                AppDate.time12h(t.startTime!),
-                style: AppText.sans(size: 11, weight: FontWeight.w800, color: context.colors.text),
-              ),
-            ),
+            _TimeLabel(AppDate.time12h(t.startTime!)),
             if (expandedId == t.id && t.subtasks.isNotEmpty)
               PlanTaskExpandedCard(
                 task: t,
@@ -514,29 +543,75 @@ class _SwipeableTask extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // v11 task-swipe: two 62-wide actions (124 of a ~370 card), the last
+    // rounded into the card's corner.
     return Slidable(
       key: ValueKey(task.id),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.46,
+        extentRatio: 0.34,
         children: [
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onLater(),
             backgroundColor: context.colors.warn,
             foregroundColor: Colors.white,
-            icon: Icons.event,
-            label: 'Later',
+            padding: EdgeInsets.zero,
+            child: const _SwipeActionLabel(icon: 'carry_forward', label: 'Later'),
           ),
-          SlidableAction(
+          CustomSlidableAction(
             onPressed: (_) => onDelete(),
             backgroundColor: const Color(0xFFE85476),
             foregroundColor: Colors.white,
-            icon: Icons.delete_outline,
-            label: 'Delete',
+            padding: EdgeInsets.zero,
+            borderRadius: const BorderRadius.horizontal(right: Radius.circular(AppRadius.card)),
+            child: const _SwipeActionLabel(icon: 'delete', label: 'Delete'),
           ),
         ],
       ),
       child: GestureDetector(onLongPress: onOverflow, child: child),
+    );
+  }
+}
+
+/// A swipe action's glyph over its 11/700 label, white.
+class _SwipeActionLabel extends StatelessWidget {
+  const _SwipeActionLabel({required this.icon, required this.label});
+
+  final String icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Ic(icon, size: 20, color: Colors.white),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          softWrap: false,
+          style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white),
+        ),
+      ],
+    );
+  }
+}
+
+/// A planned task's start time over its card (v11 `TimeLabel`, 15/800).
+class _TimeLabel extends StatelessWidget {
+  const _TimeLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 7),
+      child: Text(
+        text,
+        style: AppText.sans(size: 15, weight: FontWeight.w800, color: context.colors.text),
+      ),
     );
   }
 }
@@ -562,11 +637,11 @@ class _PlanListGrouped extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final collapsed = ref.watch(collapsedGroupsProvider);
-    final meta = <DayPart, (IconData, String, Color?)>{
-      DayPart.anytime: (Icons.schedule, 'ANYTIME', null),
-      DayPart.morning: (Icons.wb_twilight, 'MORNING', colors.warn),
-      DayPart.afternoon: (Icons.wb_sunny, 'AFTERNOON', colors.accent),
-      DayPart.evening: (Icons.nights_stay, 'EVENING', colors.success),
+    final meta = <DayPart, (String, String, Color?)>{
+      DayPart.anytime: ('schedule', 'ANYTIME', null),
+      DayPart.morning: ('wb_twilight', 'MORNING', colors.warn),
+      DayPart.afternoon: ('wb_sunny', 'AFTERNOON', colors.accent),
+      DayPart.evening: ('nights_stay', 'EVENING', colors.success),
     };
     final groups = {for (final p in _order) p: <Task>[]};
     for (final t in tasks) {
@@ -583,6 +658,7 @@ class _PlanListGrouped extends ConsumerWidget {
               label: meta[part]!.$2,
               count: groups[part]!.length,
               tint: meta[part]!.$3,
+              open: !collapsed.contains(part),
               onTap: () => ref.read(collapsedGroupsProvider.notifier).toggle(part),
               onAdd: () => onAddBucket(part),
             ),
@@ -590,10 +666,13 @@ class _PlanListGrouped extends ConsumerWidget {
               for (final t in groups[part]!)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
+                  // The bar and the time span mark a timed task (v11 plan-list);
+                  // an untimed one in a bucket reads like an anytime card.
                   child: PlanTaskCard(
                     task: t,
                     tag: resolveStudyTag(tagsById.values, t.tagId),
-                    showBar: part != DayPart.anytime,
+                    showBar: t.startTime != null,
+                    showTime: true,
                     onToggleDone: () => onToggleDone(t),
                   ),
                 ),
@@ -604,50 +683,160 @@ class _PlanListGrouped extends ConsumerWidget {
   }
 }
 
-/// plan-otherday: a day with empty buckets + an add affordance (Today pill is in
-/// the header when not viewing today).
-class _OtherDayEmpty extends StatelessWidget {
-  const _OtherDayEmpty({required this.onAdd});
+/// An empty day. Today (v11 `ib-empty-plan`): the two add lines, Ada with
+/// "Nothing planned yet", and the Ice Breakers door. Another day
+/// (`plan-otherday`): the add row, then the PLANNED day drawn as one free span
+/// from 12:00 AM to 11:59 PM, with the same door underneath.
+class _EmptyDay extends StatelessWidget {
+  const _EmptyDay({required this.isToday, required this.onAdd});
+
+  final bool isToday;
   final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return ListView(
-      padding: EdgeInsets.zero,
-      children: [
-        const CollapseHead(label: 'ANYTIME', count: 0, open: true, icon: Icons.schedule),
-        AddRow(onTap: onAdd),
-        const SizedBox(height: 8),
-        const CollapseHead(label: 'PLANNED', count: 0, open: true),
-        AddRow(label: 'Add a planned task', onTap: onAdd),
-        const SizedBox(height: 30),
-        // The second door.
-        //
-        // The add-rows above stay exactly as they were: creating a task is the
-        // primary action and watching must never replace it. What was missing
-        // is somewhere to go for the student who does not yet know what a good
-        // task even looks like — for whom "add one" is the whole problem, not
-        // the answer. So this sits underneath, secondary, and never instead.
-        // Centred explicitly: a ListView stretches its children to the full
-        // width, and AdaMascot scales to whatever it is given — unconstrained
-        // she renders about five times her intended size and the copy lands on
-        // top of her.
-        const Center(child: AdaMascot(size: 44)),
-        const SizedBox(height: 10),
-        Center(
-          child: Text(
-            'Nothing planned yet',
-            style: AppText.sans(
-              size: 15,
-              weight: FontWeight.w800,
-              color: colors.text,
+    final top = isToday
+        ? <Widget>[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: CollapseHead(label: 'ANYTIME', count: 0, open: true, icon: 'schedule'),
             ),
+            AddLine(label: 'Add a task for anytime', onTap: onAdd),
+            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: CollapseHead(label: 'PLANNED', count: 0, open: true),
+            ),
+            AddLine(label: 'Add a planned task', onTap: onAdd),
+          ]
+        : <Widget>[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: CollapseHead(label: 'ANYTIME', count: 0, open: true, icon: 'schedule'),
+            ),
+            AddRow(onTap: onAdd),
+            const Padding(
+              padding: EdgeInsets.only(top: 6, bottom: 2),
+              child: CollapseHead(label: 'PLANNED', count: 0, open: true),
+            ),
+            const _TimeLabel('12:00 AM'),
+            _FreeDaySpan(onAdd: onAdd),
+            const _TimeLabel('11:59 PM'),
+          ];
+
+    // The add rows stay exactly where they were: creating a task is the
+    // primary action and watching must never replace it. What was missing is
+    // somewhere to go for the student who does not yet know what a good task
+    // even looks like — for whom "add one" is the whole problem, not the
+    // answer. So the door sits underneath, secondary, and never instead.
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...top,
+              Expanded(
+                child: isToday
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Sized explicitly: AdaMascot scales to whatever
+                              // she is given, and unconstrained she renders
+                              // about five times her intended size.
+                              const AdaMascot(size: 50, cheeks: true),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Nothing planned yet',
+                                textAlign: TextAlign.center,
+                                style: AppText.sans(
+                                  size: 20,
+                                  weight: FontWeight.w800,
+                                  letterSpacing: -0.3,
+                                  color: colors.text,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : const SizedBox(height: 24),
+              ),
+              const _ShowMeHowButton(),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        const Center(child: _ShowMeHowButton()),
       ],
+    );
+  }
+}
+
+/// plan-otherday's planned day with nothing in it: a sun-to-wind-down rail,
+/// "23h 59m → No plans" and the well "+".
+class _FreeDaySpan extends StatelessWidget {
+  const _FreeDaySpan({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final dot = Container(
+      width: 5,
+      height: 5,
+      decoration: const BoxDecoration(color: Color(0xFFD6D3CE), shape: BoxShape.circle),
+    );
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onAdd,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // A 6-wide rail as drawn; the 19 glyphs overhang it evenly.
+            SizedBox(
+              width: 6,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 1),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 19,
+                      child: OverflowBox(maxWidth: 19, child: Ic('light_mode', size: 19, color: colors.warn)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      child: Column(
+                        children: [dot, const SizedBox(height: 5), dot, const SizedBox(height: 5), dot],
+                      ),
+                    ),
+                    SizedBox(
+                      height: 19,
+                      child: OverflowBox(maxWidth: 19, child: Ic('wind_down', size: 19, color: colors.accent)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '23h 59m → No plans',
+                  style: AppText.sans(size: 15, color: colors.textDim),
+                ),
+              ),
+            ),
+            Center(child: AddCircle(onTap: onAdd)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -660,36 +849,36 @@ class _ShowMeHowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    // Sized and coloured as a secondary action: a pill that hugs its label
-    // rather than a full-width slab, and the surface colour rather than the
-    // ink the primary CTAs use. Adding a task is still the main thing to do
-    // here; this is only for the student who does not yet know what to add.
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => unawaited(context.push(Routes.iceBreakers)),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: colors.cardShadow,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(Icons.play_circle_outline, size: 16, color: colors.accent),
-            const SizedBox(width: 8),
-            Text(
-              'Show me how',
-              style: AppText.sans(
-                size: 12.5,
-                weight: FontWeight.w800,
-                color: colors.text,
+    // v11: the ghost PBtn — a full-width 50 slab, but the surface colour and
+    // a hairline rather than the ink the primary CTAs use. Adding a task is
+    // still the main thing to do here; this is only for the student who does
+    // not yet know what to add.
+    final radius = BorderRadius.circular(AppRadius.pill);
+    return Material(
+      color: colors.surface,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: () => unawaited(context.push(Routes.iceBreakers)),
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: colors.border, width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Ic('ice_breakers', size: 21, color: colors.accent),
+              const SizedBox(width: 7),
+              Text(
+                'Show me how',
+                style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
               ),
-            ),
-            const SizedBox(width: 4),
-            AppIcon(Icons.chevron_right, size: 15, color: colors.textDim),
-          ],
+              const SizedBox(width: 7),
+              Ic('chevron_right', size: 19, color: colors.textDim),
+            ],
+          ),
         ),
       ),
     );
@@ -718,9 +907,12 @@ class _PlanError extends StatelessWidget {
         children: [
           AppIcon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
           const SizedBox(height: 12),
-          Text("Couldn't load your day", style: AppText.sans(size: 14, weight: FontWeight.w800, color: colors.text)),
-          const SizedBox(height: 12),
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
+          Text("Couldn't load your day", style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text)),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onRetry,
+            child: Text('Try again', style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent)),
+          ),
         ],
       ),
     );

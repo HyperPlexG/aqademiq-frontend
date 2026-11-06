@@ -4,9 +4,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
 import '../icons/app_icon.dart';
+import 'ic.dart';
 
-/// Centered ink pill section header (prototype `SectionPill`):
-/// `icon · LABEL (count) ▾`, white-on-ink.
+/// Centered ink pill section header (v11 `SectionPill`):
+/// `icon · LABEL (count) ⌄`, white-on-ink.
 class SectionPill extends StatelessWidget {
   const SectionPill({
     super.key,
@@ -39,27 +40,20 @@ class SectionPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                AppIcon(icon, size: 12, color: Colors.white.withValues(alpha: 0.5)),
+                AppIcon(icon, size: 15, color: Colors.white.withValues(alpha: 0.5)),
                 const SizedBox(width: 6),
               ],
               Text(
-                text,
+                text.toUpperCase(),
                 style: AppText.sans(
-                  size: 10,
+                  size: 12,
                   weight: FontWeight.w800,
-                  letterSpacing: AppText.em(0.1, 10),
+                  letterSpacing: AppText.em(0.1, 12),
                   color: Colors.white,
                 ),
               ),
               const SizedBox(width: 6),
-              Text(
-                '▾',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.4),
-                  height: 1,
-                ),
-              ),
+              Ic('chevron_down', size: 17, color: Colors.white.withValues(alpha: 0.4)),
             ],
           ),
         ),

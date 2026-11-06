@@ -1,23 +1,29 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
+import '../widgets/plan_sheet.dart';
 
-/// Presents the Repeat picker bottom sheet (`plan-pick-repeat`) and returns the
-/// chosen [RepeatRule] (recurrence the planner actually expands), or `null` if
+/// Presents the Repeat picker sheet (`plan-pick-repeat`) and returns the chosen
+/// [RepeatRule] (recurrence the planner actually expands), or `null` if
 /// dismissed. A `frequency: none` rule means "No repeat".
-Future<RepeatRule?> showRepeatPicker(BuildContext context) {
-  return showModalBottomSheet<RepeatRule>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x4C140F1C),
-    builder: (_) => const _RepeatSheet(),
+///
+/// [current] marks the rule the task has now (none → "No repeat"); [date], the
+/// day the task is on, words the Weekly / Monthly rows ("Every Monday",
+/// "On the 18th"). Neither changes what a row returns.
+Future<RepeatRule?> showRepeatPicker(
+  BuildContext context, {
+  RepeatRule? current,
+  DateTime? date,
+}) {
+  return showPlanSheet<RepeatRule>(
+    context,
+    builder: (_) => _RepeatSheet(current: current, date: date),
   );
 }
 
@@ -39,223 +45,100 @@ String repeatRuleLabel(RepeatRule? rule) {
   }
 }
 
-/// The bottom-sheet shell (prototype `PickerSheet`, `hi="Repeat"`).
+const _weekdayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+String _ordinal(int n) {
+  if (n % 100 >= 11 && n % 100 <= 13) return '${n}th';
+  return switch (n % 10) {
+    1 => '${n}st',
+    2 => '${n}nd',
+    3 => '${n}rd',
+    _ => '${n}th',
+  };
+}
+
+/// The sheet body (v11 `PICK_REPEAT`).
 class _RepeatSheet extends StatelessWidget {
-  const _RepeatSheet();
+  const _RepeatSheet({this.current, this.date});
+
+  final RepeatRule? current;
+  final DateTime? date;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
-        boxShadow: colors.sheetShadow,
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0DDD7),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Repeat',
-                      style: AppText.sans(
-                        size: 20,
-                        weight: FontWeight.w800,
-                        color: colors.text,
-                      ),
-                    ),
-                  ),
-                  _CloseCircle(onTap: () => Navigator.of(context).pop()),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  'Make this a recurring task',
-                  style: AppText.sans(size: 11.5, color: colors.textMed),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _OptRow(
-                icon: Icons.block,
-                label: 'No repeat',
-                active: true,
-                onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.none)),
-              ),
-              const SizedBox(height: 1),
-              _OptRow(
-                icon: Icons.today,
-                label: 'Every day',
-                onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.daily)),
-              ),
-              const SizedBox(height: 1),
-              _OptRow(
-                icon: Icons.work_outline,
-                label: 'Weekdays',
-                sub: 'Mon – Fri',
-                onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.weekly, weekdays: [1, 2, 3, 4, 5])),
-              ),
-              const SizedBox(height: 1),
-              _OptRow(
-                icon: Icons.event_repeat,
-                label: 'Weekly',
-                sub: 'Same weekday',
-                onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.weekly)),
-              ),
-              const SizedBox(height: 1),
-              _OptRow(
-                icon: Icons.calendar_month,
-                label: 'Monthly',
-                sub: 'Same date',
-                onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.monthly)),
-              ),
-              const SizedBox(height: 1),
-              _OptRow(
-                icon: Icons.tune,
-                label: 'Custom…',
-                trailing: const _SetPill(),
-                onTap: () async {
-                  final result = await _showCustomRepeatDialog(context);
-                  if (result != null && context.mounted) {
-                    Navigator.of(context).pop(result);
-                  }
-                },
-              ),
-            ],
+    final label = repeatRuleLabel(current);
+    const standard = {'No repeat', 'Every day', 'Weekdays', 'Weekly', 'Monthly'};
+    final isCustom = !standard.contains(label);
+    final d = date;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const PlanSheetTitle('Repeat', sub: 'Make this a recurring task'),
+        PlanOptRow(
+          icon: 'block',
+          label: 'No repeat',
+          active: label == 'No repeat',
+          onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.none)),
+        ),
+        const SizedBox(height: 1),
+        PlanOptRow(
+          icon: 'today',
+          label: 'Every day',
+          active: label == 'Every day',
+          onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.daily)),
+        ),
+        const SizedBox(height: 1),
+        PlanOptRow(
+          icon: 'work_outline',
+          label: 'Weekdays',
+          sub: 'Mon – Fri',
+          active: label == 'Weekdays',
+          onTap: () => Navigator.of(context).pop(
+            const RepeatRule(frequency: RepeatFrequency.weekly, weekdays: [1, 2, 3, 4, 5]),
           ),
         ),
-      ),
+        const SizedBox(height: 1),
+        PlanOptRow(
+          icon: 'event_repeat',
+          label: 'Weekly',
+          sub: d != null ? 'Every ${_weekdayNames[d.weekday - 1]}' : 'Same weekday',
+          active: label == 'Weekly',
+          onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.weekly)),
+        ),
+        const SizedBox(height: 1),
+        PlanOptRow(
+          icon: 'calendar_month',
+          label: 'Monthly',
+          sub: d != null ? 'On the ${_ordinal(d.day)}' : 'Same date',
+          active: label == 'Monthly',
+          onTap: () => Navigator.of(context).pop(const RepeatRule(frequency: RepeatFrequency.monthly)),
+        ),
+        const SizedBox(height: 1),
+        PlanOptRow(
+          icon: 'tune',
+          label: 'Custom…',
+          active: isCustom,
+          trailing: PlanSetPill(label: isCustom ? label : null),
+          onTap: () async {
+            final result = await _showCustomRepeatDialog(context);
+            if (result != null && context.mounted) {
+              Navigator.of(context).pop(result);
+            }
+          },
+        ),
+      ],
     );
   }
 }
 
-/// Opens the centered Custom repeat dialog (`plan-pick-repeat-custom`, w=234)
+/// Opens the centered Custom repeat dialog (`plan-pick-repeat-custom`, w=344)
 /// and returns the built [RepeatRule], or `null` if dismissed.
 Future<RepeatRule?> _showCustomRepeatDialog(BuildContext context) {
-  return showDialog<RepeatRule>(
-    context: context,
-    barrierColor: const Color(0x66140F1C),
-    builder: (_) => const _CustomRepeatDialog(),
-  );
+  return showPlanDialog<RepeatRule>(context, child: const _CustomRepeatDialog());
 }
 
-/// A list row in the picker sheet (prototype `OptRow`).
-class _OptRow extends StatelessWidget {
-  const _OptRow({
-    required this.icon,
-    required this.label,
-    this.sub,
-    this.trailing,
-    this.active = false,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final String? sub;
-  final Widget? trailing;
-  final bool active;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final leadColor = active ? colors.accent : colors.textMed;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? colors.accentSoft : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.cellSmall),
-        ),
-        child: Row(
-          children: [
-            AppIcon(icon, size: 19, color: leadColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppText.sans(
-                      size: 13.5,
-                      weight: active ? FontWeight.w800 : FontWeight.w600,
-                      color: active ? colors.accent : colors.text,
-                    ),
-                  ),
-                  if (sub != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 1),
-                      child: Text(
-                        sub!,
-                        style: AppText.sans(size: 10.5, color: colors.textDim),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (trailing != null)
-              trailing!
-            else if (active)
-              Text(
-                '✓',
-                style: AppText.sans(
-                  size: 14,
-                  weight: FontWeight.w800,
-                  color: colors.accent,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Trailing "Set →" pill (prototype `SetPill`).
-class _SetPill extends StatelessWidget {
-  const _SetPill();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Text(
-        'Set →',
-        style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.textMed),
-      ),
-    );
-  }
-}
-
-/// The centered Custom repeat dialog (prototype `CenterDialog`, w=234).
+/// The centered Custom repeat dialog (v11 `PICK_REPEAT_CUSTOM`).
 class _CustomRepeatDialog extends StatefulWidget {
   const _CustomRepeatDialog();
 
@@ -292,117 +175,70 @@ class _CustomRepeatDialogState extends State<_CustomRepeatDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: 234,
-          padding: const EdgeInsets.fromLTRB(18, 17, 18, 18),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.sheetTop),
-            boxShadow: const [
-              BoxShadow(color: Color(0x57000000), blurRadius: 64, offset: Offset(0, 20)),
-            ],
+    return PlanCenterDialog(
+      title: 'Custom repeat',
+      sub: 'Set your own recurring rhythm',
+      width: 344,
+      ctaLabel: 'Save · $_ctaLabel',
+      onCta: () => Navigator.of(context).pop(_rule),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _IntervalRow(
+            value: _interval,
+            onDecrement: _interval > 1 ? () => setState(() => _interval--) : null,
+            onIncrement: () => setState(() => _interval++),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Custom repeat',
-                      style: AppText.sans(
-                        size: 19,
-                        weight: FontWeight.w800,
-                        color: colors.text,
-                      ),
-                    ),
-                  ),
-                  _CloseCircle(onTap: () => Navigator.of(context).pop()),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 3, bottom: 14),
-                child: Text(
-                  'Set your own recurring rhythm',
-                  style: AppText.sans(size: 11, color: colors.textMed),
-                ),
-              ),
-              _IntervalRow(
-                value: _interval,
-                onDecrement: _interval > 1
-                    ? () => setState(() => _interval--)
-                    : null,
-                onIncrement: () => setState(() => _interval++),
-              ),
-              const SizedBox(height: 14),
-              _UnitSegmented(
-                units: _units,
-                selected: _unitIndex,
-                onSelect: (i) => setState(() => _unitIndex = i),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'ON THESE DAYS',
-                  style: AppText.sans(
-                    size: 10,
-                    weight: FontWeight.w800,
-                    letterSpacing: AppText.em(0.08, 10),
-                    color: colors.textDim,
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  for (var i = 0; i < _dayLetters.length; i++)
-                    _DayCircle(
-                      letter: _dayLetters[i],
-                      active: _activeDays.contains(i),
-                      onTap: () => setState(() {
-                        if (!_activeDays.add(i)) _activeDays.remove(i);
-                      }),
-                    ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Material(
-                  color: colors.ink,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    onTap: () => Navigator.of(context).pop(_rule),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      alignment: Alignment.center,
-                      child: Text(
-                        'Save · $_ctaLabel',
-                        style: AppText.sans(
-                          size: 13,
-                          weight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 14),
+          _UnitSegmented(
+            units: _units,
+            selected: _unitIndex,
+            onSelect: (i) => setState(() => _unitIndex = i),
           ),
-        ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'ON THESE DAYS',
+              style: AppText.sans(
+                size: 12,
+                weight: FontWeight.w800,
+                letterSpacing: AppText.em(0.08, 12),
+                color: colors.textDim,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            // 40 circles, smaller only when a narrow phone squeezes the card.
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final side = math.min(40.0, math.max(28.0, (constraints.maxWidth - 6 * 4) / 7));
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (var i = 0; i < _dayLetters.length; i++)
+                      _DayCircle(
+                        letter: _dayLetters[i],
+                        side: side,
+                        active: _activeDays.contains(i),
+                        onTap: () => setState(() {
+                          if (!_activeDays.add(i)) _activeDays.remove(i);
+                        }),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// "Repeat every" stepper row inside the custom dialog.
+/// "Repeat every" with a − / count / + stepper.
 class _IntervalRow extends StatelessWidget {
   const _IntervalRow({
     required this.value,
@@ -418,50 +254,69 @@ class _IntervalRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'Repeat every',
-          style: AppText.sans(size: 12.5, weight: FontWeight.w700, color: colors.text),
+        Expanded(
+          child: Text(
+            'Repeat every',
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+          ),
         ),
-        Row(
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onDecrement,
-              child: AppIcon(
-                Icons.remove_circle_outline,
-                size: 18,
-                color: colors.textMed,
-              ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              width: 14,
-              child: Text(
-                '$value',
-                textAlign: TextAlign.center,
-                style: AppText.sans(
-                  size: 18,
-                  weight: FontWeight.w800,
-                  color: colors.text,
+        Semantics(
+          button: true,
+          label: 'Less often',
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onDecrement,
+            child: Opacity(
+              opacity: onDecrement == null ? 0.4 : 1,
+              child: Container(
+                width: 24,
+                height: 24,
+                margin: const EdgeInsets.all(2),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: colors.textMed, width: 2),
                 ),
+                child: Ic('remove', size: 16, color: colors.textMed),
               ),
             ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onIncrement,
-              child: AppIcon(Icons.add_circle, size: 18, color: colors.accent),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 14),
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.text),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Semantics(
+          button: true,
+          label: 'More often',
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onIncrement,
+            child: Container(
+              width: 24,
+              height: 24,
+              margin: const EdgeInsets.all(2),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(shape: BoxShape.circle, color: colors.accent),
+              child: const Ic('add', size: 17, color: Colors.white),
             ),
-          ],
+          ),
         ),
       ],
     );
   }
 }
 
-/// Days / Weeks / Months segmented control.
+/// Days / Weeks / Months — 36 high, radius 10, accent when chosen.
 class _UnitSegmented extends StatelessWidget {
   const _UnitSegmented({
     required this.units,
@@ -481,22 +336,26 @@ class _UnitSegmented extends StatelessWidget {
         for (var i = 0; i < units.length; i++) ...[
           if (i > 0) const SizedBox(width: 6),
           Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelect(i),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: i == selected ? colors.accent : colors.bg,
-                  borderRadius: BorderRadius.circular(AppRadius.tile),
-                ),
-                child: Text(
-                  units[i],
-                  style: AppText.sans(
-                    size: 11.5,
-                    weight: i == selected ? FontWeight.w800 : FontWeight.w700,
-                    color: i == selected ? Colors.white : colors.textMed,
+            child: Semantics(
+              button: true,
+              selected: i == selected,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelect(i),
+                child: Container(
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == selected ? colors.accent : colors.bg,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    units[i],
+                    style: AppText.sans(
+                      size: 15,
+                      weight: i == selected ? FontWeight.w800 : FontWeight.w700,
+                      color: i == selected ? Colors.white : colors.textMed,
+                    ),
                   ),
                 ),
               ),
@@ -508,61 +367,46 @@ class _UnitSegmented extends StatelessWidget {
   }
 }
 
-/// A 25×25 weekday toggle circle.
+/// A 40 weekday toggle circle.
 class _DayCircle extends StatelessWidget {
   const _DayCircle({
     required this.letter,
+    required this.side,
     required this.active,
     required this.onTap,
   });
 
   final String letter;
+  final double side;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 25,
-        height: 25,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: active ? colors.accent : colors.bg,
-        ),
-        child: Text(
-          letter,
-          style: AppText.sans(
-            size: 11,
-            weight: FontWeight.w800,
-            color: active ? Colors.white : colors.textMed,
+    return Semantics(
+      button: true,
+      selected: active,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: side,
+          height: side,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active ? colors.accent : colors.bg,
+          ),
+          child: Text(
+            letter,
+            style: AppText.sans(
+              size: 15,
+              weight: FontWeight.w800,
+              color: active ? Colors.white : colors.textMed,
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Shared 26×26 close circle used by both the sheet and the dialog.
-class _CloseCircle extends StatelessWidget {
-  const _CloseCircle({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: Text('✕', style: TextStyle(fontSize: 12, color: colors.textMed, height: 1)),
       ),
     );
   }

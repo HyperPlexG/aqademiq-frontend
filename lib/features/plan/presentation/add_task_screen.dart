@@ -17,11 +17,11 @@ import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../services/reminder_scheduler.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_toggle.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/tag_chip.dart';
 import '../../settings/presentation/sheets/add_tag_sheet.dart';
 import '../plan_time.dart';
@@ -32,8 +32,9 @@ import 'pickers/duration_picker.dart';
 import 'pickers/repeat_picker.dart';
 import 'pickers/time_picker.dart';
 
-/// FRAMES `plan-addtask` — the full add-task form. Each detail row opens the
-/// matching picker (time / date / duration / repeat) and reflects the result.
+/// FRAMES `plan-addtask` (v11 `AddTaskBody`) — the full add-task form. Each
+/// detail row opens the matching picker (time / date / duration / repeat) and
+/// reflects the result.
 class AddTaskScreen extends ConsumerStatefulWidget {
   const AddTaskScreen({super.key, this.existing});
 
@@ -114,6 +115,10 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
         _timeOfDay = PlanTime.dayPartLabel(draft.dayPart!);
       }
       _repeat = draft.repeat;
+      // A tag picked in Quick-add carries over; none leaves the form's own
+      // default (the first tag) in place.
+      final tagId = draft.tagId;
+      if (tagId != null && tagId.isNotEmpty) _tag = tagId;
     }
     unawaited(Future(() {
       if (mounted) ref.read(taskDraftProvider.notifier).take();
@@ -261,89 +266,80 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
             DismissKeyboard(
               child: SafeArea(
                 child: ListView(
-                  padding: const EdgeInsets.fromLTRB(10, 4, 10, 24),
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
                   children: [
-                    _HeaderCard(
-                      controller: _title,
-                      editing: widget.existing != null,
-                      saving: _saving,
-                      onClose: _saving ? null : () => context.pop(),
-                      onSave: _save,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: _HeaderCard(
+                        controller: _title,
+                        editing: widget.existing != null,
+                        saving: _saving,
+                        onClose: _saving ? null : () => context.pop(),
+                        onSave: _save,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     _Section(
                       label: "Tag · what's this for?",
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final t in tags)
-                            TagChip(
-                              label: t.label,
-                              color: hexColor(t.color),
-                              active: effectiveTag == t.id,
-                              onTap: _saving ? null : () => setState(() => _tag = t.id),
-                            ),
+                      children: [
+                        for (final t in tags)
                           TagChip(
-                            label: '+ New',
-                            color: colors.accent,
-                            dashed: true,
-                            onTap: _saving ? null : _addTag,
+                            label: t.label,
+                            color: hexColor(t.color),
+                            active: effectiveTag == t.id,
+                            onTap: _saving ? null : () => setState(() => _tag = t.id),
                           ),
-                        ],
-                      ),
+                        TagChip(
+                          label: '+ New',
+                          color: colors.accent,
+                          dashed: true,
+                          onTap: _saving ? null : _addTag,
+                        ),
+                      ],
                     ),
                     _Section(
                       label: 'Subject · link it (optional)',
-                      child: Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          for (final s in subjects)
-                            TagChip(
-                              label: (s.code != null && s.code!.trim().isNotEmpty)
-                                  ? s.code!
-                                  : s.name,
-                              color: hexColor(s.color),
-                              active: _subject == s.id,
-                              onTap: _saving
-                                  ? null
-                                  : () => setState(() => _subject = s.id),
-                            ),
+                      children: [
+                        for (final s in subjects)
                           TagChip(
-                            label: 'None',
-                            active: _subject.isEmpty,
-                            onTap: _saving ? null : () => setState(() => _subject = ''),
+                            label: (s.code != null && s.code!.trim().isNotEmpty) ? s.code! : s.name,
+                            color: hexColor(s.color),
+                            active: _subject == s.id,
+                            onTap: _saving ? null : () => setState(() => _subject = s.id),
                           ),
-                        ],
-                      ),
+                        TagChip(
+                          label: 'None',
+                          active: _subject.isEmpty,
+                          onTap: _saving ? null : () => setState(() => _subject = ''),
+                        ),
+                      ],
                     ),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: AppCard(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
                         child: Column(
                           children: [
                             _DetailRow(
-                              icon: Icons.schedule,
+                              icon: 'schedule',
                               label: 'Time of day',
                               value: _timeOfDay,
                               onTap: _saving ? null : _pickTime,
                             ),
                             _DetailRow(
-                              icon: Icons.event,
+                              icon: 'event',
                               label: 'Date',
                               value: taskDateLabel(_date),
                               onTap: _saving ? null : _pickDate,
                             ),
                             _DetailRow(
-                              icon: Icons.hourglass_empty,
+                              icon: 'hourglass_empty',
                               label: 'Duration',
                               value: '$_durationMin min',
                               onTap: _saving ? null : _pickDuration,
                             ),
                             _DetailRow(
-                              icon: Icons.repeat,
+                              icon: 'repeat',
                               label: 'Repeat',
                               value: repeatRuleLabel(_repeat),
                               onTap: _saving ? null : _pickRepeat,
@@ -355,7 +351,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                     ),
                     const SizedBox(height: 8),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: AppCard(
                         child: Row(
                           children: [
@@ -365,7 +361,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                               child: Text(
                                 'Let Ada break this down',
                                 style: AppText.sans(
-                                  size: 12.5,
+                                  size: 17,
                                   weight: FontWeight.w700,
                                   color: colors.text,
                                 ),
@@ -383,7 +379,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                     ),
                     const SizedBox(height: 8),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       // The whole note card is the tap target. The TextField's
                       // intrinsic height is only one dense line; without this,
                       // taps on card padding / the icon were swallowed by
@@ -396,8 +392,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: AppIcon(Icons.notes, size: 16, color: colors.textMed),
+                                padding: const EdgeInsets.only(top: 1),
+                                child: Ic('note', size: 20, color: colors.textMed),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
@@ -409,12 +405,13 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                                   maxLines: 6,
                                   keyboardType: TextInputType.multiline,
                                   textInputAction: TextInputAction.newline,
-                                  style: AppText.sans(size: 12.5, color: colors.text),
+                                  style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
                                   decoration: InputDecoration(
                                     isDense: true,
+                                    isCollapsed: true,
                                     border: InputBorder.none,
                                     hintText: 'Add a note…',
-                                    hintStyle: AppText.sans(size: 12.5, color: colors.textDim),
+                                    hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
                                   ),
                                 ),
                               ),
@@ -465,7 +462,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   }
 
   Future<void> _pickRepeat() async {
-    final v = await showRepeatPicker(context);
+    final v = await showRepeatPicker(context, current: _repeat, date: _date);
     if (v != null) setState(() => _repeat = v);
   }
 }
@@ -500,18 +497,31 @@ class _HeaderCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: onClose,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-                  child: Text('✕', style: TextStyle(fontSize: 13, color: colors.textMed, height: 1)),
+              // BarDismiss at the left edge: the bare ✕, its glyph on the
+              // padding line, in a 32 × 44 target.
+              Semantics(
+                button: true,
+                label: 'Close',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onClose,
+                  child: SizedBox(
+                    width: 32,
+                    height: 44,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Ic('close', size: 20, color: colors.textMed),
+                    ),
+                  ),
                 ),
               ),
               Expanded(
-                child: Text(editing ? 'Edit task' : 'Add task', textAlign: TextAlign.center, style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text)),
+                child: Text(
+                  editing ? 'Edit task' : 'Add task',
+                  textAlign: TextAlign.center,
+                  style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
+                ),
               ),
               GestureDetector(
                 // Disabled while a save is in flight — the parent's `_saving`
@@ -522,15 +532,17 @@ class _HeaderCard extends StatelessWidget {
                 onTap: saving ? null : onSave,
                 behavior: HitTestBehavior.opaque,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: saving ? colors.hilite : colors.ink,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderRadius: BorderRadius.circular(22),
                   ),
                   child: saving
                       ? SizedBox(
-                          width: 14,
-                          height: 14,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: colors.textDim,
@@ -539,7 +551,7 @@ class _HeaderCard extends StatelessWidget {
                       : Text(
                           'Save',
                           style: AppText.sans(
-                            size: 12,
+                            size: 17,
                             weight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -551,16 +563,17 @@ class _HeaderCard extends StatelessWidget {
           const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(12)),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: TextField(
               controller: controller,
               enabled: !saving,
-              style: AppText.sans(size: 14, color: colors.text),
+              style: AppText.sans(size: 17, color: colors.text),
               decoration: InputDecoration(
                 isDense: true,
+                isCollapsed: true,
                 border: InputBorder.none,
                 hintText: 'What do you need to do?',
-                hintStyle: AppText.sans(size: 14, color: colors.textDim),
+                hintStyle: AppText.sans(size: 17, color: colors.textDim),
               ),
             ),
           ),
@@ -570,33 +583,53 @@ class _HeaderCard extends StatelessWidget {
   }
 }
 
+/// A section label (v11 `SLabel`, 12/800 tracked caps) over one row of chips
+/// that scrolls sideways rather than wrapping.
 class _Section extends StatelessWidget {
-  const _Section({required this.label, required this.child});
+  const _Section({required this.label, required this.children});
   final String label;
-  final Widget child;
+  final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 7),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 7),
             child: Text(
               label.toUpperCase(),
-              style: AppText.sans(size: 9, weight: FontWeight.w800, letterSpacing: AppText.em(0.12, 9), color: colors.textDim),
+              style: AppText.sans(
+                size: 12,
+                weight: FontWeight.w800,
+                letterSpacing: AppText.em(0.12, 12),
+                color: colors.textDim,
+              ),
             ),
           ),
-          child,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                for (var i = 0; i < children.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 6),
+                  children[i],
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+/// A detail row (Time of day / Date / Duration / Repeat): icon 20, 17/600
+/// label and the value in a 36 well pill; 52 min, separators inset to the label.
 class _DetailRow extends StatelessWidget {
   const _DetailRow({
     required this.icon,
@@ -605,7 +638,9 @@ class _DetailRow extends StatelessWidget {
     this.onTap,
     this.last = false,
   });
-  final IconData icon;
+
+  /// A design icon name (`schedule`).
+  final String icon;
   final String label;
   final String value;
   final VoidCallback? onTap;
@@ -614,23 +649,43 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          border: last ? null : Border(bottom: BorderSide(color: colors.border)),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 8),
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
         child: Row(
           children: [
-            AppIcon(icon, size: 16, color: colors.textMed),
+            Ic(icon, size: 20, color: colors.textMed),
             const SizedBox(width: 10),
-            Expanded(child: Text(label, style: AppText.sans(size: 12.5, color: colors.text))),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
-              child: Text(value, style: AppText.sans(size: 11, color: colors.textMed)),
+            Expanded(
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 52),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  border: last ? null : Border(bottom: BorderSide(color: colors.border)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(label, style: AppText.sans(size: 17, color: colors.text)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 36,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, color: colors.textMed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

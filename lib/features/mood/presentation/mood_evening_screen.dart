@@ -13,7 +13,6 @@ import '../../../data/models/mood_log.dart';
 import '../../../data/repositories/mood_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -30,16 +29,15 @@ class MoodEveningScreen extends ConsumerStatefulWidget {
 }
 
 class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
-  /// MOODS scale colors (idx 0→4): Rough → Great (prototype `MOODS`).
-  static const List<Color> _moodColors = [
-    Color(0xFFA79FC4),
-    Color(0xFF9286D2),
-    Color(0xFF7D70D9),
-    Color(0xFF6A5CE4),
-    Color(0xFF5A44F1),
-  ];
+  /// MOODS scale colors (idx 0→4): Rough → Great (v11 `MOODS`).
+  static const List<Color> _moodColors = MoodScale.colors;
 
   static const String _weekLetters = 'MTWTFSS';
+  static const _weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  static const _months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+  /// "MON · 18 MAY" for the day being reflected on.
+  static String _dayLine(DateTime d) => '${_weekdays[d.weekday - 1]} · ${d.day} ${_months[d.month - 1]}';
 
   final TextEditingController _note = TextEditingController();
   int _sel = 3;
@@ -105,38 +103,51 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // The day itself — this read "MON · 18 MAY" whatever the date.
                   Text(
-                    'MON · 18 MAY',
+                    _dayLine(today),
                     style: AppText.sans(
-                      size: 10,
+                      size: 12,
                       weight: FontWeight.w800,
-                      letterSpacing: AppText.em(0.1, 10),
+                      letterSpacing: AppText.em(0.1, 12),
                       color: colors.textDim,
                     ),
                   ),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => context.go(Routes.plan),
-                    child: Text(
-                      'Skip',
-                      style: AppText.sans(size: 11, color: colors.textDim),
+                  Transform.translate(
+                    offset: const Offset(10, 0),
+                    child: Semantics(
+                      button: true,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => context.go(Routes.plan),
+                        child: SizedBox(
+                          height: 44,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Center(
+                              widthFactor: 1,
+                              child: Text('Skip', style: AppText.sans(size: 15, color: colors.textDim)),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
               Text(
                 'Evening\nreflection',
                 style: AppText.sans(
-                  size: 26,
+                  size: 34,
                   weight: FontWeight.w800,
                   height: 1.2,
+                  color: colors.text,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 'How did today go?',
-                style: AppText.sans(size: 12, color: colors.textDim),
+                style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
               ),
               const SizedBox(height: 18),
               Padding(
@@ -155,7 +166,18 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                 ),
               ),
               const SizedBox(height: 22),
-              const FieldLabel('Optional note'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 7),
+                child: Text(
+                  'OPTIONAL NOTE',
+                  style: AppText.sans(
+                    size: 12,
+                    weight: FontWeight.w800,
+                    letterSpacing: AppText.em(0.12, 12),
+                    color: colors.textDim,
+                  ),
+                ),
+              ),
               Container(
                 constraints: const BoxConstraints(minHeight: 70),
                 padding: const EdgeInsets.symmetric(
@@ -170,10 +192,10 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                   controller: _note,
                   maxLines: null,
                   cursorColor: colors.text,
-                  style: AppText.sans(size: 12, color: colors.text),
+                  style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
                   decoration: InputDecoration.collapsed(
                     hintText: 'What made today that way?',
-                    hintStyle: AppText.sans(size: 12, color: colors.textDim),
+                    hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
                   ),
                 ),
               ),
@@ -184,7 +206,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                   children: [
                     Text(
                       "This week's mood",
-                      style: AppText.sans(size: 13, weight: FontWeight.w700),
+                      style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -205,6 +227,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
                 label: 'Save reflection →',
                 onPressed: () => unawaited(_save()),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -232,33 +255,41 @@ class _MoodPick extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(3),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: selected ? color.alpha8(0x14) : Colors.transparent,
-              border: Border.all(
-                width: 2,
-                color: selected ? color : Colors.transparent,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: MoodScale.labels[idx],
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: selected ? color.alpha8(0x14) : Colors.transparent,
+                border: Border.all(
+                  width: 2,
+                  color: selected ? color : Colors.transparent,
+                ),
+              ),
+              child: MoodBlob(idx: idx, size: selected ? 34 : 31),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              MoodScale.labels[idx],
+              maxLines: 1,
+              softWrap: false,
+              style: AppText.sans(
+                size: 12,
+                weight: FontWeight.w700,
+                color: selected ? color : colors.textDim,
               ),
             ),
-            child: MoodBlob(idx: idx, size: selected ? 34 : 31),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            MoodScale.labels[idx],
-            style: AppText.sans(
-              size: 8.5,
-              weight: FontWeight.w700,
-              color: selected ? color : colors.textDim,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -296,7 +327,7 @@ class _WeekDay extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           letter,
-          style: AppText.sans(size: 9, color: colors.textDim),
+          style: AppText.sans(size: 12, weight: FontWeight.w500, color: colors.textDim),
         ),
       ],
     );

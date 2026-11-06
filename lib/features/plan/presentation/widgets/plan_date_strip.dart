@@ -4,8 +4,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
 
-/// The horizontal week strip on PLAN_TIMELINE. Each cell = date number (top) +
-/// large weekday letter, with a selected highlight + underline.
+/// The horizontal week strip on PLAN_TIMELINE (v11 `PlanDateStrip`). Each
+/// cell = date number (13/700) + large weekday letter (22/800), with a selected
+/// highlight + underline.
 class PlanDateStrip extends StatelessWidget {
   const PlanDateStrip({
     super.key,
@@ -56,6 +57,7 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final numberColor =
         (isToday && !isSelected) ? colors.accent : colors.textDim;
     final letterColor = isSelected
@@ -77,19 +79,21 @@ class _DayCell extends StatelessWidget {
           children: [
             Text(
               '${date.day}',
-              style: AppText.sans(size: 10, weight: FontWeight.w700, color: numberColor),
+              style: AppText.sans(size: 13, weight: FontWeight.w700, color: numberColor),
             ),
             const SizedBox(height: 2),
             Text(
               AppDate.weekdayLetter(date.weekday),
-              style: AppText.sans(size: 19, weight: FontWeight.w800, color: letterColor),
+              style: AppText.sans(size: 22, weight: FontWeight.w800, color: letterColor),
             ),
             const SizedBox(height: 2),
             Container(
               width: 14,
               height: 3,
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFC4C1BB) : Colors.transparent,
+                color: isSelected
+                    ? (dark ? const Color(0xFFC4C1BB) : const Color(0xFFE5E3E0))
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
 
-/// The light `hilite` section pill on the Plan timeline (prototype
-/// `CollapseHead`): optional leading icon, "LABEL (count)", expand/collapse
-/// chevron. Distinct from the ink `SectionPill`.
+/// The light `hilite` section pill on the Plan timeline (v11 `CollapseHead`):
+/// optional leading icon, "LABEL (count)" 13/800, and the chevron — down while
+/// open, up while collapsed. Distinct from the ink `SectionPill`.
 class CollapseHead extends StatelessWidget {
   const CollapseHead({
     super.key,
@@ -21,7 +21,9 @@ class CollapseHead extends StatelessWidget {
   final String label;
   final int count;
   final bool open;
-  final IconData? icon;
+
+  /// A design icon name (`schedule`), drawn from the icon pack.
+  final String? icon;
   final VoidCallback? onTap;
 
   @override
@@ -32,37 +34,36 @@ class CollapseHead extends StatelessWidget {
         : const EdgeInsets.symmetric(horizontal: 15, vertical: 7);
 
     return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: colors.hilite,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                AppIcon(icon, size: 15, color: colors.textMed),
-                const SizedBox(width: 7),
-              ],
-              Text(
-                '$label ($count)',
-                style: AppText.sans(
-                  size: 11.5,
-                  weight: FontWeight.w800,
-                  letterSpacing: AppText.em(0.05, 11.5),
-                  color: colors.text,
+      child: Semantics(
+        button: onTap != null,
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: padding,
+            decoration: BoxDecoration(
+              color: colors.hilite,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Ic(icon!, size: 19, color: colors.textMed),
+                  const SizedBox(width: 7),
+                ],
+                Text(
+                  '$label ($count)',
+                  style: AppText.sans(
+                    size: 13,
+                    weight: FontWeight.w800,
+                    letterSpacing: AppText.em(0.05, 13),
+                    color: colors.text,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 7),
-              AppIcon(
-                open ? Icons.expand_more : Icons.expand_less,
-                size: 18,
-                color: colors.text,
-              ),
-            ],
+                const SizedBox(width: 7),
+                Ic(open ? 'expand_more' : 'expand_less', size: 18, color: colors.text),
+              ],
+            ),
           ),
         ),
       ),

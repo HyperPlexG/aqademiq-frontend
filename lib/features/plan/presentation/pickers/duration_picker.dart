@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../widgets/plan_sheet.dart';
 
 /// Duration presets shown in the picker grid, paired with the minute value
 /// each cell commits when tapped (`plan-pick-duration`).
@@ -19,17 +17,13 @@ const _presets = <_Preset>[
   _Preset('1.5 hr', 90),
 ];
 
-/// Presents the `plan-pick-duration` bottom sheet. [current] is the currently
+/// Presents the `plan-pick-duration` floating sheet. [current] is the currently
 /// selected duration so its preset renders active. Tapping a preset cell returns
 /// its minute value; "Custom duration → Set" opens [_showCustomDuration] and
 /// returns the fine-tuned value from there. Returns `null` if dismissed.
 Future<int?> showDurationPicker(BuildContext context, {int current = 30}) {
-  return showModalBottomSheet<int>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x4C140F1C),
+  return showPlanSheet<int>(
+    context,
     builder: (_) => _DurationSheet(current: current),
   );
 }
@@ -47,93 +41,49 @@ class _DurationSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.sheetTop),
-        ),
-        boxShadow: colors.sheetShadow,
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final isCustom = !_presets.any((p) => p.minutes == current);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const PlanSheetTitle('Duration', sub: 'How long do you expect this to take?'),
+        for (var row = 0; row < _presets.length; row += 3) ...[
+          if (row > 0) const SizedBox(height: 8),
+          Row(
             children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0DDD7),
-                    borderRadius: BorderRadius.circular(2),
+              for (var i = row; i < row + 3 && i < _presets.length; i++) ...[
+                if (i > row) const SizedBox(width: 8),
+                Expanded(
+                  child: _PresetCell(
+                    preset: _presets[i],
+                    active: _presets[i].minutes == current,
+                    onTap: () => Navigator.of(context).pop(_presets[i].minutes),
                   ),
                 ),
-              ),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Duration',
-                      style: AppText.sans(
-                        size: 20,
-                        weight: FontWeight.w800,
-                        color: colors.text,
-                      ),
-                    ),
-                  ),
-                  _CloseButton(onTap: () => Navigator.of(context).pop()),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 3, bottom: 12),
-                child: Text(
-                  'How long do you expect this to take?',
-                  style: AppText.sans(size: 11.5, color: colors.textMed),
-                ),
-              ),
-              GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: AppSpacing.x2,
-                crossAxisSpacing: AppSpacing.x2,
-                childAspectRatio: 2.3,
-                children: [
-                  for (final preset in _presets)
-                    _PresetCell(
-                      preset: preset,
-                      active: preset.minutes == current,
-                      onTap: () => Navigator.of(context).pop(preset.minutes),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _OptRow(
-                icon: Icons.tune,
-                label: 'Custom duration',
-                onTap: () async {
-                  final picked = await _showCustomDuration(context);
-                  if (picked != null && context.mounted) {
-                    Navigator.of(context).pop(picked);
-                  }
-                },
-              ),
+              ],
             ],
           ),
+        ],
+        const SizedBox(height: 10),
+        PlanOptRow(
+          icon: 'tune',
+          label: 'Custom duration',
+          active: isCustom,
+          trailing: PlanSetPill(label: isCustom ? '$current min' : null),
+          onTap: () async {
+            final picked = await _showCustomDuration(context, initial: current);
+            if (picked != null && context.mounted) {
+              Navigator.of(context).pop(picked);
+            }
+          },
         ),
-      ),
+      ],
     );
   }
 }
 
-/// A single preset cell in the 3-column grid. Active = accent fill / white w800;
-/// inactive = `bg` fill / text w700.
+/// A single preset cell in the 3-column grid: 17 on a well, accent / white 800
+/// when it is the current duration.
 class _PresetCell extends StatelessWidget {
   const _PresetCell({
     required this.preset,
@@ -148,79 +98,30 @@ class _PresetCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final borderRadius = BorderRadius.circular(AppRadius.rowInput);
-    return Material(
-      color: active ? colors.accent : colors.bg,
-      borderRadius: borderRadius,
-      child: InkWell(
+    final borderRadius = BorderRadius.circular(14);
+    return Semantics(
+      button: true,
+      selected: active,
+      child: Material(
+        color: active ? colors.accent : colors.bg,
         borderRadius: borderRadius,
-        onTap: onTap,
-        child: Center(
-          child: Text(
-            preset.label,
-            style: AppText.sans(
-              size: 13,
-              weight: active ? FontWeight.w800 : FontWeight.w700,
-              color: active ? Colors.white : colors.text,
+        child: InkWell(
+          borderRadius: borderRadius,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: Center(
+              child: Text(
+                preset.label,
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.sans(
+                  size: 17,
+                  weight: active ? FontWeight.w800 : FontWeight.w700,
+                  color: active ? Colors.white : colors.text,
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A list row (`OptRow`) with a leading icon, label, and a trailing "Set →"
-/// pill that opens the custom dialog.
-class _OptRow extends StatelessWidget {
-  const _OptRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final borderRadius = BorderRadius.circular(AppRadius.cellSmall);
-    return Material(
-      color: Colors.transparent,
-      borderRadius: borderRadius,
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-          child: Row(
-            children: [
-              AppIcon(icon, size: 19, color: colors.textMed),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppText.sans(size: 13.5, color: colors.text),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colors.bg,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  'Set →',
-                  style: AppText.sans(
-                    size: 11,
-                    weight: FontWeight.w700,
-                    color: colors.textMed,
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
@@ -230,26 +131,31 @@ class _OptRow extends StatelessWidget {
 
 /// Presents the `plan-pick-duration-custom` centered dialog. The stepper, slider
 /// and quick chips mutate local state; "Set · N min" returns the chosen minutes.
-Future<int?> _showCustomDuration(BuildContext context) {
-  return showDialog<int>(
-    context: context,
-    barrierColor: const Color(0x66140F1C),
-    builder: (_) => const _CustomDurationDialog(),
-  );
+Future<int?> _showCustomDuration(BuildContext context, {required int initial}) {
+  return showPlanDialog<int>(context, child: _CustomDurationDialog(initial: initial));
 }
 
 class _CustomDurationDialog extends ConsumerStatefulWidget {
-  const _CustomDurationDialog();
+  const _CustomDurationDialog({required this.initial});
+
+  /// The duration the task has now; a preset value opens on the old 50.
+  final int initial;
 
   @override
-  ConsumerState<_CustomDurationDialog> createState() =>
-      _CustomDurationDialogState();
+  ConsumerState<_CustomDurationDialog> createState() => _CustomDurationDialogState();
 }
 
 class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
   static const _min = 5;
   static const _max = 120;
-  int _minutes = 50;
+  static const _chips = [
+    _Preset('45 min', 45),
+    _Preset('1 hr', 60),
+    _Preset('1.5 hr', 90),
+    _Preset('2 hr', 120),
+  ];
+
+  late int _minutes = _presets.any((p) => p.minutes == widget.initial) ? 50 : widget.initial.clamp(_min, _max);
 
   /// [detent] is true only for the slider — see the note in
   /// `focus_duration_dialog.dart`; Pickers get one event (§7) and this is it.
@@ -263,158 +169,80 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final fraction = (_minutes - _min) / (_max - _min);
-    return Center(
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          width: 226,
-          padding: const EdgeInsets.fromLTRB(18, 17, 18, 18),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.sheetTop),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x57000000),
-                blurRadius: 64,
-                offset: Offset(0, 20),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return PlanCenterDialog(
+      title: 'Custom duration',
+      sub: 'Fine-tune the time you need',
+      ctaLabel: 'Set · $_minutes min',
+      onCta: () => Navigator.of(context).pop(_minutes),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Custom duration',
-                      style: AppText.sans(
-                        size: 19,
-                        weight: FontWeight.w800,
-                        color: colors.text,
+              PlanStepButton(
+                icon: 'remove',
+                label: 'Five minutes less',
+                onTap: () => _setMinutes(_minutes - 5),
+              ),
+              const SizedBox(width: 18),
+              // Scales down for three digits, which do not fit the 252 card.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    textBaseline: TextBaseline.alphabetic,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    children: [
+                      Text(
+                        '$_minutes',
+                        style: AppText.sans(size: 50, weight: FontWeight.w800, height: 1, color: colors.text),
                       ),
-                    ),
-                  ),
-                  _CloseButton(onTap: () => Navigator.of(context).pop()),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 3, bottom: 14),
-                child: Text(
-                  'Fine-tune the time you need',
-                  style: AppText.sans(size: 11, color: colors.textMed),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _StepBtn(
-                      icon: Icons.remove,
-                      onTap: () => _setMinutes(_minutes - 5),
-                    ),
-                    const SizedBox(width: 18),
-                    Row(
-                      textBaseline: TextBaseline.alphabetic,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      children: [
-                        Text(
-                          '$_minutes',
-                          style: AppText.sans(
-                            size: 38,
-                            weight: FontWeight.w800,
-                            height: 1,
-                            color: colors.text,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'min',
-                          style: AppText.sans(
-                            size: 13,
-                            weight: FontWeight.w700,
-                            color: colors.textMed,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 18),
-                    _StepBtn(
-                      icon: Icons.add,
-                      onTap: () => _setMinutes(_minutes + 5),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 14),
-                child: _DurationSlider(
-                  fraction: fraction,
-                  onChanged: (value) => _setMinutes(
-                    (_min + value * (_max - _min)).round(),
-                    detent: true,
+                      const SizedBox(width: 4),
+                      Text(
+                        'min',
+                        style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.textMed),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Row(
-                children: [
-                  for (final chip in const [
-                    _Preset('45 min', 45),
-                    _Preset('1 hr', 60),
-                    _Preset('1.5 hr', 90),
-                    _Preset('2 hr', 120),
-                  ])
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.only(
-                          right: chip.minutes == 120 ? 0 : 6,
-                        ),
-                        child: _QuickChip(
-                          label: chip.label,
-                          onTap: () => _setMinutes(chip.minutes),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: _DialogCta(
-                  label: 'Set · $_minutes min',
-                  onTap: () => Navigator.of(context).pop(_minutes),
-                ),
+              const SizedBox(width: 18),
+              PlanStepButton(
+                icon: 'add',
+                label: 'Five minutes more',
+                onTap: () => _setMinutes(_minutes + 5),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A 38px circular stepper button (`StepBtn`).
-class _StepBtn extends StatelessWidget {
-  const _StepBtn({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Material(
-      color: colors.bg,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 38,
-          height: 38,
-          child: AppIcon(icon, size: 20, color: colors.text),
-        ),
+          const SizedBox(height: 14),
+          _DurationSlider(
+            fraction: fraction,
+            onChanged: (value) => _setMinutes(
+              (_min + value * (_max - _min)).round(),
+              detent: true,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              for (var i = 0; i < _chips.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: PlanQuickChip(
+                    label: _chips[i].label,
+                    size: 15,
+                    expand: true,
+                    active: _minutes == _chips[i].minutes,
+                    onTap: () => _setMinutes(_chips[i].minutes),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -434,8 +262,7 @@ class _DurationSlider extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        void handle(Offset local) =>
-            onChanged((local.dx / width).clamp(0.0, 1.0));
+        void handle(Offset local) => onChanged((local.dx / width).clamp(0.0, 1.0));
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) => handle(details.localPosition),
@@ -487,100 +314,6 @@ class _DurationSlider extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// An inactive quick-pick chip in the custom dialog (`bg` fill / med text).
-class _QuickChip extends StatelessWidget {
-  const _QuickChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final borderRadius = BorderRadius.circular(AppRadius.pill);
-    return Material(
-      color: colors.bg,
-      borderRadius: borderRadius,
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: AppText.sans(
-              size: 10.5,
-              weight: FontWeight.w700,
-              color: colors.textMed,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The ink CTA pill used by the custom dialog.
-class _DialogCta extends StatelessWidget {
-  const _DialogCta({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final borderRadius = BorderRadius.circular(AppRadius.pill);
-    return Material(
-      color: colors.ink,
-      borderRadius: borderRadius,
-      child: InkWell(
-        borderRadius: borderRadius,
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: AppText.sans(
-              size: 13,
-              weight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The 26px circular close button shared by the sheet and dialog headers.
-class _CloseButton extends StatelessWidget {
-  const _CloseButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 26,
-        height: 26,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(color: colors.bg, shape: BoxShape.circle),
-        child: Text(
-          '✕',
-          style: TextStyle(fontSize: 12, color: colors.textMed, height: 1),
-        ),
-      ),
     );
   }
 }

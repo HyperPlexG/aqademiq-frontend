@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
+import '../../../../shared/widgets/ic.dart';
 
 const _monthNames = <String>[
   'January',
@@ -134,11 +134,7 @@ class _MonthCardState extends State<_MonthCard> {
           color: colors.surface,
           borderRadius: BorderRadius.circular(22),
           boxShadow: const [
-            BoxShadow(
-              color: Color(0x29000000),
-              blurRadius: 44,
-              offset: Offset(0, 14),
-            ),
+            BoxShadow(color: Color(0x29000000), blurRadius: 44, offset: Offset(0, 14)),
           ],
         ),
         padding: _wheelOpen
@@ -187,37 +183,29 @@ class _CalendarBody extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onOpenWheel,
-              child: Row(
-                children: [
-                  Text(
-                    view.label,
-                    style: AppText.sans(
-                      size: 17,
-                      weight: FontWeight.w800,
-                      color: colors.text,
+            Semantics(
+              button: true,
+              label: 'Choose month and year',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onOpenWheel,
+                child: Row(
+                  children: [
+                    Text(
+                      view.label,
+                      style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.text),
                     ),
-                  ),
-                  const SizedBox(width: 3),
-                  AppIcon(Icons.chevron_right, size: 16, color: colors.accent),
-                ],
+                    const SizedBox(width: 4),
+                    Ic('chevron_right', size: 20, color: colors.accent),
+                  ],
+                ),
               ),
             ),
             Row(
               children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onPrev,
-                  child: AppIcon(Icons.chevron_left, size: 20, color: colors.text),
-                ),
-                const SizedBox(width: 16),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onNext,
-                  child: AppIcon(Icons.chevron_right, size: 20, color: colors.text),
-                ),
+                _NavArrow(icon: 'back', label: 'Previous month', onTap: onPrev),
+                const SizedBox(width: 4),
+                _NavArrow(icon: 'chevron_right', label: 'Next month', onTap: onNext),
               ],
             ),
           ],
@@ -273,14 +261,10 @@ class _WheelBodyState extends State<_WheelBody> {
             children: [
               Text(
                 '${_monthNames[_month - 1]} $_year',
-                style: AppText.sans(
-                  size: 17,
-                  weight: FontWeight.w800,
-                  color: colors.accent,
-                ),
+                style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.accent),
               ),
-              const SizedBox(width: 3),
-              AppIcon(Icons.expand_less, size: 16, color: colors.accent),
+              const SizedBox(width: 4),
+              Ic('chevron_down', size: 20, color: colors.accent),
             ],
           ),
         ),
@@ -294,47 +278,60 @@ class _WheelBodyState extends State<_WheelBody> {
               child: Container(
                 height: 42,
                 decoration: BoxDecoration(
-                  color: colors.accentSoft,
+                  color: colors.hilite,
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
             SizedBox(
-              height: 168,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _Wheel(
-                      count: 12,
-                      initialIndex: _month - 1,
-                      label: (i) => _monthNames[i],
-                      onChanged: (i) => setState(() => _month = i + 1),
+              height: 210,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _Wheel(
+                        count: 12,
+                        initialIndex: _month - 1,
+                        label: (i) => _monthNames[i],
+                        alignment: Alignment.centerLeft,
+                        onChanged: (i) => setState(() => _month = i + 1),
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: _Wheel(
-                      count: _years.length,
-                      initialIndex: _years.indexOf(_year),
-                      label: (i) => '${_years[i]}',
-                      onChanged: (i) => setState(() => _year = _years[i]),
+                    Expanded(
+                      child: _Wheel(
+                        count: _years.length,
+                        initialIndex: _years.indexOf(_year),
+                        label: (i) => '${_years[i]}',
+                        alignment: Alignment.centerRight,
+                        onChanged: (i) => setState(() => _year = _years[i]),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => widget.onPick(_month, _year),
-          child: Center(
-            child: Text(
-              'Done',
-              style: AppText.sans(
-                size: 13,
-                weight: FontWeight.w800,
-                color: colors.accent,
+        const SizedBox(height: 4),
+        Center(
+          child: Semantics(
+            button: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => widget.onPick(_month, _year),
+              child: SizedBox(
+                height: 44,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      'Done',
+                      style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -354,12 +351,16 @@ class _Wheel extends ConsumerStatefulWidget {
     required this.initialIndex,
     required this.label,
     required this.onChanged,
+    this.alignment = Alignment.center,
   });
 
   final int count;
   final int initialIndex;
   final String Function(int) label;
   final ValueChanged<int> onChanged;
+
+  /// Months sit on the left of the card, years on the right.
+  final Alignment alignment;
 
   @override
   ConsumerState<_Wheel> createState() => _WheelState();
@@ -382,7 +383,7 @@ class _WheelState extends ConsumerState<_Wheel> {
     return ListWheelScrollView.useDelegate(
       controller: _controller,
       itemExtent: 42,
-      perspective: 0.004,
+      perspective: 0.002,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (i) {
         ref.read(hapticsProvider).wheelItem();
@@ -392,18 +393,51 @@ class _WheelState extends ConsumerState<_Wheel> {
       childDelegate: ListWheelChildBuilderDelegate(
         childCount: widget.count,
         builder: (context, i) {
-          final selected = i == _selected;
-          return Center(
+          final distance = (i - _selected).abs();
+          final selected = distance == 0;
+          // v11: the centre row 28/800, then the text colour at 50% and 28%.
+          final opacity = selected ? 1.0 : (distance == 1 ? 0.5 : 0.28);
+          return Align(
+            alignment: widget.alignment,
             child: Text(
               widget.label(i),
+              maxLines: 1,
+              softWrap: false,
               style: AppText.sans(
-                size: selected ? 22 : 18,
+                size: selected ? 28 : 22,
                 weight: selected ? FontWeight.w800 : FontWeight.w600,
-                color: selected ? colors.text : const Color(0xFFC8C4BE),
+                color: colors.text.withValues(alpha: opacity),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// A ‹ or › that steps the calendar a month (20, with a 36 target).
+class _NavArrow extends StatelessWidget {
+  const _NavArrow({required this.icon, required this.label, required this.onTap});
+
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(child: Ic(icon, size: 20, color: context.colors.text)),
+        ),
       ),
     );
   }

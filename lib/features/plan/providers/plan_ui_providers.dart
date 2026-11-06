@@ -7,13 +7,14 @@ import '../../../data/models/task.dart';
 enum PlanViewMode { timeline, list }
 
 /// A pending task draft handed from Quick-add to the full Add-task form so the
-/// typed title / time-of-day / repeat survive the "More" hop (PLAN-8).
+/// typed title / time-of-day / tag / repeat survive the "More" hop (PLAN-8).
 class TaskDraft {
   const TaskDraft({
     this.title = '',
     this.dayPart,
     this.timeLabel,
     this.repeat,
+    this.tagId,
   });
 
   final String title;
@@ -25,6 +26,10 @@ class TaskDraft {
   final String? timeLabel;
 
   final RepeatRule? repeat;
+
+  /// The study tag picked in Quick-add, or null when none was — creation then
+  /// falls back to the first tag, as it always has.
+  final String? tagId;
 }
 
 final taskDraftProvider =

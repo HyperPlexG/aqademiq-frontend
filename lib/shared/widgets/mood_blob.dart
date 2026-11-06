@@ -5,6 +5,15 @@ import '../mascot/ada_mascot.dart';
 /// The MOODS scale (0 Rough … 4 Great), label + nominal color (prototype MOODS).
 class MoodScale {
   static const List<String> labels = ['Rough', 'Tired', 'OK', 'Good', 'Great'];
+
+  /// Each mood's colour (v11 `MOODS`) — the border tone of its cube.
+  static const List<Color> colors = [
+    Color(0xFFA79FC4),
+    Color(0xFF9286D2),
+    Color(0xFF7D70D9),
+    Color(0xFF6A5CE4),
+    Color(0xFF5A44F1),
+  ];
   static const List<AdaExpr> _expr = [
     AdaExpr.sad,
     AdaExpr.meh,

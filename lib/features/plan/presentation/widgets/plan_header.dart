@@ -4,11 +4,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/guest_badge.dart';
+import '../../../../shared/widgets/ic.dart';
 
-/// PLAN_TIMELINE header: day + month (calendar button), and the action capsule
-/// (overflow ··· and add +). A "Today" pill appears when viewing another day.
+/// v11 `PlanHeader`: day (17/800) + month (12/800, the calendar button), and
+/// the action capsule (overflow ··· and add +, 36 slots in a 44 pill). A 44
+/// "Today" pill appears when viewing another day.
 class PlanHeader extends StatelessWidget {
   const PlanHeader({
     super.key,
@@ -37,41 +38,46 @@ class PlanHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onMonthTap,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppDate.weekdayFull(date),
-                    style: AppText.sans(
-                      size: 15,
-                      weight: FontWeight.w800,
-                      letterSpacing: -0.3,
-                      height: 1.1,
-                      color: colors.text,
+            child: Semantics(
+              button: true,
+              label: 'Pick a month',
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMonthTap,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppDate.weekdayFull(date),
+                      style: AppText.sans(
+                        size: 17,
+                        weight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.1,
+                        color: colors.text,
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          AppDate.monthYearUpper(date),
-                          style: AppText.sans(
-                            size: 9.5,
-                            weight: FontWeight.w800,
-                            letterSpacing: AppText.em(0.04, 9.5),
-                            color: colors.textMed,
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppDate.monthYearUpper(date),
+                            style: AppText.sans(
+                              size: 12,
+                              weight: FontWeight.w800,
+                              letterSpacing: AppText.em(0.04, 12),
+                              color: colors.textMed,
+                            ),
                           ),
-                        ),
-                        AppIcon(Icons.chevron_right, size: 11, color: colors.textMed),
-                      ],
+                          const SizedBox(width: 1),
+                          Ic('chevron_right', size: 14, color: colors.textMed),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -90,6 +96,7 @@ class PlanHeader extends StatelessWidget {
   }
 }
 
+/// BarPill "Today": 44 high, white on the page with the card shadow, 17/700.
 class _TodayPill extends StatelessWidget {
   const _TodayPill({this.onTap});
   final VoidCallback? onTap;
@@ -97,18 +104,23 @@ class _TodayPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          boxShadow: colors.cardShadow,
-        ),
-        child: Text(
-          'Today',
-          style: AppText.sans(size: 12.5, weight: FontWeight.w800, color: colors.text),
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: colors.cardShadow,
+          ),
+          child: Text(
+            'Today',
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+          ),
         ),
       ),
     );
@@ -134,25 +146,15 @@ class _ActionCapsule extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _CircleTap(
+            label: 'More',
             onTap: onMenu,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Text(
-                '···',
-                style: AppText.sans(
-                  size: 17,
-                  weight: FontWeight.w800,
-                  letterSpacing: 0.5,
-                  height: 1,
-                  color: colors.text,
-                ),
-              ),
-            ),
+            child: Ic('more', color: colors.text),
           ),
           const SizedBox(width: 2),
           _CircleTap(
+            label: 'Add a task',
             onTap: onAdd,
-            child: AppIcon(Icons.add, size: 21, color: colors.text),
+            child: Ic('add', color: colors.text),
           ),
         ],
       ),
@@ -161,16 +163,21 @@ class _ActionCapsule extends StatelessWidget {
 }
 
 class _CircleTap extends StatelessWidget {
-  const _CircleTap({required this.child, this.onTap});
+  const _CircleTap({required this.child, required this.label, this.onTap});
   final Widget child;
+  final String label;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: SizedBox(width: 30, height: 30, child: Center(child: child)),
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(width: 36, height: 36, child: Center(child: child)),
+      ),
     );
   }
 }

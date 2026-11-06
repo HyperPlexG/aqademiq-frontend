@@ -8,10 +8,12 @@ import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/tag.dart';
 import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/icons/aq_icon.dart';
+import 'plan_task_card.dart';
 
-/// FRAMES `plan-breakdown` — a planned task expanded into Ada microtasks, with a
-/// progress header and a connector-rail subtask list.
+/// FRAMES `plan-breakdown` (v11 `PLAN_BREAKDOWN`) — a planned task expanded
+/// into Ada microtasks, with a progress header and a connector-rail subtask
+/// list.
 class PlanTaskExpandedCard extends StatelessWidget {
   const PlanTaskExpandedCard({
     super.key,
@@ -38,32 +40,36 @@ class PlanTaskExpandedCard extends StatelessWidget {
     final progress = doneCount / total;
 
     return Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          boxShadow: colors.cardShadow,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Only the header collapses. Wrapping the whole card meant a tap on
-            // a micro-step bubbled up here and closed it, which is what made the
-            // list look unusable.
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onCollapse,
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: colors.cardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Only the header collapses. Wrapping the whole card meant a tap on
+          // a micro-step bubbled up here and closed it, which is what made the
+          // list look unusable.
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onCollapse,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(13, 11, 13, 9),
               child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(width: 4, color: color),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 11, 13, 9),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      width: 4,
+                      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
                       child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Wrap(
@@ -71,87 +77,98 @@ class PlanTaskExpandedCard extends StatelessWidget {
                             runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Text(task.title, style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.text)),
+                              Text(
+                                task.title,
+                                style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1.25, color: colors.text),
+                              ),
                               _AdaBadge(steps: subtasks.length),
                             ],
                           ),
                           const SizedBox(height: 5),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              if (task.startTime != null) ...[
-                                Text(AppDate.time12h(task.startTime!), style: AppText.sans(size: 10, weight: FontWeight.w800, color: colors.text)),
-                                const SizedBox(width: 8),
-                              ],
-                              Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                              const SizedBox(width: 4),
-                              Text(studyTagLabel(tag, task.tagId), style: AppText.sans(size: 9.5, weight: FontWeight.w800, color: color)),
-                              if (task.durationMin != null) ...[
-                                const SizedBox(width: 8),
-                                Text('${task.durationMin}m', style: AppText.sans(size: 10.5, color: colors.textDim)),
-                              ],
+                              if (task.startTime != null)
+                                Text(
+                                  AppDate.time12h(task.startTime!),
+                                  style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.text),
+                                ),
+                              PlanInlineTag(label: studyTagLabel(tag, task.tagId), color: color),
+                              if (task.durationMin != null)
+                                Text('${task.durationMin}m', style: AppText.sans(size: 13, color: colors.textDim)),
                             ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 13, top: 11),
-                    child: Column(
+                    const SizedBox(width: 11),
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text.rich(
                           TextSpan(
                             text: '$doneCount',
-                            style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent, height: 1),
+                            style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.accent, height: 1),
                             children: [
-                              TextSpan(text: '/${subtasks.length}', style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.textDim, height: 1)),
+                              TextSpan(
+                                text: '/${subtasks.length}',
+                                style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.textDim, height: 1),
+                              ),
                             ],
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text('DONE', style: AppText.sans(size: 7.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.06, 7.5), color: colors.textDim)),
+                        Text(
+                          'DONE',
+                          style: AppText.sans(
+                            size: 11,
+                            weight: FontWeight.w800,
+                            letterSpacing: AppText.em(0.06, 11),
+                            color: colors.textDim,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(2),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 3,
-                  backgroundColor: colors.bg,
-                  valueColor: AlwaysStoppedAnimation(colors.accent),
+                  ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 14, 10),
-              child: Column(
-                children: [
-                  for (var i = 0; i < subtasks.length; i++)
-                    _MicrotaskRow(
-                      subtask: subtasks[i],
-                      isFirst: i == 0,
-                      isLast: i == subtasks.length - 1,
-                      onTap: onToggleStep == null
-                          ? null
-                          : () => onToggleStep!(subtasks[i]),
-                    ),
-                ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 3,
+                backgroundColor: colors.bg,
+                valueColor: AlwaysStoppedAnimation(colors.accent),
               ),
             ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 14, 10),
+            child: Column(
+              children: [
+                for (var i = 0; i < subtasks.length; i++)
+                  _MicrotaskRow(
+                    subtask: subtasks[i],
+                    isFirst: i == 0,
+                    isLast: i == subtasks.length - 1,
+                    onTap: onToggleStep == null ? null : () => onToggleStep!(subtasks[i]),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
+/// "✦ Ada · 3 steps" — 12/800 accent on accent-soft.
 class _AdaBadge extends StatelessWidget {
   const _AdaBadge({required this.steps});
   final int steps;
@@ -165,9 +182,9 @@ class _AdaBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('✦', style: TextStyle(fontSize: 9, color: colors.accent, height: 1)),
+          Text('✦', style: TextStyle(fontSize: 12, color: colors.accent, height: 1)),
           const SizedBox(width: 3),
-          Text('Ada · $steps steps', style: AppText.sans(size: 8.5, weight: FontWeight.w800, color: colors.accent)),
+          Text('Ada · $steps steps', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.accent)),
         ],
       ),
     );
@@ -190,55 +207,66 @@ class _MicrotaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final done = subtask.done;
-    return GestureDetector(
-      // Opaque and wrapping the whole row: the circle alone is 15px, far under
-      // a comfortable touch target, and the row is what reads as tappable.
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(
-            width: 16,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  top: isFirst ? null : 0,
-                  bottom: isLast ? null : 0,
-                  child: Container(width: 1.5, height: isFirst || isLast ? null : double.infinity, color: colors.border),
-                ),
-                Container(
-                  width: 15,
-                  height: 15,
+    return Semantics(
+      checked: done,
+      child: GestureDetector(
+        // Opaque and wrapping the whole row: the circle alone is 15px, far
+        // under a comfortable touch target, and the row is what reads as
+        // tappable.
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: 16,
+                child: Stack(
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: done ? colors.accent : colors.surface,
-                    border: Border.all(color: done ? colors.accent : const Color(0xFFCFCBC4), width: 1.5),
-                    boxShadow: [BoxShadow(color: colors.surface, spreadRadius: 3)],
-                  ),
-                  child: done ? const AppIcon(Icons.check, size: 8, color: Colors.white) : null,
+                  children: [
+                    // The rail: from the middle of the first row to the middle
+                    // of the last, continuous through the rows between.
+                    Positioned(
+                      top: 0,
+                      bottom: 0,
+                      child: Column(
+                        children: [
+                          Expanded(child: Container(width: 1.5, color: isFirst ? Colors.transparent : colors.border)),
+                          Expanded(child: Container(width: 1.5, color: isLast ? Colors.transparent : colors.border)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      width: 15,
+                      height: 15,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: done ? colors.accent : colors.surface,
+                        border: Border.all(color: done ? colors.accent : const Color(0xFFCFCBC4), width: 1.5),
+                        boxShadow: [BoxShadow(color: colors.surface, spreadRadius: 3)],
+                      ),
+                      child: done ? const AqIcon(AqIcons.check, size: 12, color: Colors.white, strokeWidth: 2.4) : null,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                subtask.title,
-                style: AppText.sans(
-                  size: 11.5,
-                  color: done ? colors.textDim : colors.text,
-                ).copyWith(decoration: done ? TextDecoration.lineThrough : null),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    subtask.title,
+                    style: AppText.sans(
+                      size: 15,
+                      color: done ? colors.textDim : colors.text,
+                    ).copyWith(decoration: done ? TextDecoration.lineThrough : null),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
       ),
     );
   }
