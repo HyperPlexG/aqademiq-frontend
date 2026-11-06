@@ -46,10 +46,13 @@ class _FreezeNowState extends ConsumerState<_FreezeNow> {
     final apps = ref.watch(freezeAppsProvider);
     final focus = ref.watch(focusControllerProvider);
     final focusRunning = focus.status == FocusStatus.running && focus.endsAt != null;
-    final length = _length ?? (focusRunning ? _Length.session : _Length.hour);
+    // "This session" picked, then the session ended with the sheet open: fall
+    // back rather than freeze with a stale or missing end.
+    final picked = _length == _Length.session && !focusRunning ? null : _length;
+    final length = picked ?? (focusRunning ? _Length.session : _Length.hour);
     final now = DateTime.now();
     final sessionMins = focusRunning ? (focus.endsAt!.difference(now).inSeconds / 60).ceil() : 0;
-    final DateTime? endsAt = switch (length) {
+    final endsAt = switch (length) {
       _Length.session => focus.endsAt,
       _Length.hour => now.add(const Duration(hours: 1)),
       _Length.twoHours => now.add(const Duration(hours: 2)),
@@ -224,7 +227,7 @@ class _NameFrostState extends State<_NameFrost> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _save(),
             cursorColor: colors.accent,
-            style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.text),
+            style: AppText.sans(size: 15, color: colors.text),
             decoration: const InputDecoration.collapsed(hintText: 'Frost name').copyWith(counterText: ''),
           ),
         ),

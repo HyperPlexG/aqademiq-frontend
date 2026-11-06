@@ -181,7 +181,8 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
     final freeze = ref.watch(freezeControllerProvider);
     final apps = ref.watch(freezeAppsProvider);
     final trimTarget = thaws.count >= 2 ? thaws.onlyTarget : null;
-    final canTrim = trimTarget != null && (apps.ios || freeze.recentApps.packages.contains(trimTarget));
+    final canTrim = trimTarget != null &&
+        (apps.ios ? !freeze.recentApps.isEmpty : freeze.recentApps.packages.contains(trimTarget));
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -221,13 +222,13 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Focused', style: AppText.sans(size: 17, weight: FontWeight.w600, color: _inkSub)),
+                      Text('Focused', style: AppText.sans(size: 17, color: _inkSub)),
                       if (thaws.count > 0) ...[
                         const SizedBox(width: 7),
                         Container(width: 3, height: 3, decoration: const BoxDecoration(color: _inkSub, shape: BoxShape.circle)),
                         const SizedBox(width: 7),
                         Text(thaws.count == 1 ? '1 thaw' : '${thaws.count} thaws',
-                            style: AppText.sans(size: 17, weight: FontWeight.w600, color: _inkSub)),
+                            style: AppText.sans(size: 17, color: _inkSub)),
                       ],
                     ],
                   ),
@@ -264,7 +265,7 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: _again,
-                    child: Text('Start another session', style: AppText.sans(size: 15, weight: FontWeight.w600, color: _inkSub)),
+                    child: Text('Start another session', style: AppText.sans(size: 15, color: _inkSub)),
                   ),
                 ],
               ),

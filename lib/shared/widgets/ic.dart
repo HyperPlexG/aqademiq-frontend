@@ -44,7 +44,9 @@ class Ic extends StatelessWidget {
     // App freeze's own words.
     'freeze': Icons.ac_unit,
     'ac_unit': Icons.ac_unit,
-    'thaw': Icons.water_drop_outlined,
+    // Icons.waves is what the pack draws as thaw (AQ_MAP), so a SettingsRow
+    // handed this IconData still gets the thaw glyph.
+    'thaw': Icons.waves,
     'never_open': Icons.block,
     'shield': Icons.shield_outlined,
     'hidden': Icons.visibility_off_outlined,

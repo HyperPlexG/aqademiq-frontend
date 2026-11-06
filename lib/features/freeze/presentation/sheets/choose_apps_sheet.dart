@@ -48,12 +48,12 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
   late AppSet _set = widget.current;
   bool _picking = false;
 
-  bool get _ios => ref.read(freezeAppsProvider).ios;
-
   Future<void> _pickIos() async {
     if (_picking) return;
     setState(() => _picking = true);
-    final id = _set.iosSelection ?? 'sel-${widget.owner}';
+    // Its own selection, never a shared one: re-picking for one frost must
+    // not silently rewrite every set that came from the same pick.
+    final id = 'sel-${widget.owner}';
     final result = await ref.read(appFreezeChannelProvider).pickApps(
           selectionId: id,
           title: _set.keepOnly ? 'Keep only these' : 'Choose what freezes',
@@ -106,7 +106,7 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
                 height: kFzHeadButton,
                 decoration: BoxDecoration(color: colors.accent, shape: BoxShape.circle),
                 alignment: Alignment.center,
-                child: const Ic('check', size: 24, color: Colors.white),
+                child: const Ic('check', color: Colors.white),
               ),
             ),
           ),
@@ -194,7 +194,7 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(s.name, style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textMed)),
+                        Text(s.name, style: AppText.sans(size: 13, color: colors.textMed)),
                       ],
                     ),
                   ),

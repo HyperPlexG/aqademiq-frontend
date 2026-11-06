@@ -57,6 +57,17 @@ class BottomNav extends StatelessWidget {
 
   bool _locked(int i) => guest && (i == NavTab.ada || i == NavTab.stats);
 
+  /// The key of the tab carrying semantic [index] (`NavTab`).
+  static ValueKey<String> tabKey(int index) => ValueKey('nav-tab-$index');
+
+  static const _labels = {
+    NavTab.subjects: 'Subjects',
+    NavTab.planner: 'Planner',
+    NavTab.ada: 'Ada',
+    NavTab.timer: 'Focus',
+    NavTab.stats: 'Insights',
+  };
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -72,7 +83,14 @@ class BottomNav extends StatelessWidget {
         children: [
           for (final item in _items)
             Expanded(
-              child: GestureDetector(
+              child: Semantics(
+                button: true,
+                selected: currentIndex == item.index,
+                label: _labels[item.index],
+                child: GestureDetector(
+                // Tabs are found by key, not by icon: the glyphs are drawn by
+                // the icon pack, so there is no IconData to look for.
+                key: tabKey(item.index),
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onTap(item.index),
                 child: SizedBox(
@@ -90,6 +108,7 @@ class BottomNav extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
               ),
             ),
         ],
@@ -114,7 +133,7 @@ class _StandardTab extends StatelessWidget {
         color: active ? (dark ? colors.accent : const Color(0xFFECECEC)) : Colors.transparent,
         borderRadius: BorderRadius.circular(27),
       ),
-      child: AqIcon.named(icon, size: 24, fill: active, color: active ? (dark ? Colors.white : colors.text) : colors.textMed),
+      child: AqIcon.named(icon, fill: active, color: active ? (dark ? Colors.white : colors.text) : colors.textMed),
     );
   }
 }

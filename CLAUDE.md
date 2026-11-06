@@ -217,11 +217,26 @@ SystemUI, not the system uid, so a `RECEIVER_NOT_EXPORTED` receiver never gets
 it; and a lock-screen surface that works on Samsung will not come from
 promotion alone.
 
-The small icon is Ada's flat silhouette (`ic_stat_ada_N`, `ic_stat_frost_N`),
-never the app logo — a status bar masks icons to one colour,
-so melt stage and frost have to survive as outline alone. All of her Android
-drawables, masks and the Quick Settings tile icon included, come out of
-`tool/generate_ada_android.py`; none are edited by hand.
+The small icon is never the app logo — a status bar masks icons to one
+colour, so it has to survive as outline alone. Since v11 it is the pack's
+`aq_brand_ada_mono` (`ic_stat_ada`) while a session runs and the pack's
+freeze glyph (`ic_stat_freeze`) while it is held; the older
+`ic_stat_ada_N` / `ic_stat_frost_N` melt silhouettes are still generated.
+All of her Android drawables, masks and the Quick Settings tile icon
+included, come out of `tool/generate_ada_android.py`, and the v11 cube, brand
+mark and mood poses (Android vector drawables, the GENERATED block at the end
+of `ios/AmbientWidgets/AdaShape.swift`, and `assets/images/notif_session_done.png`)
+from `tool/generate_ambient_glyphs.js` — none are edited by hand; both read
+the icon pack's geometry.
+
+v11 also gave the surfaces the icon pack's `aq_cube_session` as the timer
+(trimmed to time left, over `aq_cube_frozen`), and the shared state one more
+field, `weekMoods` (0–4 per day, **-1 for no check-in, never null** — iOS
+mirrors the payload to the watch with `updateApplicationContext`, which
+rejects null). A session that runs to its end leaves a "Session done" card on
+the lock screen for 5 minutes (one end call with a dismissal date, not a
+push); ending early still removes it at once, and iOS never keeps an ended
+activity in the Island.
 
 Widgets deep-link through `aqademiq://` and speak in intent (`focus`, `plan`,
 `stats`), not route strings, so renaming a route cannot break a widget already
@@ -277,3 +292,34 @@ Full map, platform setup and limits: `CALENDAR_REMINDER_IMPORT.md`; wire contrac
 - `IcsFetcher` uses its own bare Dio on purpose: `dioProvider` would send the
   Supabase token to a third-party calendar host.
 - `ImportItem` and friends are plain classes, not freezed — no build_runner step.
+
+## v2 — the v11 design (branch `v2`)
+
+The visual source of truth is now `prototypes/Aqademiq V1 Full Flow v11.html`
+(`prototypes/v11/app.jsx` is the same design as JSX). v11 moved to an iOS-like
+type scale (34 / 22 / 20 / 17 / 15 / 13) and floating sheets; the shared widgets
+carry it, so prefer them over new one-offs.
+
+**App freeze** (`lib/features/freeze/`, full map in `APP_FREEZE.md`) — freeze
+distracting apps now or with a frost; thawing takes a breath. Things to preserve:
+- Device-local by design ("We never see your picks"): no source, repository or
+  DTO, nothing sent to the backend. iOS gives tokens, not names.
+- `freeze_engine.dart` is the specification. `FreezeRules.kt` and
+  `FreezeRules.swift` port it so frosts run with the app closed; change a rule
+  in all three and in `test/freeze_engine_test.dart`.
+- The policy crosses the boundary as one JSON object (`applyPolicy`), re-applied
+  on every mutation and every resume.
+- iOS: the Family Controls entitlement is added by `ios/add_freeze_targets.rb`,
+  not checked in — a distribution export carrying it fails to sign until Apple
+  approves Family Controls for the four bundle ids.
+
+**Icons** — screens draw the Aqademiq icon pack (`lib/shared/icons/`,
+`docs/ICONS.md`). Use `AppIcon(Icons.x)` (drop-in for `Icon`) or
+`Ic('design_name')`. Both generated files come from Node scripts:
+`tool/generate_aq_icons.js` (the glyphs) and `tool/generate_aq_for_material.js`
+(Material → glyph, re-run after using a new Material icon).
+
+**Onboarding v2** — age → consent → referral → how you heard → name → study →
+mood → study hours → App freeze → pick apps → Prism → loading. Study hours become
+the Study hours and Wellness time frosts on the phone; `heard_from` and
+`study_hours` go to `POST /onboarding/complete` (contract §2.1).

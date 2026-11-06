@@ -12,6 +12,7 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/domain/freeze_engine.dart';
 import '../../freeze/presentation/sheets/frost_sheets.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
+import '../../freeze/providers/freeze_controller.dart';
 import '../providers/onboarding_controller.dart';
 import 'ob_source_screen.dart';
 import 'widgets/onboarding_scaffold.dart';
@@ -121,6 +122,8 @@ class _ObHoursScreenState extends ConsumerState<ObHoursScreen> {
               // No hours, no frosts to offer: App freeze can still be set up
               // later from Focus, so the freeze steps are skipped.
               ref.read(onboardingProvider.notifier).skipStudyHours();
+              // Back here after the apps step: the frosts it made go too.
+              ref.read(freezeControllerProvider.notifier).dropOnboardingFrosts();
               unawaited(context.push(Routes.obPrism));
             },
           ),

@@ -149,7 +149,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   Future<void> _ice() async {
     final current = ref.read(freezeControllerProvider).recentApps;
     final picked = await chooseApps(context, current: current, owner: 'usual', title: 'The usual');
-    if (picked != null) ref.read(freezeControllerProvider.notifier).setRecentApps(picked);
+    if (!mounted || picked == null) return;
+    ref.read(freezeControllerProvider.notifier).setRecentApps(picked);
   }
 
   Future<void> _setTime() async {
@@ -226,13 +227,18 @@ class _SetupView extends StatelessWidget {
           label: 'Session length $durationLabel',
           child: GestureDetector(
             onTap: onSetTime,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const SizedBox(width: 30),
-                Text(durationLabel, style: AppText.sans(size: 46, weight: FontWeight.w800, letterSpacing: 0.5, height: 1.2, color: colors.text)),
-                Padding(padding: const EdgeInsets.only(top: 4), child: Ic('expand_more', size: 26, color: colors.textDim)),
-              ],
+            // Scales down rather than overflowing at large text sizes and on
+            // narrow phones (focus_layout_test).
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 30),
+                  Text(durationLabel, style: AppText.sans(size: 46, weight: FontWeight.w800, letterSpacing: 0.5, height: 1.2, color: colors.text)),
+                  Padding(padding: const EdgeInsets.only(top: 4), child: Ic('expand_more', size: 26, color: colors.textDim)),
+                ],
+              ),
             ),
           ),
         ),
@@ -532,7 +538,7 @@ class _IceChip extends StatelessWidget {
                     Text('The usual', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
                     const SizedBox(width: 7),
                     Text(
-                      keepOnly ? 'all but $count' : '$count on ice',
+                      keepOnly ? (count == 0 ? 'everything' : 'all but $count') : '$count on ice',
                       style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
                     ),
                     AppIcon(Icons.expand_more, size: 20, color: colors.textDim),

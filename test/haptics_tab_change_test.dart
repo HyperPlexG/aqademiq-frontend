@@ -16,6 +16,7 @@ import 'package:aqademiq/data/auth/auth_repository.dart';
 import 'package:aqademiq/features/shell/presentation/app_shell.dart';
 import 'package:aqademiq/services/haptics/haptic_patterns.dart';
 import 'package:aqademiq/services/haptics/haptics_service.dart';
+import 'package:aqademiq/shared/widgets/bottom_nav.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,8 +85,9 @@ Future<_RecordingHaptics> _pumpShell(WidgetTester tester) async {
   return haptics;
 }
 
-Future<void> _tapTab(WidgetTester tester, IconData icon) async {
-  await tester.tap(find.byIcon(icon));
+/// Tabs are drawn with the Aqademiq icon pack, so they are found by key.
+Future<void> _tapTab(WidgetTester tester, int tab) async {
+  await tester.tap(find.byKey(BottomNav.tabKey(tab)));
   await tester.pumpAndSettle();
 }
 
@@ -103,18 +105,18 @@ void main() {
       reason: 'never greet someone with a buzz on launch (§4.5)',
     );
 
-    await _tapTab(tester, Icons.calendar_today_outlined);
+    await _tapTab(tester, NavTab.planner);
     expect(find.text('PLAN'), findsOneWidget);
     expect(haptics.events, [HapticEvent.segmentChange]);
 
-    await _tapTab(tester, Icons.calendar_today_outlined);
+    await _tapTab(tester, NavTab.planner);
     expect(
       haptics.events,
       [HapticEvent.segmentChange],
       reason: 're-tapping the active tab is explicitly zero (§7, Shell)',
     );
 
-    await _tapTab(tester, Icons.menu_book_outlined);
+    await _tapTab(tester, NavTab.subjects);
     expect(find.text('SUBJECTS'), findsOneWidget);
     expect(
       haptics.events,
@@ -128,13 +130,13 @@ void main() {
     // type from somewhere else in the tree.
     final haptics = await _pumpShell(tester);
 
-    for (final icon in [
-      Icons.calendar_today_outlined,
-      Icons.timer_outlined,
-      Icons.bar_chart_outlined,
-      Icons.menu_book_outlined,
+    for (final tab in [
+      NavTab.planner,
+      NavTab.timer,
+      NavTab.stats,
+      NavTab.subjects,
     ]) {
-      await _tapTab(tester, icon);
+      await _tapTab(tester, tab);
     }
 
     expect(haptics.events, hasLength(4));

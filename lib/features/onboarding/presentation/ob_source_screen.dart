@@ -22,8 +22,16 @@ class ObSourceScreen extends ConsumerStatefulWidget {
 }
 
 class _ObSourceScreenState extends ConsumerState<ObSourceScreen> {
-  late String? _pick = ref.read(onboardingProvider).heardFrom;
-  late final TextEditingController _other = TextEditingController(text: ref.read(onboardingProvider).heardFromOther);
+  String? _pick;
+  late final TextEditingController _other;
+
+  @override
+  void initState() {
+    super.initState();
+    final draft = ref.read(onboardingProvider);
+    _pick = draft.heardFrom;
+    _other = TextEditingController(text: draft.heardFromOther);
+  }
 
   @override
   void dispose() {
@@ -67,14 +75,14 @@ class _ObSourceScreenState extends ConsumerState<ObSourceScreen> {
               maxLength: 60,
               cursorColor: colors.accent,
               textCapitalization: TextCapitalization.sentences,
-              style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text),
+              style: AppText.sans(size: 17, color: colors.text),
               decoration: InputDecoration(
                 isDense: true,
                 filled: true,
                 fillColor: colors.bg,
                 counterText: '',
                 hintText: 'A podcast',
-                hintStyle: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.textDim),
+                hintStyle: AppText.sans(size: 17, color: colors.textDim),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -122,15 +130,18 @@ class ObChip extends StatelessWidget {
         child: Container(
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: active ? colors.accentSoft : colors.surface,
             borderRadius: BorderRadius.circular(100),
             border: Border.all(color: active ? colors.accent : colors.border, width: 1.5),
           ),
-          child: Text(
-            label,
-            style: AppText.sans(size: 15, weight: FontWeight.w600, color: active ? colors.accent : colors.textMed),
+          // Sized to the label: an aligned Container would take a whole Wrap line.
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              style: AppText.sans(size: 15, color: active ? colors.accent : colors.textMed),
+            ),
           ),
         ),
       ),
@@ -155,7 +166,7 @@ class ObLink extends StatelessWidget {
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: AppText.sans(size: 15, weight: FontWeight.w600, color: context.colors.textMed),
+          style: AppText.sans(size: 15, color: context.colors.textMed),
         ),
       ),
     );

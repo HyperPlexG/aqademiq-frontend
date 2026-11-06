@@ -109,23 +109,29 @@ class _NewFrost extends ConsumerWidget {
         const SizedBox(height: 2),
         Text('Start from one. Change anything.', style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
         const SizedBox(height: 14),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.55,
-          children: [
-            for (final t in templates)
-              FzTemplateCard(
-                icon: t.icon,
-                name: t.name,
-                meta: t.meta,
-                well: true,
-                onTap: () => Navigator.of(context).pop(t.make(c)),
-              ),
-          ],
+        // Two columns of natural height: a fixed aspect ratio clipped the
+        // cards once their two-line meta wrapped.
+        LayoutBuilder(
+          builder: (_, box) {
+            final w = (box.maxWidth - 8) / 2;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in templates)
+                  SizedBox(
+                    width: w,
+                    child: FzTemplateCard(
+                      icon: t.icon,
+                      name: t.name,
+                      meta: t.meta,
+                      well: true,
+                      onTap: () => Navigator.of(context).pop(t.make(c)),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -182,10 +188,16 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
     final colors = context.colors;
     final apps = ref.watch(freezeAppsProvider);
     final controller = ref.read(freezeControllerProvider.notifier);
-    ref.watch(freezeControllerProvider);
-    final locked = widget.isNew ? null : controller.lockedUntil(_f);
+    // Locked by the SAVED frost's Deep freeze, not this draft's: switching Deep
+    // on for a running frost must not lock its own Save.
+    final saved = ref.watch(freezeControllerProvider).frosts.where((f) => f.id == _f.id).firstOrNull;
+    final locked = widget.isNew || saved == null ? null : controller.lockedUntil(saved);
     final session = _f.kind == FrostKind.session;
-    final canSave = locked == null && (_f.apps.count > 0 || _f.apps.keepOnly) && (session || _f.days.isNotEmpty);
+    final canSave = locked == null &&
+        (_f.apps.count > 0 || _f.apps.keepOnly) &&
+        (session || _f.days.isNotEmpty) &&
+        // From == Until would be a 24-hour freeze nobody asked for.
+        (session || _f.allDay || _f.startMinute % 1440 != _f.endMinute % 1440);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -220,7 +232,7 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
                 Expanded(
                   child: Text(
                     'Changes to this frost unlock at ${FreezeText.clock(locked)}',
-                    style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.text),
+                    style: AppText.sans(size: 13, color: colors.text),
                   ),
                 ),
               ],
@@ -367,7 +379,6 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
 Future<int?> showFrostTimeDialog(BuildContext context, {required String title, required String sub, required int minute}) {
   return showDialog<int>(
     context: context,
-    useRootNavigator: true,
     barrierColor: const Color(0x5C140F1C),
     builder: (_) => _TimeDialog(title: title, sub: sub, minute: minute),
   );
@@ -424,14 +435,14 @@ class _TimeDialogState extends State<_TimeDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    Widget ampm(String l, bool pm) => GestureDetector(
+    Widget ampm(String l, {required bool pm}) => GestureDetector(
           onTap: () => setState(() => _pm = pm),
           child: Container(
             height: 32,
             constraints: const BoxConstraints(minWidth: 48),
             alignment: Alignment.center,
             decoration: BoxDecoration(color: _pm == pm ? colors.accent : colors.bg, borderRadius: BorderRadius.circular(16)),
-            child: Text(l, style: AppText.sans(size: 15, weight: FontWeight.w600, color: _pm == pm ? Colors.white : colors.textMed)),
+            child: Text(l, style: AppText.sans(size: 15, color: _pm == pm ? Colors.white : colors.textMed)),
           ),
         );
     return Dialog(
@@ -474,7 +485,7 @@ class _TimeDialogState extends State<_TimeDialog> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Column(children: [ampm('AM', false), const SizedBox(height: 6), ampm('PM', true)]),
+                  Column(children: [ampm('AM', pm: false), const SizedBox(height: 6), ampm('PM', pm: true)]),
                 ],
               ),
               const SizedBox(height: 16),
@@ -550,7 +561,7 @@ class _ActiveFrost extends ConsumerWidget {
         Text(
           '${session ? 'Session' : 'Schedule'}, $leftText',
           textAlign: TextAlign.center,
-          style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.accent),
+          style: AppText.sans(size: 15, color: colors.accent),
         ),
         const SizedBox(height: 2),
         Text(
@@ -566,7 +577,7 @@ class _ActiveFrost extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(frost.apps.keepOnly ? 'Everything else is frozen' : 'Frozen',
-                  style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text)),
+                  style: AppText.sans(size: 17, color: colors.text)),
               const SizedBox(height: 12),
               if (frozen.isEmpty)
                 FzCountTile(count: frost.apps.count)
@@ -636,7 +647,7 @@ class _ActiveFrost extends ConsumerWidget {
               children: [
                 Ic('pause', size: 19, color: colors.text),
                 const SizedBox(width: 6),
-                Text('End early', style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text)),
+                Text('End early', style: AppText.sans(size: 17, color: colors.text)),
               ],
             ),
           ),
@@ -778,9 +789,9 @@ class _DeepHold extends ConsumerWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        FzAppIcon(app: a, size: 30, glyph: glyphs[a.name] ?? apps.glyphOf(a.id)),
+                        FzAppIcon(app: a, glyph: glyphs[a.name] ?? apps.glyphOf(a.id)),
                         const SizedBox(width: 7),
-                        Text(a.name, style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.text)),
+                        Text(a.name, style: AppText.sans(size: 15, color: colors.text)),
                       ],
                     ),
                 ],

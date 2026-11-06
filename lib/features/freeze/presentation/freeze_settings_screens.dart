@@ -109,7 +109,7 @@ class AppFreezeSettingsScreen extends ConsumerWidget {
             SettingsRow(
               icon: Ic.materialFor('waves'),
               label: 'Thaw everything',
-              value: down ? (until == null ? 'Until you\'re back' : 'Until ${FreezeText.clock(until)}') : null,
+              value: down ? (until == null ? "Until you're back" : 'Until ${FreezeText.clock(until)}') : null,
               sub: down ? null : "For a day, a week, or until you're back",
               showChevron: true,
               last: true,
@@ -374,6 +374,8 @@ class ThawSettingsScreen extends ConsumerWidget {
             blendMode: BlendMode.dstIn,
             child: OverflowBox(
               alignment: Alignment.topCenter,
+              minWidth: 0,
+              maxWidth: 220,
               maxHeight: 300,
               child: Container(
                 width: 220,
@@ -396,7 +398,7 @@ class ThawSettingsScreen extends ConsumerWidget {
                     Text(
                       'Still want Instagram\nin ${thaw.resistance == ThawResistance.standard ? 7 : 17} seconds?',
                       textAlign: TextAlign.center,
-                      style: AppText.sans(size: 13, weight: FontWeight.w600, height: 1.4, color: kFrostSub),
+                      style: AppText.sans(size: 13, height: 1.4, color: kFrostSub),
                     ),
                   ],
                 ),

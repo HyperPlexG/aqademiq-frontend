@@ -113,7 +113,9 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                             GestureDetector(
                               onTap: () => unawaited(_thaw(ThawGrant.allApps, null)),
                               child: FzCountTile(
-                                count: a.apps.count,
+                                // Keep only freezes everything but its list;
+                                // the kept count is not the frozen count.
+                                count: a.apps.keepOnly ? 0 : a.apps.count,
                                 frozen: FreezeEngine.grantFor(data, ThawGrant.allApps, now) == null || a.deep,
                               ),
                             ),
@@ -136,11 +138,13 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                 ],
                 if (data.frosts.isEmpty) ...[
                   FzSec(title: 'Student frosts', chevron: true, onTap: () => unawaited(showNewFrostSheet(context, ref))),
-                  SizedBox(
-                    height: 112,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      clipBehavior: Clip.none,
+                  // Natural height, not a fixed one: a meta line that wraps
+                  // must grow the card, not clip it.
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    clipBehavior: Clip.none,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         for (final t in frostTemplates()) ...[
                           FzTemplateCard(
@@ -294,7 +298,7 @@ class _GroupsRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(groups[gi].$1, maxLines: 1, style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text)),
+                  Text(groups[gi].$1, maxLines: 1, style: AppText.sans(size: 17, color: colors.text)),
                   const SizedBox(height: 1),
                   Text(
                     _count(groups[gi].$2.count),

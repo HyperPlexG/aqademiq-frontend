@@ -387,9 +387,9 @@ abstract final class FreezeText {
 
   /// "Back tomorrow at 7:00 AM." / "Back at 7:00 AM." / "Back on Mon at 9:00 AM."
   static String backAt(DateTime at, DateTime t) {
-    final today = DateTime(t.year, t.month, t.day);
-    final day = DateTime(at.year, at.month, at.day);
-    final diff = day.difference(today).inDays;
+    // Calendar days between, counted in UTC so a DST change (a 23-hour day)
+    // cannot turn "tomorrow" into "today".
+    final diff = DateTime.utc(at.year, at.month, at.day).difference(DateTime.utc(t.year, t.month, t.day)).inDays;
     final when = clock(at);
     if (diff == 0) return 'Back at $when.';
     if (diff == 1) return 'Back tomorrow at $when.';

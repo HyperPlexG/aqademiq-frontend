@@ -7,6 +7,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ice_timer.dart';
 import '../../../shared/widgets/ic.dart';
+import '../domain/freeze_engine.dart';
 import '../domain/freeze_models.dart';
 import '../providers/freeze_controller.dart';
 import 'freeze_apps.dart';
@@ -57,8 +58,16 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
     _left = _total;
     _minutes = data.thaw.minutes;
     _increasing = data.thaw.resistance == ThawResistance.increasing && _total > 10;
-    // A Deep freeze holds: say so instead of breathing for nothing.
-    final deep = c.deepHold;
+    // A Deep freeze holds: say so instead of breathing for nothing. Per app
+    // (APP_FREEZE.md §2 rule 4): only a Deep freeze that covers THIS app
+    // closes its thaw. iOS can't tell which app a token is, so any Deep
+    // freeze counts there, as it does for Thaw all.
+    final target = widget.request.target;
+    final ios = ref.read(freezeAppsProvider).ios;
+    final holding = FreezeEngine.active(data, DateTime.now())
+        .where((a) => a.deep && a.end != null && (target == ThawGrant.allApps || ios || a.covers(target)))
+        .toList();
+    final deep = holding.isEmpty ? null : holding.reduce((a, b) => b.end!.isAfter(a.end!) ? b : a);
     if (deep != null && deep.end != null && !widget.request.standDown) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
@@ -122,7 +131,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IceTimer(progress: progress, size: 150),
+              IceTimer(progress: progress),
               const SizedBox(height: 22),
               Text('Take a breath.', style: AppText.sans(size: 28, weight: FontWeight.w800, color: kFrostInk)),
               const SizedBox(height: 6),
@@ -131,7 +140,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                 child: Text(
                   ready ? 'Ready when you are.' : question,
                   textAlign: TextAlign.center,
-                  style: AppText.sans(size: 15, weight: FontWeight.w600, height: 1.5, color: kFrostSub),
+                  style: AppText.sans(size: 15, height: 1.5, color: kFrostSub),
                 ),
               ),
               if (_increasing) ...[
@@ -145,8 +154,10 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                     children: [
                       const Ic('shield', size: 16, color: kFzIce),
                       const SizedBox(width: 6),
-                      Text('Each thaw today waits a little longer',
-                          style: AppText.sans(size: 13, weight: FontWeight.w700, color: kFrostInk)),
+                      Flexible(
+                        child: Text('Each thaw today waits a little longer',
+                            style: AppText.sans(size: 13, weight: FontWeight.w700, color: kFrostInk)),
+                      ),
                     ],
                   ),
                 ),
@@ -249,15 +260,18 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                   const SizedBox(width: 24),
                   SizedBox(
                     width: 112,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text('$_minutes', style: AppText.sans(size: 64, weight: FontWeight.w800, height: 1, color: kFrostInk)),
-                        const SizedBox(width: 6),
-                        Text('min', style: AppText.sans(size: 17, weight: FontWeight.w700, color: kFrostSub)),
-                      ],
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text('$_minutes', style: AppText.sans(size: 64, weight: FontWeight.w800, height: 1, color: kFrostInk)),
+                          const SizedBox(width: 6),
+                          Text('min', style: AppText.sans(size: 17, weight: FontWeight.w700, color: kFrostSub)),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 24),

@@ -163,7 +163,7 @@ class _AdultSites extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Adult sites', style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.text)),
+                      Text('Adult sites', style: AppText.sans(size: 15, color: colors.text)),
                       const SizedBox(height: 1),
                       Text('Every browser · private browsing off', style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textMed)),
                     ],

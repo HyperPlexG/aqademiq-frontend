@@ -109,6 +109,7 @@ abstract final class FzKnownApps {
 }
 
 /// An Android app's real icon, fetched once and kept for the session.
+// ignore: specify_nonobvious_property_types
 final fzAppIconProvider = FutureProvider.family<Uint8List?, String>(
   (ref, package) => ref.watch(appFreezeChannelProvider).appIcon(package),
 );
@@ -136,7 +137,7 @@ class FzAppIcon extends ConsumerWidget {
         ? HSLColor.fromAHSL(1, t.h, (t.s < 8 ? 8 : t.s) / 100, 0.80).toColor()
         : HSLColor.fromAHSL(1, t.h, (t.s * 0.8 < 6 ? 6 : t.s * 0.8) / 100, 0.36).toColor();
     final bytes = app.id.contains('.') ? ref.watch(fzAppIconProvider(app.id)).value : null;
-    final Widget face = bytes != null
+    final face = bytes != null
         ? Image.memory(bytes, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true)
         : Container(
             color: bg,
@@ -266,7 +267,6 @@ class FzAppTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: AppText.sans(
                 size: 15,
-                weight: FontWeight.w600,
                 color: state == FzTileState.frozen ? colors.accent : colors.text,
               ),
             ),
@@ -359,8 +359,8 @@ class FzCountTile extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         Text(
-          count == 1 ? '1 app' : '$count apps',
-          style: AppText.sans(size: 15, weight: FontWeight.w600, color: frozen ? colors.accent : colors.text),
+          count <= 0 ? 'Everything else' : (count == 1 ? '1 app' : '$count apps'),
+          style: AppText.sans(size: 15, color: frozen ? colors.accent : colors.text),
         ),
       ],
     );
@@ -429,8 +429,8 @@ class FzHeadPill extends StatelessWidget {
           height: kFzHeadButton,
           padding: const EdgeInsets.symmetric(horizontal: 18),
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(kFzHeadButton / 2)),
-          alignment: Alignment.center,
-          child: Text(label, style: AppText.sans(size: 17, weight: FontWeight.w700, color: fg)),
+          // Sized to its label even under an Align (the running-frost header).
+          child: Center(widthFactor: 1, child: Text(label, style: AppText.sans(size: 17, weight: FontWeight.w700, color: fg))),
         ),
       ),
     );
@@ -521,7 +521,7 @@ class FzSec extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(title, style: AppText.sans(size: 20, weight: FontWeight.w700, letterSpacing: -0.2, color: colors.text)),
-                if (chevron) Ic('chevron_right', size: 24, color: colors.textDim),
+                if (chevron) Ic('chevron_right', color: colors.textDim),
               ],
             ),
           ),
@@ -529,7 +529,7 @@ class FzSec extends StatelessWidget {
           if (action != null)
             GestureDetector(
               onTap: onAction,
-              child: Text(action!, style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.accent)),
+              child: Text(action!, style: AppText.sans(size: 17, color: colors.accent)),
             ),
         ],
       ),
@@ -826,9 +826,13 @@ class FzChoice extends StatelessWidget {
           height: 36,
           constraints: BoxConstraints(minWidth: frost ? 58 : 0),
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
           decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(18)),
-          child: Text(label, style: AppText.sans(size: 15, weight: frost ? FontWeight.w800 : FontWeight.w600, color: fg)),
+          // Center(widthFactor: 1), not `alignment:` — an aligned Container
+          // grows to the full width a Wrap offers, one chip per line.
+          child: Center(
+            widthFactor: 1,
+            child: Text(label, style: AppText.sans(size: 15, weight: frost ? FontWeight.w800 : FontWeight.w600, color: fg)),
+          ),
         ),
       ),
     );
@@ -905,7 +909,7 @@ class FzSeg extends StatelessWidget {
                     ),
                     child: Text(
                       options[i],
-                      style: AppText.sans(size: 15, weight: FontWeight.w600, color: i == index ? colors.text : colors.textMed),
+                      style: AppText.sans(size: 15, color: i == index ? colors.text : colors.textMed),
                     ),
                   ),
                 ),
@@ -1244,7 +1248,7 @@ class FzListRow extends StatelessWidget {
               ),
             )
           else
-            FzAppIcon(app: app!, size: 30, glyph: glyph),
+            FzAppIcon(app: app!, glyph: glyph),
           const SizedBox(width: 14),
           Expanded(
             child: Container(
@@ -1333,13 +1337,15 @@ class FzFrostCard extends StatelessWidget {
             Container(
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10),
-              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: live ? colors.accentSoft : Colors.transparent,
                 border: live ? null : Border.all(color: colors.border),
                 borderRadius: BorderRadius.circular(13),
               ),
-              child: Text(status, style: AppText.sans(size: 13, weight: FontWeight.w600, color: live ? colors.accent : colors.text)),
+              child: Center(
+                widthFactor: 1,
+                child: Text(status, style: AppText.sans(size: 13, color: live ? colors.accent : colors.text)),
+              ),
             ),
             const SizedBox(height: 8),
             Text(

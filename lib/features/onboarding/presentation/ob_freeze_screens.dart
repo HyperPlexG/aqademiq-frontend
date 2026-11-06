@@ -63,7 +63,10 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
     if (!mounted) return;
     setState(() => _access = access);
     // Android: back from Settings with both grants — straight on to the apps.
-    if (!ref.read(freezeAppsProvider).ios && access.authorized) _toApps();
+    // Only while this step is on top: a resume while Prism or the loading
+    // screen is showing must not push the apps step over them.
+    final onTop = ModalRoute.of(context)?.isCurrent ?? false;
+    if (!ref.read(freezeAppsProvider).ios && access.authorized && onTop) _toApps();
   }
 
   void _toApps() {
@@ -117,7 +120,7 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(frosts[i].name, style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text)),
+                              Text(frosts[i].name, style: AppText.sans(size: 17, color: colors.text)),
                               const SizedBox(height: 1),
                               Text(
                                 '${_daysShort(frosts[i].days)} · ${FreezeText.span(frosts[i])}',
@@ -147,7 +150,9 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
                 children: [
                   Ic('shield', size: 17, color: colors.success),
                   const SizedBox(width: 9),
-                  Text('We never read your screen.', style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.5, color: colors.textMed)),
+                  Expanded(
+                    child: Text('We never read your screen.', style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.5, color: colors.textMed)),
+                  ),
                 ],
               ),
             ),
@@ -432,7 +437,7 @@ class _Tile extends StatelessWidget {
               app.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.sans(size: 13, weight: FontWeight.w600, color: on ? colors.text : colors.textMed),
+              style: AppText.sans(size: 13, color: on ? colors.text : colors.textMed),
             ),
           ],
         ),

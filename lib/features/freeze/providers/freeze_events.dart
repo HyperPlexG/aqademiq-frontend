@@ -52,6 +52,28 @@ class FreezeEvents with WidgetsBindingObserver {
     unawaited(_drain());
   }
 
+  /// Opens the breath — but not over the splash. On a cold start from the
+  /// shield the splash routes 1.6 s in and its `go` would replace the whole
+  /// stack, losing the press; so wait until it has, then push.
+  void _open(ThawRequest request) {
+    final router = _ref.read(routerProvider);
+    final delegate = router.routerDelegate;
+    bool onSplash() {
+      final path = delegate.currentConfiguration.uri.path;
+      return path.isEmpty || path == Routes.splash;
+    }
+
+    void push() => unawaited(router.push<Object?>(Routes.freezeThaw, extra: request));
+    if (!onSplash()) return push();
+    late final VoidCallback wait;
+    wait = () {
+      if (onSplash()) return;
+      delegate.removeListener(wait);
+      push();
+    };
+    delegate.addListener(wait);
+  }
+
   Future<void> _drain() async {
     if (_draining) return;
     _draining = true;
@@ -62,18 +84,13 @@ class FreezeEvents with WidgetsBindingObserver {
       final request = events.where((e) => e.type == FreezeEvent.thawRequest).lastOrNull;
       if (request == null) return;
       final target = request.target ?? '*';
-      final now = DateTime.now();
-      // The Android shield also opens the app by link; the same press must
-      // not open the breath twice.
-      if (_lastTarget == target && _lastAt != null && now.difference(_lastAt!) < const Duration(seconds: 30)) return;
+      // One press, one breath: the same queued event read twice (a resume
+      // and an eventsWaiting racing) must not open it twice. A second press
+      // has its own timestamp and opens it again.
+      if (_lastTarget == target && _lastAt == request.at) return;
       _lastTarget = target;
-      _lastAt = now;
-      unawaited(
-        _ref.read(routerProvider).push<Object?>(
-              Routes.freezeThaw,
-              extra: ThawRequest(target: target, label: request.label),
-            ),
-      );
+      _lastAt = request.at;
+      _open(ThawRequest(target: target, label: request.label));
     } finally {
       _draining = false;
     }

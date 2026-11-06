@@ -107,6 +107,17 @@ class FreezeController extends Notifier<FreezeData> {
     if (now == null || !now.withFocus) return;
     if (focus.status == FocusStatus.completed || focus.status == FocusStatus.idle) {
       _commit(state.copyWith(clearNow: true));
+    } else if (focus.status == FocusStatus.paused && focus.frozenAt != null) {
+      // A held session's end is stale until it resumes (resume pushes it out
+      // by the hold). Hold the freeze open meanwhile, so a long pause cannot
+      // let it run out and leave the rest of the session unfrozen; resume
+      // re-anchors it to the session's new end in the branch below.
+      final hold = focus.frozenAt!.add(const Duration(hours: 12));
+      if (now.endsAt != hold) {
+        _commit(state.copyWith(
+          now: FreezeNow(startedAt: now.startedAt, endsAt: hold, deep: now.deep, apps: now.apps, withFocus: true),
+        ));
+      }
     } else if (focus.endsAt != null && focus.endsAt != now.endsAt && focus.status == FocusStatus.running) {
       _commit(state.copyWith(
         now: FreezeNow(
@@ -195,7 +206,16 @@ class FreezeController extends Notifier<FreezeData> {
     final frost = state.frosts.where((f) => f.id == id).firstOrNull;
     if (frost == null) return;
     final sel = frost.apps.iosSelection;
-    if (sel != null) unawaited(_channel.deleteSelection(sel));
+    // Onboarding's frosts and The usual share one Screen Time pick; only
+    // forget it once nothing else uses it.
+    bool used(String s) =>
+        state.frosts.any((f) => f.id != id && f.apps.iosSelection == s) ||
+        state.recentApps.iosSelection == s ||
+        state.now?.apps.iosSelection == s ||
+        state.groups.alwaysOpen.iosSelection == s ||
+        state.groups.neverOpen.iosSelection == s ||
+        state.groups.distracting.iosSelection == s;
+    if (sel != null && !used(sel)) unawaited(_channel.deleteSelection(sel));
     _commit(state.copyWith(frosts: state.frosts.where((f) => f.id != id).toList()));
   }
 
@@ -281,6 +301,12 @@ class FreezeController extends Notifier<FreezeData> {
 
   /// Onboarding's Study hours step hands over its days and hours; App freeze
   /// turns them into the frosts ob-freeze shows (`onboardingFrosts`).
+  /// "I don't have set hours" after all: drop the frosts onboarding made.
+  void dropOnboardingFrosts() {
+    if (!state.frosts.any((f) => f.id.startsWith('ob-'))) return;
+    _commit(state.copyWith(frosts: state.frosts.where((f) => !f.id.startsWith('ob-')).toList()));
+  }
+
   void adoptOnboardingFrosts(List<Frost> frosts, {required AppSet apps}) {
     final kept = state.frosts.where((f) => !f.id.startsWith('ob-')).toList();
     _commit(state.copyWith(
@@ -298,7 +324,7 @@ List<Frost> onboardingFrosts({required Set<int> studyDays, required int fromMinu
   final rest = {1, 2, 3, 4, 5, 6, 7}.difference(studyDays);
   return [
     if (rest.isNotEmpty)
-      Frost(id: 'ob-wellness', name: 'Wellness time', days: rest, startMinute: 9 * 60, endMinute: 12 * 60),
+      Frost(id: 'ob-wellness', name: 'Wellness time', days: rest, endMinute: 12 * 60),
     if (studyDays.isNotEmpty)
       Frost(id: 'ob-study', name: 'Study hours', days: studyDays, startMinute: fromMinute, endMinute: untilMinute),
   ];

@@ -128,7 +128,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
       ..invalidate(floorAppsProvider);
     if (!mounted) return;
     if (access.batteryRestricted) await showBatterySheet(context, ref);
-    if (mounted) context.pushReplacement(Routes.freeze);
+    if (mounted) unawaited(context.pushReplacement(Routes.freeze));
   }
 
   Future<void> _continueIos() async {
@@ -140,7 +140,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
     if (ok) {
       await _finish(await ref.read(appFreezeChannelProvider).status());
     } else {
-      context.pushReplacement(Routes.freezeDenied);
+      unawaited(context.pushReplacement(Routes.freezeDenied));
     }
   }
 
@@ -247,13 +247,13 @@ class FreezeGrants extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(grants[i].$1, style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.text)),
+                        Text(grants[i].$1, style: AppText.sans(size: 17, color: colors.text)),
                         const SizedBox(height: 1),
                         Text(grants[i].$2, style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.33, color: colors.textMed)),
                       ],
                     ),
                   ),
-                  if (!grants[i].$3) Text('Grant', style: AppText.sans(size: 17, weight: FontWeight.w600, color: colors.accent)),
+                  if (!grants[i].$3) Text('Grant', style: AppText.sans(size: 17, color: colors.accent)),
                 ],
               ),
             ),
@@ -354,7 +354,7 @@ class FreezeDeniedScreen extends ConsumerWidget {
             final channel = ref.read(appFreezeChannelProvider);
             if (ios && await channel.requestAuthorization()) {
               ref.read(freezeControllerProvider.notifier).markSetUp();
-              if (context.mounted) context.pushReplacement(Routes.freeze);
+              if (context.mounted) unawaited(context.pushReplacement(Routes.freeze));
               return;
             }
             // Neither OS asks twice: Settings is the way back.
