@@ -270,6 +270,7 @@ class _IntervalRow extends StatelessWidget {
           button: true,
           label: 'Less often',
           excludeSemantics: true,
+          onTap: onDecrement,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onDecrement,
@@ -303,6 +304,7 @@ class _IntervalRow extends StatelessWidget {
           button: true,
           label: 'More often',
           excludeSemantics: true,
+          onTap: onIncrement,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: onIncrement,

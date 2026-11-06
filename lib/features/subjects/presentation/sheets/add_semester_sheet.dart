@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -103,7 +105,7 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
       firstDate: DateTime(initial.year - 5),
       lastDate: DateTime(initial.year + 5),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() {
       if (isStart) {
         _startDate = picked;
@@ -147,13 +149,17 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
     }
 
     setState(() => _saving = true);
+    // Read before the await: the sheet can be dismissed while the save is in
+    // flight, and `ref` is unusable once it is.
+    final semesters = ref.read(semestersProvider.notifier);
+    final selection = ref.read(selectedSemesterProvider.notifier);
     try {
-      final saved = await ref.read(semestersProvider.notifier).save(
-            Semester(id: '', name: name),
-            start: _startDate,
-            end: _endDate,
-          );
-      ref.read(selectedSemesterProvider.notifier).select(saved.id);
+      final saved = await semesters.save(
+        Semester(id: '', name: name),
+        start: _startDate,
+        end: _endDate,
+      );
+      selection.select(saved.id);
       if (!mounted) return;
       navigator.pop(saved);
     } on Exception {
@@ -188,7 +194,7 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
               child: _DateColumn(
                 label: 'Starts',
                 value: _fmt(_startDate),
-                onTap: () => _pickDate(isStart: true),
+                onTap: () => unawaited(_pickDate(isStart: true)),
               ),
             ),
             const SizedBox(width: 10),
@@ -196,7 +202,7 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
               child: _DateColumn(
                 label: 'Ends',
                 value: _fmt(_endDate),
-                onTap: () => _pickDate(isStart: false),
+                onTap: () => unawaited(_pickDate(isStart: false)),
               ),
             ),
           ],

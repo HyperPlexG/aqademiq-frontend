@@ -34,7 +34,9 @@ class SubjectsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final guest = ref.watch(isGuestProvider);
-    final subjectsAsync = ref.watch(subjectsProvider);
+    // In the order picked on the Sort sheet — the list and the grid both
+    // render from this.
+    final subjectsAsync = ref.watch(sortedSubjectsProvider);
     final layout = ref.watch(subjectsLayoutProvider);
     final semesters = ref.watch(semestersProvider).value ?? const <Semester>[];
     final selectedId = ref.watch(selectedSemesterProvider);
@@ -47,8 +49,8 @@ class SubjectsScreen extends ConsumerWidget {
           _SubjHeader(
             guest: guest,
             onShare: () => unawaited(showShareSheet(context)),
-            onMenu: () => _menu(context, ref),
-            onAdd: () => _addSubject(context),
+            onMenu: () => unawaited(_menu(context, ref)),
+            onAdd: () => unawaited(_addSubject(context)),
           ),
           const SizedBox(height: 10),
           subjectsAsync.when(
@@ -56,7 +58,7 @@ class SubjectsScreen extends ConsumerWidget {
             error: (_, _) => Expanded(child: Center(child: Text('Could not load subjects', style: AppText.sans(size: 15, color: colors.textMed)))),
             data: (subjects) => Expanded(
               child: subjects.isEmpty
-                  ? _Empty(guest: guest, onAdd: () => _addSubject(context))
+                  ? _Empty(guest: guest, onAdd: () => unawaited(_addSubject(context)))
                   : _SubjectCollection(
                       subjects: subjects,
                       layout: layout,
@@ -171,6 +173,7 @@ class _HeadIcon extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

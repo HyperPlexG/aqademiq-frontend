@@ -146,6 +146,7 @@ class SubjDismiss extends StatelessWidget {
         button: true,
         label: MaterialLocalizations.of(context).closeButtonTooltip,
         excludeSemantics: true,
+        onTap: onTap ?? () => Navigator.of(context).maybePop(),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap ?? () => Navigator.of(context).maybePop(),

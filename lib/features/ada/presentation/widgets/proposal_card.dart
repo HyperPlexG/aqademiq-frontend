@@ -346,6 +346,7 @@ class _UndoButton extends StatelessWidget {
       button: true,
       label: 'Undo, remove this task from your plan',
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

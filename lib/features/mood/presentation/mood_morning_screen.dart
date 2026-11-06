@@ -235,6 +235,7 @@ class _MoodNode extends StatelessWidget {
       selected: selected,
       label: MoodScale.labels[idx],
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

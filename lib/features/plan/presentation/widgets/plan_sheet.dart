@@ -53,6 +53,7 @@ class PlanDismiss extends StatelessWidget {
       button: true,
       label: 'Close',
       excludeSemantics: true,
+      onTap: onTap ?? () => unawaited(Navigator.of(context).maybePop()),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap ?? () => unawaited(Navigator.of(context).maybePop()),
@@ -389,6 +390,8 @@ class PlanStepButton extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
+      // excludeSemantics drops the InkWell's own tap action too.
+      onTap: onTap,
       child: Material(
         color: colors.bg,
         shape: const CircleBorder(),

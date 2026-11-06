@@ -300,6 +300,7 @@ class _InputPill extends StatelessWidget {
               button: true,
               label: 'Add a task by voice',
               excludeSemantics: true,
+              onTap: onSpeak,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onSpeak,
@@ -374,6 +375,7 @@ class _MorePill extends StatelessWidget {
       button: true,
       label: 'More options',
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -404,6 +406,7 @@ class _SendButton extends StatelessWidget {
       button: true,
       label: 'Add task',
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         child: Container(

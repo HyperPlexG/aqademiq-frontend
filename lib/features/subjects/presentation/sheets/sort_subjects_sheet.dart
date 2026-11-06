@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_toggle.dart';
 import '../../../../shared/widgets/ic.dart';
+import '../../providers/subjects_ui_providers.dart';
 
 /// Presents the "Sort subjects" sheet (`subj-sort`) — the v11 floating sheet
 /// over the dimmed Subjects list. Lists five ordering options plus a "Reverse
-/// order" toggle. Tapping an option pops with its label; returns `null` on
-/// dismiss.
-Future<String?> showSortSubjectsSheet(BuildContext context) {
-  return showAppBottomSheet<String>(
+/// order" toggle, both reading and writing [subjectSortProvider]: tapping an
+/// option applies it and closes the sheet, the toggle applies at once.
+Future<void> showSortSubjectsSheet(BuildContext context) {
+  return showAppBottomSheet<void>(
     context,
     title: 'Sort subjects',
     subtitle: 'Choose how your subjects are ordered',
@@ -23,10 +25,13 @@ Future<String?> showSortSubjectsSheet(BuildContext context) {
 /// One sortable ordering option as shown in the sheet.
 class _SortOption {
   const _SortOption({
+    required this.sortKey,
     required this.icon,
     required this.label,
     required this.sub,
   });
+
+  final SubjectSortKey sortKey;
 
   /// A design icon name.
   final String icon;
@@ -36,45 +41,46 @@ class _SortOption {
 
 const _options = <_SortOption>[
   _SortOption(
+    sortKey: SubjectSortKey.manual,
     icon: 'drag_indicator',
     label: 'Manual order',
-    sub: 'Drag to arrange',
+    // The design says "Drag to arrange", but subjects have no stored position
+    // and nothing reorders them by hand yet: Manual is the order they arrive.
+    sub: 'In the order you added them',
   ),
   _SortOption(
+    sortKey: SubjectSortKey.alphabetical,
     icon: 'sort_by_alpha',
     label: 'Alphabetical',
     sub: 'A → Z',
   ),
   _SortOption(
+    sortKey: SubjectSortKey.grade,
     icon: 'grade',
     label: 'Grade',
     sub: 'Highest target first',
   ),
   _SortOption(
+    sortKey: SubjectSortKey.credits,
     icon: 'workspace_premium',
     label: 'Credits',
     sub: 'Most credits first',
   ),
   _SortOption(
+    sortKey: SubjectSortKey.mood,
     icon: 'sentiment_satisfied',
     label: 'Mood',
     sub: 'How you feel about each',
   ),
 ];
 
-class _SortSubjectsBody extends StatefulWidget {
+class _SortSubjectsBody extends ConsumerWidget {
   const _SortSubjectsBody();
 
   @override
-  State<_SortSubjectsBody> createState() => _SortSubjectsBodyState();
-}
-
-class _SortSubjectsBodyState extends State<_SortSubjectsBody> {
-  bool _reverse = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final sort = ref.watch(subjectSortProvider);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,8 +92,11 @@ class _SortSubjectsBodyState extends State<_SortSubjectsBody> {
             ),
             child: _OptRow(
               option: _options[i],
-              active: i == 0,
-              onTap: () => Navigator.of(context).pop(_options[i].label),
+              active: _options[i].sortKey == sort.key,
+              onTap: () {
+                ref.read(subjectSortProvider.notifier).setKey(_options[i].sortKey);
+                Navigator.of(context).pop();
+              },
             ),
           ),
         Padding(
@@ -105,8 +114,9 @@ class _SortSubjectsBodyState extends State<_SortSubjectsBody> {
                 ),
               ),
               AppToggle(
-                value: _reverse,
-                onChanged: (v) => setState(() => _reverse = v),
+                value: sort.reverse,
+                onChanged: (v) =>
+                    ref.read(subjectSortProvider.notifier).setReverse(reverse: v),
               ),
             ],
           ),

@@ -96,6 +96,8 @@ class ScreenshotBanner extends StatelessWidget {
                   button: true,
                   label: MaterialLocalizations.of(context).closeButtonTooltip,
                   excludeSemantics: true,
+                  // excludeSemantics drops the child's tap, so give it here too.
+                  onTap: onDismiss,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: onDismiss,

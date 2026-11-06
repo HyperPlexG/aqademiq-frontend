@@ -197,6 +197,7 @@ class _Dismiss extends StatelessWidget {
       button: true,
       label: 'Close',
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -250,6 +251,7 @@ class _ReviewRow extends StatelessWidget {
       checked: ticked,
       label: ticked ? 'Move ${task.title}' : 'Keep ${task.title} on this day',
       excludeSemantics: true,
+      onTap: onToggle,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onToggle,
@@ -510,6 +512,7 @@ class _Arrow extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

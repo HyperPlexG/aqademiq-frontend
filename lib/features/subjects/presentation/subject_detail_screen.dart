@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -66,8 +68,8 @@ class SubjectDetailScreen extends ConsumerWidget {
           subject: subject,
           color: color,
           onBack: () => context.pop(),
-          onEdit: () => _editSubject(context, ref, subject),
-          onDelete: () => _deleteSubject(context, ref, subject),
+          onEdit: () => unawaited(_editSubject(context, ref, subject)),
+          onDelete: () => unawaited(_deleteSubject(context, ref, subject)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -132,7 +134,9 @@ class SubjectDetailScreen extends ConsumerWidget {
                 children: [
                   Expanded(child: SubjLabel('Materials (${files?.length ?? subject.fileCount})', bottom: 0)),
                   GestureDetector(
-                    onTap: () => showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
+                    onTap: () => unawaited(
+                      showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
+                    ),
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -170,9 +174,10 @@ class SubjectDetailScreen extends ConsumerWidget {
                                 name: f.name,
                                 size: f.sizeLabel,
                                 color: fileColor,
-                                onTap: () => _openFile(context, ref, f.id),
-                                onDelete: () =>
-                                    _deleteFile(context, ref, subject.id, f.id, f.name),
+                                onTap: () => unawaited(_openFile(context, ref, f.id)),
+                                onDelete: () => unawaited(
+                                  _deleteFile(context, ref, subject.id, f.id, f.name),
+                                ),
                               );
                             },
                           ),
@@ -287,30 +292,21 @@ class SubjectDetailScreen extends ConsumerWidget {
     String name,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete file?'),
-        content: Text('"$name" will be permanently removed.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFE85476)),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    // Taken before the first await: the screen can be left while the alert or
+    // the delete is up, and `ref` is unusable once it has gone.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final confirmed = await confirmDestructive(
+      context,
+      title: 'Delete $name?',
+      message: 'This file will be deleted for good.',
+      confirmLabel: 'Delete file',
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
 
     try {
-      await ref.read(subjectsRepositoryProvider).deleteFile(fileId);
+      await container.read(subjectsRepositoryProvider).deleteFile(fileId);
       // Refresh the materials list and the subject's file-count badge.
-      ref
+      container
         ..invalidate(subjectFilesProvider(subjectId))
         ..invalidate(subjectsProvider);
       messenger.showSnackBar(SnackBar(content: Text('Deleted "$name".')));
@@ -510,6 +506,7 @@ class _FileRow extends StatelessWidget {
                 button: true,
                 label: 'Delete file',
                 excludeSemantics: true,
+                onTap: onDelete,
                 child: GestureDetector(
                   onTap: onDelete,
                   behavior: HitTestBehavior.opaque,

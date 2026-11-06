@@ -200,6 +200,7 @@ class _MoodColumn extends StatelessWidget {
       selected: selected,
       label: MoodScale.labels[idx],
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,

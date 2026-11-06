@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,6 +106,9 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
     if (_busy) return;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    // The sheet can be dismissed while the picker or the upload is up, and
+    // `ref` is unusable once it is — so go through the container, taken now.
+    final container = ProviderScope.containerOf(context, listen: false);
 
     const typeGroup = XTypeGroup(
       label: 'Documents',
@@ -124,12 +129,12 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
       ],
     );
     final file = await openFile(acceptedTypeGroups: const [typeGroup]);
-    if (file == null) return;
+    if (file == null || !mounted) return;
 
     setState(() => _busy = true);
     try {
       final bytes = await file.readAsBytes();
-      await ref.read(subjectsRepositoryProvider).uploadFile(
+      await container.read(subjectsRepositoryProvider).uploadFile(
             subjectId: widget.subjectId,
             name: file.name,
             kind: kind,
@@ -137,7 +142,7 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
             bytes: bytes,
           );
       // Refresh subjects so the materials list picks up the new file.
-      ref.invalidate(subjectsProvider);
+      container.invalidate(subjectsProvider);
       if (!mounted) return;
       navigator.pop();
       messenger.showSnackBar(
@@ -189,14 +194,14 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
                 source: _sources[i],
                 onTap: _busy
                     ? null
-                    : () => _pickAndUpload(_sources[i].kind),
+                    : () => unawaited(_pickAndUpload(_sources[i].kind)),
               ),
             ),
           const SizedBox(height: 14),
           _OutlinePill(
             icon: 'folder',
             label: 'Browse',
-            onTap: _busy ? null : () => _pickAndUpload('notes'),
+            onTap: _busy ? null : () => unawaited(_pickAndUpload('notes')),
           ),
         ],
       ),

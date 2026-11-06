@@ -504,6 +504,7 @@ class _HeaderCard extends StatelessWidget {
                 button: true,
                 label: 'Close',
                 excludeSemantics: true,
+                onTap: onClose,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: onClose,

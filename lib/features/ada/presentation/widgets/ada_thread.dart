@@ -348,6 +348,7 @@ class _AttachmentChip extends StatelessWidget {
           button: true,
           label: 'Remove $name',
           excludeSemantics: true,
+          onTap: onRemove,
           child: GestureDetector(
             onTap: onRemove,
             behavior: HitTestBehavior.opaque,

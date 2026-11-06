@@ -92,6 +92,7 @@ class _ChatHistoryPanel extends ConsumerWidget {
                         button: true,
                         label: 'New chat',
                         excludeSemantics: true,
+                        onTap: newConversation,
                         child: GestureDetector(
                           onTap: newConversation,
                           child: Container(

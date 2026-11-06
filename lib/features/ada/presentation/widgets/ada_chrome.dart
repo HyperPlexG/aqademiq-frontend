@@ -79,6 +79,7 @@ class AdaMenuButton extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -137,6 +138,7 @@ class _UploadPill extends StatelessWidget {
       enabled: onTap != null,
       label: uploading ? 'Uploading' : 'Upload a file',
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -401,6 +403,7 @@ class _RoundAction extends StatelessWidget {
       button: true,
       label: label,
       excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -461,6 +464,7 @@ class AdaProposalTray extends StatelessWidget {
                     button: true,
                     label: '$count changes waiting. Show them',
                     excludeSemantics: true,
+                    onTap: onShow,
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: onShow,

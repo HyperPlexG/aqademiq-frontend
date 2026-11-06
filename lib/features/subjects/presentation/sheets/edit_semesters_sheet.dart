@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -58,14 +60,14 @@ class _EditSemestersBody extends ConsumerWidget {
               isCurrent: semesters[i].id == selectedId,
               canDelete: semesters.length > 1,
               colors: colors,
-              onRename: () => _rename(context, ref, semesters[i]),
-              onDelete: () => _delete(context, ref, semesters[i]),
+              onRename: () => unawaited(_rename(context, ref, semesters[i])),
+              onDelete: () => unawaited(_delete(context, ref, semesters[i])),
             ),
           ),
         const SizedBox(height: 8),
         _AddSemesterButton(
           colors: colors,
-          onTap: () => showAddSemesterSheet(context),
+          onTap: () => unawaited(showAddSemesterSheet(context)),
         ),
       ],
     );
@@ -116,14 +118,20 @@ class _EditSemestersBody extends ConsumerWidget {
       confirmLabel: 'Delete semester',
       cancelLabel: 'Keep it',
     );
-    if (!ok) return;
-    await ref.read(semestersProvider.notifier).remove(id);
-    final selected = ref.read(selectedSemesterProvider);
-    if (selected == id) {
-      final remaining = ref.read(semestersProvider).value ?? const <Semester>[];
-      if (remaining.isNotEmpty) {
-        ref.read(selectedSemesterProvider.notifier).select(remaining.first.id);
-      }
+    if (!ok || !context.mounted) return;
+    // Everything this needs from `ref` is read before the delete, so dismissing
+    // the sheet while it is in flight can't leave the selection on a deleted
+    // term. remove() only invalidates the provider, which keeps serving the old
+    // list until the reload lands, so the deleted term is left out by hand.
+    final semesters = ref.read(semestersProvider.notifier);
+    final selection = ref.read(selectedSemesterProvider.notifier);
+    final wasSelected = ref.read(selectedSemesterProvider) == id;
+    final remaining = (ref.read(semestersProvider).value ?? const <Semester>[])
+        .where((s) => s.id != id)
+        .toList(growable: false);
+    await semesters.remove(id);
+    if (wasSelected && remaining.isNotEmpty) {
+      selection.select(remaining.first.id);
     }
   }
 }
@@ -238,6 +246,7 @@ class _SemesterRow extends StatelessWidget {
             button: true,
             label: 'Rename ${semester.name}',
             excludeSemantics: true,
+            onTap: onRename,
             child: GestureDetector(
               onTap: onRename,
               behavior: HitTestBehavior.opaque,
@@ -253,6 +262,7 @@ class _SemesterRow extends StatelessWidget {
             enabled: canDelete,
             label: 'Delete ${semester.name}',
             excludeSemantics: true,
+            onTap: canDelete ? onDelete : null,
             child: GestureDetector(
               onTap: canDelete ? onDelete : null,
               behavior: HitTestBehavior.opaque,
