@@ -8,7 +8,8 @@ import UIKit
 /// iOS asks this extension for the copy each time it shows the shield. The
 /// copy steps by how often the shield has covered *that app* this thaw day
 /// (from 4 AM), capped at three — counted here, since this is the only code
-/// that knows the shield appeared:
+/// that knows the shield appeared (asks for the same app within 5 seconds
+/// are one appearance):
 ///
 ///   1  Ada's sitting on this one.   Yours again at 3:42
 ///   2  Still on ice.                3:42
@@ -63,7 +64,12 @@ final class FreezeShieldConfiguration: ShieldConfigurationDataSource {
         }
 
         // Counted per app where there is one, so two apps in one category step
-        // separately.
+        // separately — and once per appearance: iOS may ask for the same
+        // shield again within moments (`countShield`).
+        //
+        // Every count is a write to the App Group from this extension. That
+        // it sticks has to be seen on a device (APP_FREEZE.md §7); if it does
+        // not, the copy simply stays at stage 1.
         var countId = "unknown"
         if let app, let id = FreezeStore.tokenId(app, kind: FreezeStore.appKind) {
             countId = id
@@ -72,7 +78,7 @@ final class FreezeShieldConfiguration: ShieldConfigurationDataSource {
         } else if let category, let id = FreezeStore.tokenId(category, kind: FreezeStore.categoryKind) {
             countId = id
         }
-        let stage = min(max(FreezeStore.bumpShieldCount(countId, at: now), 1), 3)
+        let stage = min(max(FreezeStore.countShield(countId, at: now), 1), 3)
 
         let title: String
         var line: String?

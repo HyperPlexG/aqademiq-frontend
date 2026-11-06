@@ -102,6 +102,20 @@ class ShieldActivity : Activity() {
         render(intent)
     }
 
+    /**
+     * A shield can outlive its freeze: left up with the screen off while the
+     * window ended, or brought back from wherever it was while a thaw ran.
+     * Coming back to a shield over an app that is no longer frozen, step
+     * aside — the app underneath is the student's again. The monitor puts it
+     * back within a second if that was wrong.
+     */
+    override fun onResume() {
+        super.onResume()
+        val pkg = target ?: return
+        val policy = FreezeStore.policy(this)
+        if (policy == null || !FreezeRules.isFrozen(policy, pkg, System.currentTimeMillis())) finish()
+    }
+
     private fun render(intent: Intent) {
         target = intent.getStringExtra(EXTRA_PACKAGE)
         label = intent.getStringExtra(EXTRA_LABEL)

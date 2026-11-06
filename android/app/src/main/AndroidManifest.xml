@@ -40,6 +40,10 @@
         tools:ignore="ProtectedPermissions"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Weekly report's "Screenshotting?" banner (MainActivity.kt): Android 14+
+         tells a visible activity that the screen was captured, and nothing
+         about what was in it. A normal, install-time permission — no prompt. -->
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE"/>
     <application
         android:label="Aqademiq"
         android:name="${applicationName}"
@@ -269,6 +273,11 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="geo"/>
+        </intent>
+        <!-- The clock apps (AlarmClock.ACTION_SHOW_ALARMS) are floor too: an
+             alarm rings in its own app, and a frost must never cover it. -->
+        <intent>
+            <action android:name="android.intent.action.SHOW_ALARMS"/>
         </intent>
         <package android:name="com.google.android.apps.walletnfcrel"/>
         <package android:name="com.samsung.android.spay"/>

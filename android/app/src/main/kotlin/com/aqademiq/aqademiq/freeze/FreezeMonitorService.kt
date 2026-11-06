@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -32,11 +33,12 @@ import com.aqademiq.aqademiq.R
  * that runs while the policy can freeze anything.
  *
  * While the screen is on it reads the foreground app from UsageStatsManager
- * about once a second and puts [ShieldActivity] over a frozen one; it checks
- * in, once in 30 minutes, when a Distracting app is opened. With the screen
- * off it does nothing at all — no poll, no alarm, no wake lock — because no
- * app can be opened then, and the first thing the screen coming on does is
- * look again.
+ * about once a second (every five while nothing at all can freeze) and puts
+ * [ShieldActivity] over a frozen one — never during a call or while the phone
+ * rings; it checks in, once in 30 minutes, when a Distracting app is opened.
+ * With the screen off it does nothing at all — no poll, no alarm, no wake
+ * lock — because no app can be opened then, and the first thing the screen
+ * coming on does is look again.
  *
  * Its own service, not [com.aqademiq.aqademiq.AmbientSessionService]: that
  * one is the focus session's `mediaPlayback` card and lives only as long as a
@@ -64,7 +66,17 @@ class FreezeMonitorService : Service() {
         private const val NOTIFICATION_ID = 0x46
         private const val CHECKIN_ID = 0x47
 
+        /** "App freeze is paused": the monitor could not come back by itself. */
+        private const val PAUSED_ID = 0x48
+
         private const val POLL_MS = 1_000L
+
+        /**
+         * The poll while nothing can freeze an app at all: no freeze running,
+         * no Never open, no Distracting. It still reads the foreground app,
+         * so whatever is open when a window starts is known on the next read.
+         */
+        private const val IDLE_POLL_MS = 5_000L
         private const val NOTICE_MS = 30_000L
         private const val CHECKIN_GAP_MS = 30 * 60_000L
         private const val CHECKIN_TIMEOUT_MS = 10 * 60_000L
@@ -82,6 +94,8 @@ class FreezeMonitorService : Service() {
 
         private const val IDLE_TITLE = "App freeze is on"
         private const val IDLE_TEXT = "Frosts run on their schedule."
+        private const val PAUSED_TITLE = "App freeze is paused"
+        private const val PAUSED_TEXT = "Tap to turn it back on."
 
         @Volatile
         var running = false
@@ -153,21 +167,32 @@ class FreezeMonitorService : Service() {
     // Worker-thread state.
     private var interactive = true
     private var foreground: String? = null
-    private var foregroundSince = 0L
     private var lastQueryEnd = 0L
     private var previous: String? = null
     private var shieldedPkg: String? = null
-    private var shieldedSince = -1L
+
+    /**
+     * The student has been somewhere else since the shield last covered
+     * [shieldedPkg] — another app or home came to the front, or the app was
+     * open and not frozen. Only then is it a new cover: a splash screen
+     * handing over to the app's main screen resumes the same package twice,
+     * and that is one open, not two.
+     */
+    private var leftSinceShield = true
+
+    /** When the cover of [shieldedPkg] was counted. */
+    private var shieldedAt = 0L
     private var shieldedStage = 1
     private var lastShieldAt = 0L
     private var lastNoticeAt = 0L
+    private var pollMs = POLL_MS
     private val labels = HashMap<String, String>()
 
     private val tick = object : Runnable {
         override fun run() {
             if (stopping || !interactive) return
             poll()
-            if (!stopping && interactive) worker?.postDelayed(this, POLL_MS)
+            if (!stopping && interactive) worker?.postDelayed(this, pollMs)
         }
     }
 
@@ -308,33 +333,77 @@ class FreezeMonitorService : Service() {
             }
             refreshNotice(policy, now)
         }
+        // Worked out once per poll and handed on: the frozen check and the
+        // shield's copy both need it.
+        val running = FreezeRules.active(policy, now)
+        pollMs = if (
+            running.isEmpty() &&
+            policy.groups.neverOpen.packages.isEmpty() &&
+            policy.groups.distracting.packages.isEmpty()
+        ) {
+            IDLE_POLL_MS
+        } else {
+            POLL_MS
+        }
         readForeground(now)
         val pkg = foreground ?: return
+        // The shield is our own package: it coming to the front is not the
+        // student leaving.
+        if (pkg != shieldedPkg && pkg != packageName) leftSinceShield = true
         if (FreezeRules.Floor.contains(this, pkg)) {
             previous = pkg
             return
         }
-        if (FreezeRules.isFrozen(policy, pkg, now)) {
+        if (inCall()) {
+            // Ringing or on a call, a VoIP one included: the call is the app
+            // in front, and no frost stands between the student and it. Not
+            // a leave by itself — a VoIP call inside a frozen app ends with
+            // the same shield back over it, uncounted.
+            previous = pkg
+            return
+        }
+        if (FreezeRules.isFrozen(policy, pkg, now, running)) {
             // A new open (or the freeze starting under an open app) is one
             // more shield today. The same open still on top after a few
             // seconds means the shield did not get there: show it again,
             // without counting it twice.
-            val fresh = pkg != shieldedPkg || foregroundSince != shieldedSince
+            val fresh = pkg != shieldedPkg || leftSinceShield
             if (fresh) {
-                val count = FreezeStore.bumpShieldCount(this, pkg, now)
-                shieldedPkg = pkg
-                shieldedSince = foregroundSince
-                shieldedStage = count.coerceIn(1, 3)
-                showShield(policy, pkg, shieldedStage, now)
-                lastShieldAt = now
+                // Not counted when it cannot be shown at all.
+                if (FreezeAccess.overlay(this)) {
+                    val count = FreezeStore.bumpShieldCount(this, pkg, now)
+                    shieldedPkg = pkg
+                    shieldedAt = now
+                    leftSinceShield = false
+                    shieldedStage = count.coerceIn(1, 3)
+                    showShield(policy, pkg, shieldedStage, now, running)
+                    lastShieldAt = now
+                }
             } else if (now - lastShieldAt >= RESHIELD_MS || now < lastShieldAt) {
-                showShield(policy, pkg, shieldedStage, now)
+                showShield(policy, pkg, shieldedStage, now, running)
                 lastShieldAt = now
             }
-        } else if (pkg != previous && policy.groups.distracting.contains(pkg)) {
-            checkIn(pkg, now)
+        } else {
+            // Open and not frozen (thawed, or the window ended): the next
+            // shield over it is a new one.
+            if (pkg == shieldedPkg) leftSinceShield = true
+            if (pkg != previous && policy.groups.distracting.contains(pkg)) checkIn(pkg, now)
         }
         previous = pkg
+    }
+
+    /**
+     * Ringing, or on a call — the phone's own or a VoIP one, which sets the
+     * same mode. Not covered by the floor: a VoIP call happens inside the
+     * app (WhatsApp, Meet) that may well be frozen.
+     */
+    private fun inCall(): Boolean {
+        val audio = getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
+        return try {
+            audio.mode != AudioManager.MODE_NORMAL
+        } catch (e: RuntimeException) {
+            false
+        }
     }
 
     /**
@@ -381,18 +450,19 @@ class FreezeMonitorService : Service() {
         val resumed = resumedType()
         val event = UsageEvents.Event()
         var pkg: String? = null
-        var at = 0L
         while (events.hasNextEvent()) {
             if (!events.getNextEvent(event)) break
-            if (event.eventType == resumed) {
-                pkg = event.packageName
-                at = event.timeStamp
+            if (event.eventType != resumed) continue
+            val resumedPkg = event.packageName ?: continue
+            pkg = resumedPkg
+            // Home and straight back between two reads is still a leave.
+            // Only events after the cover was counted: the overlap re-reads
+            // the moments before it.
+            if (resumedPkg != shieldedPkg && resumedPkg != packageName && event.timeStamp > shieldedAt) {
+                leftSinceShield = true
             }
         }
-        if (pkg != null) {
-            foreground = pkg
-            foregroundSince = at
-        }
+        if (pkg != null) foreground = pkg
     }
 
     private fun usageStats(): UsageStatsManager? =
@@ -413,10 +483,18 @@ class FreezeMonitorService : Service() {
 
     // ---- the shield ----------------------------------------------------------
 
-    /** Copy per APP_FREEZE.md §4, worked out here so the shield only draws. */
-    private fun showShield(policy: FreezePolicy, pkg: String, stage: Int, now: Long) {
+    /**
+     * Copy per APP_FREEZE.md §4, worked out here so the shield only draws.
+     * [running] is this poll's [FreezeRules.active].
+     */
+    private fun showShield(policy: FreezePolicy, pkg: String, stage: Int, now: Long, running: List<FreezeRules.Active>) {
+        // Display over other apps is what lets the shield start from the
+        // background. Taken away, every start fails; asking again every
+        // three seconds would only fail every three seconds. The next poll
+        // after it is granted again shows the shield.
+        if (!FreezeAccess.overlay(this)) return
         val never = policy.groups.neverOpen.contains(pkg)
-        val over = FreezeRules.covering(policy, pkg, now)
+        val over = FreezeRules.covering(policy, pkg, now, running)
         val deep = !never && over.any { it.deep }
         val until = FreezeRules.nextUnfreeze(over)
         val line = when {
@@ -473,7 +551,8 @@ class FreezeMonitorService : Service() {
         FreezeStore.markCheckIn(this, pkg, now)
         if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return
         val notification = NotificationCompat.Builder(this, CHECKIN_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_stat_ada_0)
+            // Ada speaking: aq_brand_ada_mono, her one-colour mark (v11).
+            .setSmallIcon(R.drawable.ic_stat_ada)
             .setContentTitle("Ada")
             .setContentText("Quick check-in — is this what you meant to open?")
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
@@ -542,20 +621,52 @@ class FreezeMonitorService : Service() {
             }
             shownTitle = title
             shownText = text
+            // Back on: a "paused" notice from an earlier failed restart is
+            // no longer true.
+            cancel(PAUSED_ID)
             true
         } catch (e: RuntimeException) {
             // ForegroundServiceStartNotAllowedException (a sticky restart in
-            // the background on Android 12+) and friends.
+            // the background on Android 12+) and friends. The monitor stops
+            // here and nothing restarts it until Aqademiq is opened, so say
+            // so — a frost that silently stopped is worse than one that
+            // asks to be turned back on.
             Log.w(TAG, "could not go foreground", e)
+            if (wanted()) postPaused()
             false
         }
     }
 
+    /**
+     * "App freeze is paused" / "Tap to turn it back on." — an ordinary
+     * notification, not the service's: there is no service to hold it. The
+     * tap opens App freeze, whose applyPolicy starts the monitor again from
+     * the foreground, where Android allows it.
+     */
+    private fun postPaused() {
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            // Nothing is frozen while paused, so not the freeze glyph: Ada's
+            // mark, as on every other Aqademiq notification (v11).
+            .setSmallIcon(R.drawable.ic_stat_ada)
+            .setContentTitle(PAUSED_TITLE)
+            .setContentText(PAUSED_TEXT)
+            .setContentIntent(openFreeze())
+            .setAutoCancel(true)
+            .setShowWhen(false)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColor(ContextCompat.getColor(this, R.color.notification_color))
+            .build()
+        post(PAUSED_ID, notification)
+    }
+
     private fun buildNotice(title: String, text: String): Notification =
         NotificationCompat.Builder(this, CHANNEL_ID)
-            // Ada's frost silhouette: a status bar masks icons to one colour,
-            // so frozen has to survive as outline alone (CLAUDE.md).
-            .setSmallIcon(R.drawable.ic_stat_frost_0)
+            // Something is frozen: the pack's freeze glyph (v11). A status
+            // bar masks icons to one colour, so frozen has to survive as
+            // outline alone (CLAUDE.md). Generated, like ic_stat_ada, by
+            // tool/generate_ada_android.py.
+            .setSmallIcon(R.drawable.ic_stat_freeze)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(openFreeze())
@@ -568,7 +679,7 @@ class FreezeMonitorService : Service() {
             .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .build()
 
-    /** Both notifications open App freeze — as intent, not a route (`aqademiq://freeze`). */
+    /** Every notification here opens App freeze — as intent, not a route (`aqademiq://freeze`). */
     private fun openFreeze(): PendingIntent =
         PendingIntent.getActivity(
             this,
@@ -585,6 +696,11 @@ class FreezeMonitorService : Service() {
         } catch (e: SecurityException) {
             // Notifications not allowed (Android 13+): the monitor still works.
         }
+    }
+
+    private fun cancel(id: Int) {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        manager.cancel(id)
     }
 
     private fun ensureChannels() {

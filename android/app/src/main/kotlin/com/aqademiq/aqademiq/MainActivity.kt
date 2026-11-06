@@ -1,7 +1,9 @@
 package com.aqademiq.aqademiq
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import com.aqademiq.aqademiq.freeze.AppFreezePlugin
 import io.flutter.embedding.android.FlutterActivity
@@ -9,6 +11,17 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+
+    /**
+     * Screenshots, for the weekly report's "Screenshotting?" banner
+     * (lib/features/report/report_screenshots.dart). Android 14 tells a
+     * visible activity that the screen was captured, and nothing about what
+     * was in it; older Android has no such callback, so there it never fires.
+     */
+    private var screenshotChannel: MethodChannel? = null
+
+    /** An `Activity.ScreenCaptureCallback` on API 34+, held to unregister. */
+    private var screenCapture: Any? = null
 
     /**
      * Attach the ambient channel as soon as there is an engine to talk to.
@@ -46,6 +59,9 @@ class MainActivity : FlutterActivity() {
         // the shield can tell a live engine that a Thaw is waiting.
         flutterEngine.plugins.add(AppFreezePlugin())
 
+        // One call, `screenshotTaken`, sent from the capture callback below.
+        screenshotChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "aqademiq/screenshot")
+
         // A permission the student refused can only be re-enabled from the app's
         // page in system Settings. iOS reaches it through a URL; Android has none,
         // so Dart asks for it here (lib/services/app_settings.dart).
@@ -65,6 +81,35 @@ class MainActivity : FlutterActivity() {
             }
     }
 
+    /**
+     * The capture callback is only delivered while the activity is visible,
+     * so it is held from start to stop. Needs the normal (install-time)
+     * DETECT_SCREEN_CAPTURE permission; without it registering throws, which
+     * is caught rather than taking the activity down over a banner.
+     */
+    override fun onStart() {
+        super.onStart()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && screenCapture == null) {
+            val callback = Activity.ScreenCaptureCallback {
+                screenshotChannel?.invokeMethod("screenshotTaken", null)
+            }
+            try {
+                registerScreenCaptureCallback(mainExecutor, callback)
+                screenCapture = callback
+            } catch (e: SecurityException) {
+                screenCapture = null
+            }
+        }
+    }
+
+    override fun onStop() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            (screenCapture as? Activity.ScreenCaptureCallback)?.let { unregisterScreenCaptureCallback(it) }
+            screenCapture = null
+        }
+        super.onStop()
+    }
+
     /** A widget tapped while the app was already open (singleTop). */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -75,6 +120,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         AmbientBridge.detach()
         HapticsBridge.detach()
+        screenshotChannel = null
         super.onDestroy()
     }
 }

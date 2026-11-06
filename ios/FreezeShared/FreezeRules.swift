@@ -14,11 +14,12 @@ import ManagedSettings
 //    `isFrozen`, the breath and the 4 AM thaw day — over plain values, exactly
 //    as Dart writes them (no availability checks; Runner's floor is iOS 13);
 //  * the translation into what iOS can actually be told, which is not "is this
-//    app frozen" but a ManagedSettings shield: a set of app tokens, a category
-//    policy and web domains (`shieldPlan`), plus what the shield should say
-//    about the app it is covering (`describe`). Tokens are opaque, so that
-//    layer cannot ask which category an app is in — the places where that
-//    makes iOS coarser than the rule are called out where they happen.
+//    app frozen" but ManagedSettings shields — app tokens, a category policy
+//    and web domains, in three named stores (`shieldPlan`) — plus what the
+//    shield should say about the app it is covering (`describe`). Tokens are
+//    opaque, so that layer cannot ask which category an app is in — the
+//    places where that makes iOS coarser than the rule are called out where
+//    they happen.
 
 /// One window of a frost: when it started, and when it ends (nil = until stopped).
 struct FreezeWindow: Equatable {
@@ -196,9 +197,11 @@ enum FreezeRules {
         return t < four ? FreezeTime.at(FreezeTime.addDays(today, -1), dayStartHour * 60) : four
     }
 
-    /// `thaws_today` if it was counted in the current thaw day, otherwise 0.
+    /// `thaws_today` if it was counted in the current thaw day, otherwise 0 —
+    /// the same day, not merely "since this day began": a count stamped in
+    /// the future (a clock set back) says nothing about today either.
     static func thawsToday(_ p: FreezePolicy, at t: Date) -> Int {
-        guard let counted = p.thawsCountedAtDate, counted >= thawDayStart(t) else { return 0 }
+        guard let counted = p.thawsCountedAtDate, thawDayStart(counted) == thawDayStart(t) else { return 0 }
         return max(p.thawsToday, 0)
     }
 
@@ -230,22 +233,51 @@ struct FreezeThawed {
     var webDomains = Set<WebDomainToken>()
 }
 
-/// The one shield, as ManagedSettings takes it.
+/// One `ManagedSettingsStore`'s shield, as ManagedSettings takes it.
 @available(iOS 16.0, *)
-struct FreezeShieldPlan {
+struct FreezeShieldLayer {
     var applications = Set<ApplicationToken>()
-    /// The Never open part of `applications`, kept apart so it survives the
-    /// 50-app cap first.
-    var neverApplications = Set<ApplicationToken>()
     /// `.specific(categories, except: categoryExcept)`, unless a Keep only
-    /// source is running, which makes it `.all(except: allCategoriesExcept)`.
+    /// source is running in this layer, which makes it
+    /// `.all(except: allCategoriesExcept)`.
     var categories = Set<ActivityCategoryToken>()
     var categoryExcept = Set<ApplicationToken>()
     var allCategoriesExcept: Set<ApplicationToken>?
     var webDomains = Set<WebDomainToken>()
     var webCategories = Set<ActivityCategoryToken>()
     var webCategoryExcept = Set<WebDomainToken>()
-    /// Never open → Adult sites: `webContent.blockedByFilter = .auto()`.
+
+    mutating func add(apps: Set<ApplicationToken>, categories: Set<ActivityCategoryToken>, webDomains: Set<WebDomainToken>) {
+        applications.formUnion(apps)
+        self.categories.formUnion(categories)
+        webCategories.formUnion(categories)
+        self.webDomains.formUnion(webDomains)
+    }
+
+    /// With two Keep only sources in one layer, an app stays open only if
+    /// both keep it.
+    mutating func keep(_ open: Set<ApplicationToken>) {
+        allCategoriesExcept = allCategoriesExcept.map { $0.intersection(open) } ?? open
+    }
+}
+
+/// The shield, as three named stores. A category policy's `except` reaches
+/// every category in its store, so what may never be excepted lives in a
+/// store of its own; ManagedSettings shields whatever any one store shields.
+///
+///  * `never` — Never open, alone, with no `except` at all: not Always open,
+///    not a thaw, not a stand-down reaches it.
+///  * `deep` — the running Deep freezes. Always open is excepted (rule 2
+///    beats every frost); a thaw never is.
+///  * `main` — every other running freeze, with Always open and the running
+///    thaws excepted.
+@available(iOS 16.0, *)
+struct FreezeShieldPlan {
+    var never = FreezeShieldLayer()
+    var deep = FreezeShieldLayer()
+    var main = FreezeShieldLayer()
+    /// Never open → Adult sites: `webContent.blockedByFilter = .auto()`, in
+    /// the `never` store.
     var adultFilter = false
 }
 
@@ -269,28 +301,35 @@ extension FreezeRules {
         return out
     }
 
-    /// §2's `isFrozen`, over every token at once.
+    /// §2's `isFrozen`, over every token at once, spread over three stores
+    /// (`FreezeShieldPlan`) because a category policy's `except` reaches every
+    /// category in its store.
     ///
-    /// 1. Never open goes in first and nothing takes it out — not Always open,
-    ///    not a stand-down, not a thaw.
-    /// 2. Always open is subtracted from every frost: its apps from the token
-    ///    sets and from every category policy's `except`, its categories from
-    ///    the category sets. (A category cannot be excepted from `.all`, so an
-    ///    Always open *category* does not reach a Keep only frost — only its apps
-    ///    do.)
-    /// 3. A running source adds what it covers. Freeze these adds its apps, its
+    /// 1. Never open goes in its own store, with nothing excepted — not Always
+    ///    open, not a stand-down, not a thaw.
+    /// 2. Always open is subtracted from every frost, Deep ones included: its
+    ///    apps from the token sets and from every category policy's `except`,
+    ///    its categories from the category sets. (A category cannot be
+    ///    excepted from `.all`, so an Always open *category* does not reach a
+    ///    Keep only frost — only its apps do.)
+    /// 3. A running source adds what it covers, to the Deep store if it is
+    ///    Deep and to the main one if not. Freeze these adds its apps, its
     ///    categories (for apps and for websites) and its web domains. Keep only
-    ///    becomes `.all(except: kept apps)`; with two Keep only sources running,
-    ///    an app stays open only if both keep it. Categories in a Keep only pick
-    ///    cannot be honoured — iOS only excepts apps — so Keep only is about the
-    ///    apps it lists. Websites are not shielded by Keep only: Safari is an app
-    ///    like any other and freezes with the rest.
-    /// 4. A Deep source ignores thaws.
-    /// 5. Otherwise a thaw takes its target out: `*` drops the source entirely,
-    ///    a token id takes that app / category / site out of it. A *category*
-    ///    thaw under a running Keep only source drops that source while the thaw
-    ///    lasts, since `.all` cannot except a category; the shield usually hands
-    ///    over the app itself, so this only happens when it could not.
+    ///    becomes `.all(except: kept apps)`; with two Keep only sources in one
+    ///    store, an app stays open only if both keep it. Categories in a Keep
+    ///    only pick cannot be honoured — iOS only excepts apps — so Keep only
+    ///    is about the apps it lists. Websites are not shielded by Keep only:
+    ///    Safari is an app like any other and freezes with the rest.
+    /// 4. A Deep source ignores thaws: nothing a thaw names is subtracted from
+    ///    the Deep store or excepted in it, so a thawed app under a Deep
+    ///    *category* that started during the thaw is frozen again.
+    /// 5. Otherwise a thaw takes its target out of the main store: `*` drops
+    ///    the source entirely, a token id takes that app / category / site out
+    ///    of it, and a thawed app is excepted from its category policy. A
+    ///    *category* thaw under a running Keep only source drops that source
+    ///    while the thaw lasts, since `.all` cannot except a category; the
+    ///    shield usually hands over the app itself, so this only happens when
+    ///    it could not.
     static func shieldPlan(
         _ p: FreezePolicy,
         at t: Date,
@@ -302,48 +341,46 @@ extension FreezeRules {
         let always = selection(p.groups.alwaysOpen.iosSelection) ?? FamilyActivitySelection()
         let thaw = thawed(p, at: t, resolve: resolve)
 
-        plan.neverApplications = never.applicationTokens
-        plan.applications = never.applicationTokens
-        plan.categories = never.categoryTokens
-        plan.webCategories = never.categoryTokens
-        plan.webDomains = never.webDomainTokens
+        plan.never.add(apps: never.applicationTokens, categories: never.categoryTokens, webDomains: never.webDomainTokens)
         plan.adultFilter = p.groups.adultSites
 
-        var keptOpen: Set<ApplicationToken>?
         for source in active(p, t) {
             if !source.deep && thaw.all { continue }
             let picked = selection(source.apps.iosSelection)
             if source.apps.keepOnly {
-                if !source.deep && !thaw.categories.isEmpty { continue }
                 // No saved pick keeps nothing, so it covers everything — the
                 // same as Dart's keep-only over an empty list.
-                var open = picked?.applicationTokens ?? []
-                if !source.deep { open.formUnion(thaw.apps) }
-                keptOpen = keptOpen.map { $0.intersection(open) } ?? open
+                let kept = picked?.applicationTokens ?? []
+                if source.deep {
+                    plan.deep.keep(kept)
+                } else {
+                    if !thaw.categories.isEmpty { continue }
+                    plan.main.keep(kept.union(thaw.apps))
+                }
                 continue
             }
             guard let picked else { continue }
             var apps = picked.applicationTokens.subtracting(always.applicationTokens)
             var categories = picked.categoryTokens.subtracting(always.categoryTokens)
             var webDomains = picked.webDomainTokens.subtracting(always.webDomainTokens)
-            if !source.deep {
+            if source.deep {
+                plan.deep.add(apps: apps, categories: categories, webDomains: webDomains)
+            } else {
                 apps.subtract(thaw.apps)
                 categories.subtract(thaw.categories)
                 webDomains.subtract(thaw.webDomains)
+                plan.main.add(apps: apps, categories: categories, webDomains: webDomains)
             }
-            plan.applications.formUnion(apps)
-            plan.categories.formUnion(categories)
-            plan.webCategories.formUnion(categories)
-            plan.webDomains.formUnion(webDomains)
         }
-        // A category policy's `except` covers every category in it, Deep and
-        // Never open ones included. A thawed app is only in here because the
-        // shield over it offered a thaw — so it was not under a Deep or Never
-        // open category to begin with.
-        plan.categoryExcept = always.applicationTokens.union(thaw.apps)
-        plan.webCategoryExcept = always.webDomainTokens.union(thaw.webDomains)
-        if let keptOpen {
-            plan.allCategoriesExcept = keptOpen.union(always.applicationTokens)
+        plan.deep.categoryExcept = always.applicationTokens
+        plan.deep.webCategoryExcept = always.webDomainTokens
+        plan.main.categoryExcept = always.applicationTokens.union(thaw.apps)
+        plan.main.webCategoryExcept = always.webDomainTokens.union(thaw.webDomains)
+        if let kept = plan.deep.allCategoriesExcept {
+            plan.deep.allCategoriesExcept = kept.union(always.applicationTokens)
+        }
+        if let kept = plan.main.allCategoriesExcept {
+            plan.main.allCategoriesExcept = kept.union(always.applicationTokens)
         }
         return plan
     }

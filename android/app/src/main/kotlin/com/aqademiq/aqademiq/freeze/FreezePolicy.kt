@@ -1,5 +1,7 @@
 package com.aqademiq.aqademiq.freeze
 
+import java.util.Calendar
+import java.util.GregorianCalendar
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -200,11 +202,18 @@ class FreezePolicy(
 
         private val DAY = Regex("""(\d{4})-(\d{2})-(\d{2})""")
 
-        /** "2026-11-09" → 20261109, so dates compare as plain ints. */
+        /**
+         * "2026-11-09" → 20261109, so dates compare as plain ints. An
+         * out-of-range month or day rolls over the way Dart's
+         * `DateTime(y, m, d)` does — "2026-02-30" is 2026-03-02, "2026-13-01"
+         * is 2027-01-01 — through a lenient calendar, so both sides agree on
+         * which day a hand-edited or odd date means.
+         */
         fun dayKeyOf(raw: String?): Int? {
             val match = DAY.matchEntire(raw ?: return null) ?: return null
             val (y, m, d) = match.destructured
-            return y.toInt() * 10000 + m.toInt() * 100 + d.toInt()
+            val day = GregorianCalendar(y.toInt(), m.toInt() - 1, d.toInt()).apply { isLenient = true }
+            return day.get(Calendar.YEAR) * 10000 + (day.get(Calendar.MONTH) + 1) * 100 + day.get(Calendar.DAY_OF_MONTH)
         }
     }
 }

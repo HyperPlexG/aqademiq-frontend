@@ -14,6 +14,8 @@ import UserNotifications
 ///  * `fz.tok.<id>` — the token behind an id we gave Dart (grant targets);
 ///  * `fz.events` — what the shield did while Aqademiq was not looking (§1.2);
 ///  * `fz.shield.<day>` — how often the shield covered each app this thaw day;
+///  * `fz.lastCount` — the last app the shield was drawn for, and when, so one
+///    appearance drawn twice is counted once (see `countShield`);
 ///  * `fz.lastShield` — the app behind the last category shield (see `noteShield`);
 ///  * `fz.sched`, `fz.bounds` — what `FreezeSchedule` last asked iOS for.
 ///
@@ -27,6 +29,7 @@ enum FreezeStore {
     static let selectionPrefix = "fz.sel."
     static let tokenPrefix = "fz.tok."
     static let shieldPrefix = "fz.shield."
+    static let lastCountKey = "fz.lastCount"
     static let lastShieldKey = "fz.lastShield"
     static let scheduleKey = "fz.sched"
     static let boundariesKey = "fz.bounds"
@@ -72,11 +75,28 @@ enum FreezeStore {
     }
 
     /// The queued events, oldest first, in the shape `takeEvents` returns.
-    /// Reading them clears them.
+    /// Reading them takes them off the queue — those, and only those: the
+    /// ShieldAction extension is another process and may queue one between
+    /// the read and the write, and that one must wait for the next take
+    /// rather than be wiped unread.
     static func takeEvents() -> [[String: Any]] {
         guard let d = defaults else { return [] }
         let raw = d.array(forKey: eventsKey) as? [[String: Any]] ?? []
-        d.removeObject(forKey: eventsKey)
+        if !raw.isEmpty {
+            var taken = raw.map { $0 as NSDictionary }
+            let current = d.array(forKey: eventsKey) as? [[String: Any]] ?? []
+            let rest = current.filter { event in
+                let e = event as NSDictionary
+                guard let i = taken.firstIndex(where: { $0.isEqual(e) }) else { return true }
+                taken.remove(at: i)
+                return false
+            }
+            if rest.isEmpty {
+                d.removeObject(forKey: eventsKey)
+            } else {
+                d.set(rest, forKey: eventsKey)
+            }
+        }
         return raw.compactMap { e -> [String: Any]? in
             guard let type = e["type"] as? String else { return nil }
             var out: [String: Any] = ["type": type]
@@ -88,6 +108,40 @@ enum FreezeStore {
     }
 
     // MARK: - Shield counts
+
+    /// iOS can ask ShieldConfiguration for the same shield more than once —
+    /// drawn again on returning to it, on a trait change — and each ask is
+    /// not another time the student opened the app. Asks for the same id this
+    /// close together are one appearance.
+    static let shieldRepeatWindow: TimeInterval = 5
+
+    /// The shield was drawn for `id`: counts it as one more cover this thaw
+    /// day, unless the last draw was for the same id less than
+    /// `shieldRepeatWindow` ago — then it is the same appearance and today's
+    /// count is returned as it stands. Every draw moves the window on, so a
+    /// burst of redraws counts once however long it lasts.
+    static func countShield(_ id: String, at t: Date = Date()) -> Int {
+        guard let d = defaults else { return 1 }
+        var repeated = false
+        if let last = d.dictionary(forKey: lastCountKey),
+           last["id"] as? String == id,
+           let at = last["at"] as? NSNumber {
+            let age = t.timeIntervalSince(FreezeTime.date(ms: at.int64Value))
+            repeated = age >= 0 && age < shieldRepeatWindow
+        }
+        d.set(["id": id, "at": NSNumber(value: FreezeTime.ms(t))] as [String: Any], forKey: lastCountKey)
+        if repeated {
+            let n = shieldCount(id, at: t)
+            if n > 0 { return n }
+        }
+        return bumpShieldCount(id, at: t)
+    }
+
+    /// Today's count for `id`, without adding to it.
+    static func shieldCount(_ id: String, at t: Date = Date()) -> Int {
+        let key = shieldPrefix + FreezeTime.dayString(FreezeRules.thawDayStart(t))
+        return (defaults?.dictionary(forKey: key) as? [String: Int])?[id] ?? 0
+    }
 
     /// Counts one more cover of `id` in the current thaw day and returns the
     /// new count. Earlier days are dropped the first time a new one is used.
@@ -139,14 +193,20 @@ enum FreezeStore {
     /// be turned back into the token. The hash only has to tell apps apart on
     /// this phone — membership is still decided by token equality, never by id.
     static func tokenId<T: Encodable>(_ token: T, kind: String) -> String? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .sortedKeys
-        guard let data = try? encoder.encode(token) else { return nil }
+        guard let data = tokenData(token) else { return nil }
         let id = "\(kind)_\(digest(data, bytes: 10))"
         if let d = defaults, d.data(forKey: tokenPrefix + id) == nil {
             d.set(data, forKey: tokenPrefix + id)
         }
         return id
+    }
+
+    /// A token's JSON encoding, keys sorted so the same token always gives
+    /// the same bytes — in the app and in every extension.
+    static func tokenData<T: Encodable>(_ token: T) -> Data? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return try? encoder.encode(token)
     }
 
     @available(iOS 16.0, *)
@@ -242,61 +302,126 @@ final class FreezeSelections {
 
 /// Rewrites the shield for a moment. Every callback — the app, the monitor,
 /// a press in the picker — ends here, so there is one way the shield gets set.
+///
+/// Three named stores, one per layer of `FreezeShieldPlan`: Never open, the
+/// Deep freezes, and everything else. ManagedSettings shields whatever any
+/// store shields, so a category policy's `except` in one store cannot open
+/// what another holds — which is the whole point of the split.
 @available(iOS 16.0, *)
 enum FreezeApply {
+    /// Everything but Never open and Deep freeze (the name from before the
+    /// split, so an older build's settings are overwritten, not left behind).
     static let storeName = "aqademiq.freeze"
+    static let neverStoreName = "aqademiq.freeze.never"
+    static let deepStoreName = "aqademiq.freeze.deep"
 
     /// ManagedSettings shields at most 50 apps by token; past that it ignores
-    /// the set. Never open goes first so it is the last thing to be cut.
+    /// the set. Kept to 50 across the three stores together: Never open is
+    /// the last thing to be cut, then Deep freeze, then the rest.
     static let maxShieldedApps = 50
 
     static var store: ManagedSettingsStore {
         ManagedSettingsStore(named: ManagedSettingsStore.Name(storeName))
     }
 
-    /// Evaluates §2 at `date` and writes the result to the one store. No policy
-    /// (never set up, or the App Group was wiped) clears it.
+    static var neverStore: ManagedSettingsStore {
+        ManagedSettingsStore(named: ManagedSettingsStore.Name(neverStoreName))
+    }
+
+    static var deepStore: ManagedSettingsStore {
+        ManagedSettingsStore(named: ManagedSettingsStore.Name(deepStoreName))
+    }
+
+    /// Evaluates §2 at `date` and writes the result to the three stores. No
+    /// policy (never set up, or the App Group was wiped) clears all three.
     static func applyNow(date: Date = Date()) {
-        let store = self.store
+        let main = store
+        let never = neverStore
+        let deep = deepStore
         guard let policy = FreezeStore.loadPolicy() else {
-            store.clearAllSettings()
+            main.clearAllSettings()
+            never.clearAllSettings()
+            deep.clearAllSettings()
             return
         }
         let selections = FreezeSelections()
-        let plan = FreezeRules.shieldPlan(policy, at: date, selection: selections.get, resolve: FreezeStore.resolve)
+        var plan = FreezeRules.shieldPlan(policy, at: date, selection: selections.get, resolve: FreezeStore.resolve)
+        capApplications(&plan)
 
-        var apps = plan.applications
-        if apps.count > maxShieldedApps {
-            var capped = Set(plan.neverApplications.prefix(maxShieldedApps))
-            for token in apps where capped.count < maxShieldedApps {
-                capped.insert(token)
-            }
-            apps = capped
-        }
-        store.shield.applications = apps.isEmpty ? nil : apps
-
-        if let except = plan.allCategoriesExcept {
-            store.shield.applicationCategories = .all(except: except)
-        } else if !plan.categories.isEmpty {
-            store.shield.applicationCategories = .specific(plan.categories, except: plan.categoryExcept)
-        } else {
-            store.shield.applicationCategories = nil
-        }
-
-        store.shield.webDomains = plan.webDomains.isEmpty ? nil : plan.webDomains
-        if plan.webCategories.isEmpty {
-            store.shield.webDomainCategories = nil
-        } else {
-            store.shield.webDomainCategories = .specific(plan.webCategories, except: plan.webCategoryExcept)
-        }
+        write(plan.never, to: never)
+        write(plan.deep, to: deep)
+        write(plan.main, to: main)
 
         if plan.adultFilter {
             // `.auto()`: the system's own adult-content filter, nothing added
             // or excepted. Spelled out so it does not lean on default arguments.
-            store.webContent.blockedByFilter = .auto([], except: [])
+            never.webContent.blockedByFilter = .auto([], except: [])
         } else {
-            store.webContent.blockedByFilter = nil
+            never.webContent.blockedByFilter = nil
         }
+        // Only Never open filters the web. Cleared in the other two because
+        // the main store carried the filter before the split.
+        main.webContent.blockedByFilter = nil
+        deep.webContent.blockedByFilter = nil
+    }
+
+    private static func write(_ layer: FreezeShieldLayer, to store: ManagedSettingsStore) {
+        store.shield.applications = layer.applications.isEmpty ? nil : layer.applications
+
+        if let except = layer.allCategoriesExcept {
+            store.shield.applicationCategories = .all(except: except)
+        } else if !layer.categories.isEmpty {
+            store.shield.applicationCategories = .specific(layer.categories, except: layer.categoryExcept)
+        } else {
+            store.shield.applicationCategories = nil
+        }
+
+        store.shield.webDomains = layer.webDomains.isEmpty ? nil : layer.webDomains
+        if layer.webCategories.isEmpty {
+            store.shield.webDomainCategories = nil
+        } else {
+            store.shield.webDomainCategories = .specific(layer.webCategories, except: layer.webCategoryExcept)
+        }
+    }
+
+    /// Holds the three stores' app tokens to `maxShieldedApps` together. An
+    /// app is shielded in the first layer that has it — Never open, then
+    /// Deep, then the rest — and only there: a store further down adds
+    /// nothing for it, since neither of the first two can be thawed open.
+    ///
+    /// Which apps survive the cut is decided by a digest of each token's
+    /// encoding, never by `Set` order: Swift seeds its hashing per process,
+    /// so the app and the monitor extension would otherwise cut different
+    /// apps and the shield would change with whichever wrote last.
+    static func capApplications(_ plan: inout FreezeShieldPlan) {
+        let all = plan.never.applications
+            .union(plan.deep.applications)
+            .union(plan.main.applications)
+        guard all.count > maxShieldedApps else { return }
+        var room = maxShieldedApps
+        var taken = Set<ApplicationToken>()
+        func keep(_ tokens: Set<ApplicationToken>) -> Set<ApplicationToken> {
+            var out = Set<ApplicationToken>()
+            for token in ordered(tokens.subtracting(taken)) {
+                if room == 0 { break }
+                out.insert(token)
+                taken.insert(token)
+                room -= 1
+            }
+            return out
+        }
+        plan.never.applications = keep(plan.never.applications)
+        plan.deep.applications = keep(plan.deep.applications)
+        plan.main.applications = keep(plan.main.applications)
+    }
+
+    /// `tokens` in a stable order: by the SHA-256 of their sorted-key JSON.
+    static func ordered(_ tokens: Set<ApplicationToken>) -> [ApplicationToken] {
+        let keyed = tokens.map { token -> (token: ApplicationToken, key: String) in
+            let key = FreezeStore.tokenData(token).map { data in FreezeStore.digest(data) } ?? ""
+            return (token: token, key: key)
+        }
+        return keyed.sorted { $0.key < $1.key }.map { $0.token }
     }
 }
 

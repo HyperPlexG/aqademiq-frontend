@@ -142,6 +142,16 @@ EXTENSIONS.each do |spec|
     group.files.find { |f| f.path == file } || group.new_reference(file)
   end
 
+  # The privacy manifest (App Group UserDefaults, reason 1C8F.1) has to be
+  # *in* the extension's bundle to count, so it is a resource, not just a
+  # file in the group: required-reason APIs are declared per bundle, and an
+  # extension is a bundle of its own. Runner's settings are not touched.
+  # Idempotent: avoid_duplicates leaves an existing entry alone.
+  privacy = 'PrivacyInfo.xcprivacy'
+  abort "#{name}/#{privacy} missing" unless File.exist?(File.join(ROOT, name, privacy))
+  privacy_ref = group.files.find { |f| f.path == privacy } || group.new_reference(privacy)
+  target.resources_build_phase.add_file_reference(privacy_ref, true)
+
   # Screen Time frameworks. `import` would autolink them anyway; listing them
   # makes what the extension needs visible in the target.
   target.add_system_framework(spec[:frameworks])

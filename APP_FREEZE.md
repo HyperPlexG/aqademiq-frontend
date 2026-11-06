@@ -65,7 +65,7 @@ engine is attached. Dart then calls `takeEvents`.
 
 On Android the shield also opens the app straight away
 (`aqademiq://freeze/thaw?target=<pkg>`), so the event and the link land
-together; Dart de-duplicates by `target` within 30 s. On iOS the ShieldAction
+together; Dart de-duplicates by the event itself (`target` + `at`), so one press opens one breath and a second press opens it again. On iOS the ShieldAction
 extension cannot open an app, so it queues the event and posts a local
 notification — "Tap to thaw" — whose tap opens Aqademiq.
 
@@ -207,7 +207,7 @@ with ink text, the thaw glyph in `#6B5CF0`.
   activities for Freeze now (`fz.now`), each thaw grant (`fz.grant.<n>`), the
   stand-down (`fz.standdown`) and session frosts end at their end time; an
   interval shorter than 15 minutes starts in the past so that it is legal.
-  Every callback re-evaluates §2 and rewrites the one `ManagedSettingsStore`.
+  Every callback re-evaluates §2 and rewrites the three `ManagedSettingsStore`s (§7: Never open, Deep freeze, everything else).
 * Distracting: a daily activity `fz.distracting` with an event at 10 minutes
   of use; `eventDidReachThreshold` posts Ada's check-in notification.
 * Never open + `adult_sites` → `webContent.blockedByFilter = .auto()`.
@@ -238,8 +238,19 @@ with ink text, the thaw glyph in `#6B5CF0`.
   the `thaw_request` event (`target`, `label`), and in full through
   `app_links`. Today `_handleRoute` ignores unknown routes, so both
   `freeze/thaw` and `freeze` (below) need a case there.
-* Both notifications — the ongoing one and Ada's check-in — open
-  `aqademiq://freeze` (route `freeze`).
+* Every notification here — the ongoing one, Ada's check-in and "paused"
+  below — opens `aqademiq://freeze` (route `freeze`).
+* **Paused.** A `START_STICKY` restart that Android 12+ refuses to bring to
+  the foreground (`ForegroundServiceStartNotAllowedException`) stops the
+  monitor until the app is opened again, so it posts an ordinary,
+  auto-cancelling notification on the App freeze channel — "App freeze is
+  paused" / "Tap to turn it back on." — whose tap opens App freeze; the
+  resume's `applyPolicy` starts the monitor from the foreground, and the
+  monitor going foreground cancels the notice.
+* The poll is once a second, and once every five seconds while nothing can
+  freeze an app at all (no freeze running, Never open and Distracting both
+  empty). It keeps reading the foreground app at that pace, so an app already
+  open when a window starts is shielded at the next read.
 * The monitor runs while the policy can freeze something now or later **and**
   Usage access is granted: Never open or Distracting non-empty; a running
   Freeze now; an enabled session frost that is running; an enabled schedule
@@ -251,8 +262,21 @@ with ink text, the thaw glyph in `#6B5CF0`.
   apps on ice" (N = the kept apps), or "Everything on ice"; a freeze with no
   end reads "Until you stop. Phone and Messages stay open."; with every
   covered app thawed (or Thaw all) it falls back to the idle pair.
-* The shield's stage counts per package per thaw day; a shield re-shown for
-  the same open (it did not take the screen within 3 s) is not counted again.
+* The shield's stage counts per package per thaw day, once per visit: a cover
+  counts again only after the student has been somewhere else — another app
+  or home came to the front (the shield itself does not count), or the app
+  was open unfrozen (a thaw, a window that ended). So a splash screen handing
+  over to the app's main screen is one cover, and so is a shield re-shown
+  because it did not take the screen within 3 s.
+* No shield while the phone rings or a call is on (`AudioManager.mode` is not
+  `MODE_NORMAL`), VoIP included — a WhatsApp or Meet call inside a frozen app
+  gets through; the shield comes back, uncounted, when the call ends. An app
+  that leaves the audio mode set after its call would hold shields off until
+  it is reset (worth watching for on a device).
+* Without Display over other apps the shield cannot start from the
+  background: the monitor stops trying (and counting) until it is granted
+  again. A shield coming back to the front over an app that is no longer
+  frozen (left up with the screen off while the window ended) closes itself.
 * Ada's check-in fires on opening a Distracting app (a change of foreground
   app), not for staying in it. Its channel, "Ada's check-ins", is high
   importance with no sound or vibration, so it shows as a silent banner; it
@@ -260,7 +284,15 @@ with ink text, the thaw glyph in `#6B5CF0`.
 * The floor, beyond the launcher(s), dialer and SMS app: `android`, System
   UI, Settings (and whatever answers `ACTION_SETTINGS`), `com.android.phone`,
   Telecom, in-call UI (AOSP and Samsung), emergency / safety / cell broadcast
-  apps, and the permission controller and package installer.
+  apps, the permission controller and package installer; the screens other
+  apps open over themselves — the share sheet (`com.android.intentresolver`),
+  the document and photo pickers (DocumentsUI and the media provider, AOSP and
+  Google), Play services (`com.google.android.gms`: Google sign-in,
+  Credential Manager); and the clock — Google's, AOSP's and Samsung's, plus
+  every app that answers `AlarmClock.ACTION_SHOW_ALARMS` (in `<queries>`), so
+  a Wind down frost never covers the morning alarm.
+* `from_day` / `until_day` that are not real dates roll over as Dart's
+  `DateTime(y, m, d)` does (`2026-02-30` is 2 March), as on iOS.
 
 ## 7. iOS notes (as built)
 
@@ -271,14 +303,30 @@ with ink text, the thaw glyph in `#6B5CF0`.
   category token; FreezeShield notes the app it drew the shield for
   (`fz.lastShield`, 10 min) so the target is still the app. If that note is
   missing the target is `cat_…`, and the grant thaws the whole category.
+* **Three stores, not one** (§5's "the one `ManagedSettingsStore`"). A category
+  policy's `except` reaches every category in its store, so the shield is
+  split over three named stores and ManagedSettings shields whatever any of
+  them shields: `aqademiq.freeze.never` (Never open alone, nothing excepted —
+  not Always open, not a thaw), `aqademiq.freeze.deep` (the running Deep
+  freezes; Always open apps excepted, thawed apps never) and `aqademiq.freeze`
+  (everything else, with Always open and the running thaws excepted). So an
+  Always open app inside a Never open category stays frozen, and a thawed app
+  under a Deep freeze category that starts during the thaw freezes again. The
+  Adult sites filter lives in the Never open store. No policy clears all three.
 * **Where iOS is coarser than §2** (tokens are opaque; ManagedSettings can only
   except *apps* from a category policy): Keep only is `.all(except: kept apps
   ∪ Always open apps)` — categories in a Keep only pick, and Always open
   *categories*, cannot be excepted from it. A `cat_…` grant under a running
-  non-deep Keep only source drops that source for the grant. A thawed app is
-  excepted from every category policy, Never open categories included. At
-  most 50 app tokens are shielded (Never open first). Keep only does not
-  shield websites; Safari freezes as an app.
+  non-deep Keep only source drops that source for the grant. Keep only does
+  not shield websites; Safari freezes as an app.
+* **At most 50 app tokens** are shielded, across the three stores together
+  (in case the limit is not per store): Never open first, then Deep freeze,
+  then the rest, each app only in the first store that has it. Within a group
+  the survivors are the lowest SHA-256 digests of the tokens' sorted-key JSON,
+  so the app and the monitor extension always cut the same apps (Swift's
+  `Set` order differs per process). Whether the 50 is per store or per app
+  is worth checking on a device; if it is per store, sharing it only gives up
+  shielding more than 50 apps in all.
 * **Thaw** responds `.close` (not `.defer`, which redraws the shield and would
   count as another cover). The "Thaw in Aqademiq" notification (time-
   sensitive, id `fz.thaw`, `userInfo.aqademiq = freeze`) is not a
@@ -287,7 +335,14 @@ with ink text, the thaw glyph in `#6B5CF0`.
 * **Every foreground** re-applies the shield and reschedules (heals anything the
   monitor missed), then sends `eventsWaiting` if the queue is non-empty. On a
   cold launch that arrives before Dart listens, so Dart must also call
-  `takeEvents` once at start-up. The queue is only cleared by `takeEvents`.
+  `takeEvents` once at start-up. Only `takeEvents` takes events off the queue,
+  and only the ones it read: one ShieldAction queued in between stays for the
+  next take.
+* **Applying** (`applyPolicy`, the foreground, a pick, approval) runs on one
+  serial background queue, never the main thread, and only while
+  `AuthorizationCenter.shared.authorizationStatus == .approved`. A policy
+  arriving before approval is stored; `requestAuthorization` applies it when
+  approval comes.
 * **Activities** (≤ 18 of iOS's 20): `fz.now`, `fz.standdown`, up to three
   `fz.session.<id>` and three `fz.grant.<n>` (soonest ends), `fz.distracting`,
   then `fz.frost.<id>` for the rest (running first, then by next start). The
@@ -302,9 +357,31 @@ with ink text, the thaw glyph in `#6B5CF0`.
   stage title, subtitle "Deep freeze until 1:00 PM" (or "until you stop"), no
   thaw. A shield that nothing in the policy covers (stale) still offers Thaw:
   opening Aqademiq re-applies.
+* **Shield count**: iOS may ask FreezeShield for the same shield more than
+  once (a redraw on returning to it). Asks for the same id less than 5 s
+  after the last one are one appearance (`fz.lastCount`: last id and time,
+  moved on by every ask), so they do not step the copy.
+* **Writes from FreezeShield must be checked on a device.** The
+  ShieldConfiguration extension may run in a tighter sandbox than the other
+  two (it is the one handed app names), and whether its writes to the App
+  Group stick (`fz.shield.<day>`, `fz.lastCount`, `fz.lastShield`,
+  `fz.tok.<id>`) has to be seen on a phone, not assumed: open a frozen app
+  three times, more than 5 s apart, and the copy should step to "Frozen.".
+  If they do not stick,
+  the fallback is what the code already does with nothing stored: the copy
+  stays at stage 1 ("Ada's sitting on this one."), and with no
+  `fz.lastShield` note a category-shielded app's Thaw names `cat_…` and thaws
+  the whole category for the thaw's length. Nothing opens without the
+  student pressing Thaw, and ShieldAction writes `fz.tok.<id>` itself, so
+  grant ids still resolve.
 * **Build**: Runner stays at iOS 13; FamilyControls, ManagedSettings and
   DeviceActivity are weak-linked (`OTHER_LDFLAGS`). `status.notifications` is
   notification permission `authorized` or `provisional`.
+* **Privacy manifests**: each extension carries its own
+  `PrivacyInfo.xcprivacy` (no tracking, nothing collected,
+  `NSPrivacyAccessedAPICategoryUserDefaults` for reason `1C8F.1`, the App
+  Group). `add_freeze_targets.rb` adds each to its target's Copy Bundle
+  Resources phase; Runner's is untouched.
 * **Turning it on is one decision**: the checked-in Runner.entitlements does
   **not** carry `com.apple.developer.family-controls`, because until Apple
   approves Family Controls distribution for `com.r13.aqademiq`,

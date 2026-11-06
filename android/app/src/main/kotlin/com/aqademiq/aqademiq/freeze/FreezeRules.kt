@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.net.Uri
 import android.os.Build
+import android.provider.AlarmClock
 import android.provider.Settings
 import android.provider.Telephony
 import android.telecom.TelecomManager
@@ -287,9 +288,11 @@ object FreezeRules {
     /**
      * The apps Android never freezes, whatever the policy says (§2): Aqademiq
      * itself, every home app, Settings, System UI, the default dialer and SMS
-     * app, and the phone's emergency and in-call apps. Without this a Keep
-     * only frost would put the shield over the launcher and the student
-     * could not leave it, and over the dialer in an emergency.
+     * app, the phone's emergency and in-call apps, the clock (an alarm rings
+     * in it), and the system screens other apps borrow — the share sheet, the
+     * file and photo pickers, Google sign-in. Without this a Keep only frost
+     * would put the shield over the launcher and the student could not leave
+     * it, over the dialer in an emergency, and over the 6:30 alarm.
      *
      * Cached for ten minutes: the default launcher, dialer or SMS app changes
      * rarely, and the monitor asks every second.
@@ -315,6 +318,23 @@ object FreezeRules {
             "com.google.android.permissioncontroller",
             "com.android.packageinstaller",
             "com.google.android.packageinstaller",
+            // Screens another app opens on top of itself: the share sheet
+            // (Android 14+ moved it out of "android"), the document and
+            // photo pickers, and Play services — Google sign-in and
+            // Credential Manager live there. Freezing these breaks an app
+            // the student is allowed to use.
+            "com.android.intentresolver",
+            "com.google.android.documentsui",
+            "com.android.documentsui",
+            "com.google.android.providers.media.module",
+            "com.android.providers.media.module",
+            "com.google.android.gms",
+            // The clock: a ringing alarm is its full-screen activity, and a
+            // Wind down frost must never cover the morning alarm. Whatever
+            // answers SHOW_ALARMS is added in packages() as well.
+            "com.google.android.deskclock",
+            "com.android.deskclock",
+            "com.sec.android.app.clockpackage",
         )
 
         @Volatile private var cached: Set<String> = emptySet()
@@ -335,6 +355,11 @@ object FreezeRules {
                 ri.activityInfo?.packageName?.let(out::add)
             }
             resolve(pm, Intent(Settings.ACTION_SETTINGS))?.let(out::add)
+            // Every app that answers SHOW_ALARMS, not only the default: an
+            // alarm rings in the app that set it, whichever that is.
+            for (ri in query(pm, Intent(AlarmClock.ACTION_SHOW_ALARMS))) {
+                ri.activityInfo?.packageName?.let(out::add)
+            }
             dialer(context)?.let(out::add)
             sms(context)?.let(out::add)
             cached = out

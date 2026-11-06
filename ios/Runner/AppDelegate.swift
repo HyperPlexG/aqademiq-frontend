@@ -48,6 +48,10 @@ import UIKit
   /// requests the shield queued meanwhile.
   private var appFreeze: AppFreezePlugin?
 
+  /// Screenshots, for the weekly report's "Screenshotting?" banner. Held for
+  /// the life of the app because it owns the notification observer.
+  private var screenshot: ScreenshotPlugin?
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
@@ -55,6 +59,7 @@ import UIKit
     haptics = HapticsPlugin(messenger: messenger)
     deviceImport = DeviceImportPlugin(messenger: messenger)
     appFreeze = AppFreezePlugin(messenger: messenger)
+    screenshot = ScreenshotPlugin(messenger: messenger)
   }
 
   /// A Freeze taken on the lock screen runs in the extension, which cannot

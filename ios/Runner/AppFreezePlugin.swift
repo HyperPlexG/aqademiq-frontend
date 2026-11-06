@@ -129,10 +129,7 @@ final class AppFreezePlugin: NSObject {
             }
             let approved = AuthorizationCenter.shared.authorizationStatus == .approved
             // A policy saved before approval could not be scheduled; now it can.
-            if approved, FreezeStore.loadPolicy() != nil {
-                FreezeApply.applyNow()
-                FreezeSchedule.reschedule()
-            }
+            if approved { AppFreezePlugin.reapply(onlyIfSetUp: true) }
             result(approved)
         }
     }
@@ -148,12 +145,33 @@ final class AppFreezePlugin: NSObject {
         guard FreezePolicy.decode(json) != nil else {
             return result(FlutterError(code: "bad_policy", message: "policy is not a JSON object", details: nil))
         }
+        // Saved whatever the authorization: approval later applies it.
         FreezeStore.savePolicy(json)
-        if #available(iOS 16.0, *) {
+        Self.reapply()
+        result(nil)
+    }
+
+    // MARK: - Applying
+
+    /// One serial queue for every apply: ManagedSettings and DeviceActivity
+    /// answer synchronously through Screen Time's daemons, which is no work
+    /// for the main thread, and two applies in quick succession must land in
+    /// the order they were asked for. Each reads the stored policy when it
+    /// runs, so a queued one applies the newest.
+    private static let applyQueue = DispatchQueue(label: "com.r13.aqademiq.freeze.apply", qos: .userInitiated)
+
+    /// Re-shields and reschedules from the stored policy, off the main thread
+    /// — and only with Screen Time approved: without it ManagedSettings and
+    /// DeviceActivity refuse or ignore every call, and a policy saved now is
+    /// applied once approval comes (`requestAuthorization`, or the next
+    /// foreground). `onlyIfSetUp` skips it when no policy was ever stored.
+    private static func reapply(onlyIfSetUp: Bool = false) {
+        guard #available(iOS 16.0, *), AuthorizationCenter.shared.authorizationStatus == .approved else { return }
+        applyQueue.async {
+            if onlyIfSetUp && FreezeStore.loadPolicy() == nil { return }
             FreezeApply.applyNow()
             FreezeSchedule.reschedule()
         }
-        result(nil)
     }
 
     // MARK: - Foreground
@@ -166,10 +184,7 @@ final class AppFreezePlugin: NSObject {
         let now = Date()
         guard now.timeIntervalSince(lastActive) > 1 else { return }
         lastActive = now
-        if #available(iOS 16.0, *), AuthorizationCenter.shared.authorizationStatus == .approved, FreezeStore.loadPolicy() != nil {
-            FreezeApply.applyNow(date: now)
-            FreezeSchedule.reschedule(now: now)
-        }
+        Self.reapply(onlyIfSetUp: true)
         if FreezeStore.hasEvents() {
             channel.invokeMethod("eventsWaiting", arguments: nil)
         }
@@ -213,8 +228,7 @@ final class AppFreezePlugin: NSObject {
             finished = true
             if let picked, FreezeStore.saveSelection(picked, id: id) {
                 // The selection may belong to a frost running now.
-                FreezeApply.applyNow()
-                FreezeSchedule.reschedule()
+                AppFreezePlugin.reapply()
                 let count = picked.applicationTokens.count + picked.categoryTokens.count + picked.webDomainTokens.count
                 result(["count": count])
             } else {

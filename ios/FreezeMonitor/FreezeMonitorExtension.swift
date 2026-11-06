@@ -6,9 +6,10 @@ import Foundation
 /// The app asks DeviceActivity for a handful of intervals (`FreezeSchedule`)
 /// and iOS wakes this extension at their edges. Every edge does the same
 /// thing: read the policy, evaluate the rules for this moment and rewrite the
-/// one ManagedSettingsStore. A `fz.frost.<id>` edge fires every day whether or
-/// not it is one of the frost's days; `windowAt` is what checks the weekday
-/// and the dates, so an edge on an off day simply finds nothing running.
+/// shield's three ManagedSettingsStores (`FreezeApply`). A `fz.frost.<id>`
+/// edge fires every day whether or not it is one of the frost's days;
+/// `windowAt` is what checks the weekday and the dates, so an edge on an off
+/// day simply finds nothing running.
 ///
 /// Because no callback means anything by itself, a missed or doubled one costs
 /// nothing — the next one sets the shield right. An activity without the `fz.`
