@@ -42,6 +42,10 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
   final TextEditingController _note = TextEditingController();
   int _sel = 3;
 
+  /// The save is a network call; a second tap while it is in flight would
+  /// write the day twice.
+  bool _saving = false;
+
   @override
   void dispose() {
     _note.dispose();
@@ -55,22 +59,35 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
+    _saving = true;
     final note = _note.text.trim();
     // Persist the selected mood on the morning/adhoc wire (mood_index), then
     // optionally the evening reflection. Reflection is never required — an
     // empty note simply skips / clears the reflection write.
-    await ref.read(moodRepositoryProvider).upsertDay(
-          date: AppDate.today(),
-          mood: _sel,
-          note: note,
-          writeReflection: true,
-        );
+    try {
+      await ref.read(moodRepositoryProvider).upsertDay(
+            date: AppDate.today(),
+            mood: _sel,
+            note: note,
+            writeReflection: true,
+          );
+    } on Object {
+      _saving = false;
+      if (!mounted) return;
+      ref.read(hapticsProvider).saveFailed();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't save. Try again.")),
+      );
+      return;
+    }
+    if (!mounted) return;
     // On commit. The note field itself is explicitly zero (§7, Mood) — the
     // keyboard owns typing.
     ref.read(hapticsProvider).moodLogged();
     ref.invalidate(moodWeekProvider);
     ref.invalidate(streakProvider);
-    if (mounted) context.go(Routes.plan);
+    context.go(Routes.plan);
   }
 
   /// Latest logged mood per weekday (Mon→Sun) for the demo week, or null.
@@ -95,142 +112,142 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
       backgroundColor: colors.surface,
       body: DismissKeyboard(
         child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // The day itself — this read "MON · 18 MAY" whatever the date.
-                  Text(
-                    _dayLine(today),
-                    style: AppText.sans(
-                      size: 12,
-                      weight: FontWeight.w800,
-                      letterSpacing: AppText.em(0.1, 12),
-                      color: colors.textDim,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // The day itself — this read "MON · 18 MAY" whatever the date.
+                    Text(
+                      _dayLine(today),
+                      style: AppText.sans(
+                        size: 12,
+                        weight: FontWeight.w800,
+                        letterSpacing: AppText.em(0.1, 12),
+                        color: colors.textDim,
+                      ),
                     ),
-                  ),
-                  Transform.translate(
-                    offset: const Offset(10, 0),
-                    child: Semantics(
-                      button: true,
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () => context.go(Routes.plan),
-                        child: SizedBox(
-                          height: 44,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Center(
-                              widthFactor: 1,
-                              child: Text('Skip', style: AppText.sans(size: 15, color: colors.textDim)),
+                    Transform.translate(
+                      offset: const Offset(10, 0),
+                      child: Semantics(
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => context.go(Routes.plan),
+                          child: SizedBox(
+                            height: 44,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Center(
+                                widthFactor: 1,
+                                child: Text('Skip', style: AppText.sans(size: 15, color: colors.textDim)),
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              Text(
-                'Evening\nreflection',
-                style: AppText.sans(
-                  size: 34,
-                  weight: FontWeight.w800,
-                  height: 1.2,
-                  color: colors.text,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'How did today go?',
-                style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
-              ),
-              const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (var i = 0; i < 5; i++)
-                      _MoodPick(
-                        idx: i,
-                        selected: i == _sel,
-                        color: _moodColors[i],
-                        onTap: () => _select(i),
-                      ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 22),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 7),
-                child: Text(
-                  'OPTIONAL NOTE',
+                Text(
+                  'Evening\nreflection',
                   style: AppText.sans(
-                    size: 12,
+                    size: 34,
                     weight: FontWeight.w800,
-                    letterSpacing: AppText.em(0.12, 12),
-                    color: colors.textDim,
+                    height: 1.2,
+                    color: colors.text,
                   ),
                 ),
-              ),
-              Container(
-                constraints: const BoxConstraints(minHeight: 70),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 14,
+                const SizedBox(height: 4),
+                Text(
+                  'How did today go?',
+                  style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
                 ),
-                decoration: BoxDecoration(
-                  color: colors.bg,
-                  borderRadius: BorderRadius.circular(AppRadius.rowInput),
-                ),
-                child: TextField(
-                  controller: _note,
-                  maxLines: null,
-                  cursorColor: colors.text,
-                  style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
-                  decoration: InputDecoration.collapsed(
-                    hintText: 'What made today that way?',
-                    hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+                const SizedBox(height: 18),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (var i = 0; i < 5; i++)
+                        _MoodPick(
+                          idx: i,
+                          selected: i == _sel,
+                          color: _moodColors[i],
+                          onTap: () => _select(i),
+                        ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "This week's mood",
-                      style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+                const SizedBox(height: 22),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Text(
+                    'OPTIONAL NOTE',
+                    style: AppText.sans(
+                      size: 12,
+                      weight: FontWeight.w800,
+                      letterSpacing: AppText.em(0.12, 12),
+                      color: colors.textDim,
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (var i = 0; i < 7; i++)
-                          _WeekDay(
-                            idx: _moodForDay(logs, monday, i),
-                            letter: _weekLetters[i],
-                          ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-              PrimaryButton(
-                label: 'Save reflection →',
-                onPressed: () => unawaited(_save()),
-              ),
-              const SizedBox(height: 16),
-            ],
+                Container(
+                  constraints: const BoxConstraints(minHeight: 70),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colors.bg,
+                    borderRadius: BorderRadius.circular(AppRadius.rowInput),
+                  ),
+                  child: TextField(
+                    controller: _note,
+                    maxLines: null,
+                    cursorColor: colors.text,
+                    style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
+                    decoration: InputDecoration.collapsed(
+                      hintText: 'What made today that way?',
+                      hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "This week's mood",
+                        style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          for (var i = 0; i < 7; i++)
+                            _WeekDay(
+                              idx: _moodForDay(logs, monday, i),
+                              letter: _weekLetters[i],
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                PrimaryButton(
+                  label: 'Save reflection →',
+                  onPressed: () => unawaited(_save()),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );

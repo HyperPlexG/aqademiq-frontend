@@ -164,7 +164,7 @@ class AdaErrorNote extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 2),
-          child: Ic('error_outline', size: 24, color: colors.danger),
+          child: Ic('error_outline', color: colors.danger),
         ),
         const SizedBox(width: 9),
         Expanded(
@@ -340,7 +340,7 @@ class _AttachmentChip extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.text),
+            style: AppText.sans(size: 15, color: colors.text),
           ),
         ),
         const SizedBox(width: 2),

@@ -31,7 +31,7 @@ void showVoiceUnavailable(BuildContext context, VoiceUnavailable problem) {
       messenger.showSnackBar(
         const SnackBar(
           content: Text(
-            "Couldn't start the microphone. Tap Speak to try again.",
+            "Couldn't start the microphone. Tap the mic to try again.",
           ),
         ),
       );

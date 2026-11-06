@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -447,73 +448,96 @@ class AdaProposalTray extends StatelessWidget {
         height: kAdaTrayHeight,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 6, 0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  button: true,
-                  label: '$count changes waiting. Show them',
-                  excludeSemantics: true,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onShow,
-                    child: SizedBox(
-                      height: 44,
-                      child: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              '$count waiting',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+          // At 320dp (a 242 tray) or with large text the two buttons alone
+          // outgrow the row. They scale down to fit, never past a 44 slot left
+          // for the count, rather than overflow; at normal sizes they draw as
+          // designed. FittedBox needs the bound — a Row gives an inflexible
+          // child unbounded width, so scaling the labels alone did nothing.
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    label: '$count changes waiting. Show them',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onShow,
+                      child: SizedBox(
+                        height: 44,
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '$count waiting',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          Ic('expand_less', size: 18, color: colors.textMed),
-                        ],
+                            const SizedBox(width: 2),
+                            Ic('expand_less', size: 18, color: colors.textMed),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: busy ? null : onDeclineAll,
-                child: Container(
-                  height: 44,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text(
-                    'Decline all',
-                    style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed),
-                  ),
-                ),
-              ),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: busy ? null : onApproveAll,
-                child: Container(
-                  height: 44,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: colors.ink,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: busy
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(
-                          'Approve all',
-                          style: AppText.sans(size: 15, weight: FontWeight.w800, color: Colors.white),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: math.max(0, constraints.maxWidth - 44)),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: busy ? null : onDeclineAll,
+                          child: Container(
+                            height: 44,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              'Decline all',
+                              maxLines: 1,
+                              softWrap: false,
+                              style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed),
+                            ),
+                          ),
                         ),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: busy ? null : onApproveAll,
+                          child: Container(
+                            height: 44,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: colors.ink,
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: busy
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text(
+                                    'Approve all',
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: AppText.sans(size: 15, weight: FontWeight.w800, color: Colors.white),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

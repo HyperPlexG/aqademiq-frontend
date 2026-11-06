@@ -36,7 +36,11 @@ String repeatRuleLabel(RepeatRule? rule) {
     case RepeatFrequency.weekly:
       final wd = rule.weekdays.toSet();
       if (wd.length == 5 && wd.containsAll({1, 2, 3, 4, 5})) return 'Weekdays';
-      return rule.interval == 1 ? 'Weekly' : 'Every ${rule.interval} weeks';
+      if (rule.interval != 1) return 'Every ${rule.interval} weeks';
+      // Plain "Weekly" carries no days — it repeats on the task's own weekday.
+      // A hand-picked set (Mon & Wed) is a custom rule; calling it "Weekly"
+      // ticked the wrong row in the picker.
+      return wd.isEmpty ? 'Weekly' : 'Custom';
     case RepeatFrequency.monthly:
       return rule.interval == 1 ? 'Monthly' : 'Every ${rule.interval} months';
     case RepeatFrequency.none:
@@ -214,7 +218,8 @@ class _CustomRepeatDialogState extends State<_CustomRepeatDialog> {
             // 40 circles, smaller only when a narrow phone squeezes the card.
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final side = math.min(40.0, math.max(28.0, (constraints.maxWidth - 6 * 4) / 7));
+                // Explicit <double>: with bare int literals these infer `num`.
+                final side = math.min<double>(40, math.max<double>(28, (constraints.maxWidth - 6 * 4) / 7));
                 return Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

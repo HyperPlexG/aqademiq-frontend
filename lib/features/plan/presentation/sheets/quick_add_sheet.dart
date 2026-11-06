@@ -125,7 +125,7 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
 
   Future<void> _pickTime() async {
     final v = await showTimeOfDayPicker(context, current: _timeLabel);
-    if (v == null) return;
+    if (v == null || !mounted) return;
     // Anchor to an arbitrary date — only the clock / day-part matters here; the
     // real calendar day is applied in create / Add-task.
     final resolved = PlanTime.resolve(v, DateTime(2000));
@@ -146,7 +146,7 @@ class _QuickAddSheetState extends ConsumerState<_QuickAddSheet> {
       current: _repeat,
       date: ref.read(selectedDateProvider),
     );
-    if (v != null) setState(() => _repeat = v);
+    if (v != null && mounted) setState(() => _repeat = v);
   }
 
   @override

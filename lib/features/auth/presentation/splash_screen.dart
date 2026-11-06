@@ -80,13 +80,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             ),
           ),
           // v11 SPLASH: the state-mark loader, 34 above the bottom edge.
-          const Positioned(
+          // Not const: the unnamed Semantics constructor is not a const one.
+          Positioned(
             bottom: 34,
             left: 0,
             right: 0,
             child: Semantics(
               label: 'Loading',
-              child: Center(child: ThinkMark(size: 26)),
+              child: const Center(child: ThinkMark(size: 26)),
             ),
           ),
         ],

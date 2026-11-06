@@ -265,6 +265,10 @@ class AdaChatController extends Notifier<AdaChatState> {
         pendingAttachments: attachments,
         error: adaErrorMessage(e),
       );
+    } finally {
+      // Whatever became of the reply, the turn may have started a conversation
+      // or moved one to the top: the history panel's cached list is stale.
+      if (ref.mounted) ref.invalidate(adaConversationsProvider);
     }
   }
 
@@ -383,6 +387,9 @@ class AdaChatController extends Notifier<AdaChatState> {
   void newConversation() {
     _turn++;
     ref.read(adaRepositoryProvider).startNewConversation();
+    // The history was cached when the panel first opened; without this the
+    // chat just left (and any started since) never showed up in it.
+    ref.invalidate(adaConversationsProvider);
     state = const AdaChatState();
   }
 

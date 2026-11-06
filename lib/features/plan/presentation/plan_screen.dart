@@ -110,8 +110,8 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     try {
       await ref.read(tasksRepositoryProvider).create(task);
     } on Object {
-      ref.read(hapticsProvider).saveFailed();
       if (!mounted) return;
+      ref.read(hapticsProvider).saveFailed();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't add task. Try again.")),
       );
@@ -120,6 +120,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     // Second creation path (quick add) alongside `add_task_screen._save`. Same
     // Tier 2 event, not a new one — the state change is identical, so it costs
     // nothing against Plan's budget of 4.
+    if (!mounted) return;
     ref.read(hapticsProvider).taskCreated();
     ref.invalidate(dayTasksProvider);
   }
@@ -147,11 +148,21 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
         await showRescheduleSheet(context);
       case PlanMenuResult.logMood:
         final result = await showLogMoodSheet(context);
-        if (result != null) {
-          await ref.read(moodRepositoryProvider).upsertDay(
-                date: ref.read(selectedDateProvider),
-                mood: result.mood,
-              );
+        if (result != null && mounted) {
+          try {
+            await ref.read(moodRepositoryProvider).upsertDay(
+                  date: ref.read(selectedDateProvider),
+                  mood: result.mood,
+                );
+          } on Object {
+            if (!mounted) return;
+            ref.read(hapticsProvider).saveFailed();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Couldn't save. Try again.")),
+            );
+            return;
+          }
+          if (!mounted) return;
           // On commit, and only after it lands — distinct from the ramp detents
           // that preceded it inside the sheet.
           ref.read(hapticsProvider).moodLogged();
@@ -338,7 +349,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   }
 
   void _moveToTomorrow(Task t) {
-    final next = ref.read(selectedDateProvider).add(const Duration(days: 1));
+    // Calendar arithmetic, not 24 hours: across a DST change `add(days: 1)`
+    // lands at 23:00 the same day or 01:00 the next.
+    final d = ref.read(selectedDateProvider);
+    final next = DateTime(d.year, d.month, d.day + 1);
     unawaited(ref.read(dayTasksProvider.notifier).move(t, next));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Moved "${t.title}" to tomorrow')),
@@ -369,7 +383,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final steps = t.subtasks.length;
     return [
       if (t.durationMin != null) '${t.durationMin} min',
-      if (steps > 0) ...['Ada generated', steps == 1 ? '1 microtask' : '$steps microtasks'],
+      if (steps > 0) ...['Ada generated', if (steps == 1) '1 microtask' else '$steps microtasks'],
     ].join(' · ');
   }
 

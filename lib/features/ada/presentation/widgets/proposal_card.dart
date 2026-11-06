@@ -405,7 +405,7 @@ class _MetaChip extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppText.sans(size: 15, weight: FontWeight.w600, color: colors.text),
+              style: AppText.sans(size: 15, color: colors.text),
             ),
           ),
         ],
@@ -423,7 +423,7 @@ class _FieldRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final value = AppText.sans(size: 15, weight: FontWeight.w600, height: 1.4, color: colors.text);
+    final value = AppText.sans(size: 15, height: 1.4, color: colors.text);
     final quiet = AppText.sans(size: 15, weight: FontWeight.w400, height: 1.4, color: colors.textMed);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),

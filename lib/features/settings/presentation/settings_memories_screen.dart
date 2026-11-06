@@ -241,19 +241,19 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
                         ),
                         child: Text(
                           m.source.label,
-                          style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textMed),
+                          style: AppText.sans(size: 13, color: colors.textMed),
                         ),
                       )
                     else
                       Text(
                         m.source.label,
-                        style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textDim),
+                        style: AppText.sans(size: 13, color: colors.textDim),
                       ),
                     if (m.expiresAt != null) ...[
                       const SizedBox(width: 8),
                       Text(
                         'until ${_ymd(m.expiresAt!)}',
-                        style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textDim),
+                        style: AppText.sans(size: 13, color: colors.textDim),
                       ),
                     ],
                   ],

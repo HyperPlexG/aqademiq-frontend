@@ -32,6 +32,10 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
 
   int _selectedMood = 3;
 
+  /// The save is a network call; a second tap while it is in flight would log
+  /// the morning twice.
+  bool _saving = false;
+
   /// Tier 3 — and one of the two exceptions where a haptic belongs to a widget
   /// rather than a controller, because the detent *is* the interaction
   /// (spec §6.3).
@@ -45,15 +49,28 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
   }
 
   Future<void> _setIntention() async {
-    await ref.read(moodRepositoryProvider).log(
-          date: AppDate.today(),
-          phase: MoodPhase.morning,
-          mood: _selectedMood,
-        );
+    if (_saving) return;
+    _saving = true;
+    try {
+      await ref.read(moodRepositoryProvider).log(
+            date: AppDate.today(),
+            phase: MoodPhase.morning,
+            mood: _selectedMood,
+          );
+    } on Object {
+      _saving = false;
+      if (!mounted) return;
+      ref.read(hapticsProvider).saveFailed();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Couldn't save. Try again.")),
+      );
+      return;
+    }
+    if (!mounted) return;
     // On commit, distinct from the ramp detents that preceded it.
     ref.read(hapticsProvider).moodLogged();
     ref.invalidate(moodWeekProvider);
-    if (mounted) context.go(Routes.plan);
+    context.go(Routes.plan);
   }
 
   @override
@@ -64,61 +81,74 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
     return Scaffold(
       backgroundColor: colors.surface,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-          child: Column(
-            children: [
-              // Skip: 15/600 in a 44 target, its padding hanging into the corner.
-              Align(
-                alignment: Alignment.centerRight,
-                child: Transform.translate(
-                  offset: const Offset(10, 0),
-                  child: _SkipButton(onTap: () => context.go(Routes.plan)),
+        // Scrolls only when it has to (a 320×568 phone, or large text);
+        // otherwise the Spacer still pins the button to the bottom as drawn.
+        // The padding sits inside the scroll view so Skip's overhang into the
+        // corner stays on screen and tappable.
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+                  child: Column(
+                    children: [
+                      // Skip: 15/600 in a 44 target, its padding hanging into the corner.
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Transform.translate(
+                          offset: const Offset(10, 0),
+                          child: _SkipButton(onTap: () => context.go(Routes.plan)),
+                        ),
+                      ),
+                      Text(
+                        'Morning\ncheck-in',
+                        textAlign: TextAlign.center,
+                        style: AppText.sans(
+                          size: 34,
+                          weight: FontWeight.w800,
+                          height: 1.2,
+                          color: colors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'How are you feeling today?',
+                        textAlign: TextAlign.center,
+                        style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+                      ),
+                      const SizedBox(height: 14),
+                      MoodBlob(idx: _selectedMood, size: 84),
+                      const SizedBox(height: 6),
+                      Text(
+                        MoodScale.labels[_selectedMood],
+                        style: AppText.sans(
+                          size: 17,
+                          weight: FontWeight.w800,
+                          color: moodColor,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _MoodSlider(
+                        selectedMood: _selectedMood,
+                        moodColors: _moodColors,
+                        onSelect: _selectMood,
+                      ),
+                      const SizedBox(height: 6),
+                      const _AdaTipCard(),
+                      const SizedBox(height: 14),
+                      const Spacer(),
+                      PrimaryButton(
+                        label: "Set today's intention →",
+                        onPressed: () => unawaited(_setIntention()),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                  ),
                 ),
               ),
-              Text(
-                'Morning\ncheck-in',
-                textAlign: TextAlign.center,
-                style: AppText.sans(
-                  size: 34,
-                  weight: FontWeight.w800,
-                  height: 1.2,
-                  color: colors.text,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'How are you feeling today?',
-                textAlign: TextAlign.center,
-                style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
-              ),
-              const SizedBox(height: 14),
-              MoodBlob(idx: _selectedMood, size: 84),
-              const SizedBox(height: 6),
-              Text(
-                MoodScale.labels[_selectedMood],
-                style: AppText.sans(
-                  size: 17,
-                  weight: FontWeight.w800,
-                  color: moodColor,
-                ),
-              ),
-              const SizedBox(height: 14),
-              _MoodSlider(
-                selectedMood: _selectedMood,
-                moodColors: _moodColors,
-                onSelect: _selectMood,
-              ),
-              const SizedBox(height: 6),
-              const _AdaTipCard(),
-              const SizedBox(height: 14),
-              const Spacer(),
-              PrimaryButton(
-                label: "Set today's intention →",
-                onPressed: () => unawaited(_setIntention()),
-              ),
-              const SizedBox(height: 12),
-            ],
+            ),
           ),
         ),
       ),

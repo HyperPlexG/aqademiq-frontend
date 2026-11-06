@@ -271,6 +271,9 @@ class _WheelBodyState extends State<_WheelBody> {
         const SizedBox(height: 10),
         Stack(
           alignment: Alignment.center,
+          // The highlight hangs 4 past each side; the default hardEdge clip
+          // cut it off flush.
+          clipBehavior: Clip.none,
           children: [
             Positioned(
               left: -4,

@@ -49,6 +49,9 @@ Color _tagColor(Iterable<Tag> tags, Task t) => hexColor(resolveStudyTag(tags, t.
 Future<void> showRescheduleSheet(BuildContext context) {
   return showDialog<void>(
     context: context,
+    // Full-bleed: the review's own SafeArea handles the insets, so its surface
+    // (not the scrim over the planner) fills the status-bar strip.
+    useSafeArea: false,
     barrierColor: const Color(0x47140F1C),
     builder: (_) => const _RescheduleReview(),
   );
@@ -95,7 +98,8 @@ class _RescheduleReviewState extends ConsumerState<_RescheduleReview> {
     final remaining = tasks.where((t) => !t.done).toList();
     final ticked = remaining.where((t) => !_leftBehind.contains(t.id)).toList();
     final tagsById = ref.watch(tagsByIdProvider);
-    final tomorrow = selected.add(const Duration(days: 1));
+    // Calendar arithmetic, not 24 hours, so a DST change can't skip or repeat a day.
+    final tomorrow = DateTime(selected.year, selected.month, selected.day + 1);
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -372,6 +376,7 @@ Future<DateTime?> showMoveDateSheet(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x47140F1C),
     builder: (_) => _MoveDateSheet(tasks: tasks, initial: initial, colorFor: colorFor),
@@ -404,88 +409,87 @@ class _MoveDateSheetState extends State<_MoveDateSheet> {
     final total = DateTime(_month.year, _month.month + 1, 0).day;
     final accentDay = (_selected.year == _month.year && _selected.month == _month.month) ? _selected.day : null;
 
-    return Padding(
-      padding: EdgeInsets.only(top: media.padding.top),
-      child: Container(
-        constraints: BoxConstraints(maxHeight: media.size.height - media.padding.top),
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, -8))],
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(top: 12, bottom: 14),
-                  decoration: BoxDecoration(color: const Color(0xFFE0DDD7), borderRadius: BorderRadius.circular(2)),
-                ),
+    // The route's `useSafeArea` keeps the sheet clear of the status bar. A
+    // modal sheet's builder sees MediaQuery with the top padding removed, so
+    // the inset this used to read here was always 0.
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, -8))],
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 14),
+                decoration: BoxDecoration(color: const Color(0xFFE0DDD7), borderRadius: BorderRadius.circular(2)),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  PlanSheetTitle('Move ($n)', size: 28, bottom: 4),
+                  Text(
+                    'When do you want to move this to?',
+                    style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    PlanSheetTitle('Move ($n)', size: 28, bottom: 4),
-                    Text(
-                      'When do you want to move this to?',
-                      style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
+                    for (var i = 0; i < n; i++)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: i == n - 1 ? 16 : 7),
+                        child: _MoveTaskCard(task: widget.tasks[i], color: widget.colorFor(widget.tasks[i]), radius: 13),
+                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '${_monthsFull[_month.month - 1]} ${_month.year}',
+                          style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
+                        ),
+                        const SizedBox(width: 4),
+                        Ic('chevron_right', size: 19, color: colors.accent),
+                        const Spacer(),
+                        _Arrow(icon: 'back', label: 'Previous month', color: colors.textDim, onTap: () => _shiftMonth(-1)),
+                        const SizedBox(width: 4),
+                        _Arrow(icon: 'chevron_right', label: 'Next month', color: colors.text, onTap: () => _shiftMonth(1)),
+                      ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 10),
+                    CalendarGrid(
+                      firstCol: firstCol,
+                      total: total,
+                      accentDay: accentDay,
+                      onDayTap: (day) => setState(() => _selected = DateTime(_month.year, _month.month, day)),
+                    ),
                   ],
                 ),
               ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (var i = 0; i < n; i++)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: i == n - 1 ? 16 : 7),
-                          child: _MoveTaskCard(task: widget.tasks[i], color: widget.colorFor(widget.tasks[i]), radius: 13),
-                        ),
-                      Row(
-                        children: [
-                          Text(
-                            '${_monthsFull[_month.month - 1]} ${_month.year}',
-                            style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
-                          ),
-                          const SizedBox(width: 4),
-                          Ic('chevron_right', size: 19, color: colors.accent),
-                          const Spacer(),
-                          _Arrow(icon: 'back', label: 'Previous month', color: colors.textDim, onTap: () => _shiftMonth(-1)),
-                          const SizedBox(width: 4),
-                          _Arrow(icon: 'chevron_right', label: 'Next month', color: colors.text, onTap: () => _shiftMonth(1)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      CalendarGrid(
-                        firstCol: firstCol,
-                        total: total,
-                        accentDay: accentDay,
-                        onDayTap: (day) => setState(() => _selected = DateTime(_month.year, _month.month, day)),
-                      ),
-                    ],
-                  ),
-                ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(18, 8, 18, 14 + media.viewPadding.bottom),
+              child: PlanCta(
+                label: 'Move ($n) to ${_fmtDate(_selected)}',
+                onTap: () => Navigator.of(context).pop(_selected),
               ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(18, 8, 18, 14 + media.viewPadding.bottom),
-                child: PlanCta(
-                  label: 'Move ($n) to ${_fmtDate(_selected)}',
-                  onTap: () => Navigator.of(context).pop(_selected),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

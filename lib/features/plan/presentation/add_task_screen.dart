@@ -238,8 +238,9 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
 
   Future<void> _addTag() async {
     final draft = await showAddTagSheet(context);
-    if (draft == null) return;
+    if (draft == null || !mounted) return;
     await ref.read(tagsProvider.notifier).add(label: draft.label, colorHex: hexFromColor(draft.color));
+    if (!mounted) return;
     final tags = ref.read(tagsProvider).value ?? const <Tag>[];
     Tag? created;
     for (final t in tags) {
@@ -448,22 +449,22 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     // Pass the current selection so reopening the sheet highlights it (it used
     // to always show "Anytime").
     final v = await showTimeOfDayPicker(context, current: _timeOfDay);
-    if (v != null) setState(() => _timeOfDay = v);
+    if (v != null && mounted) setState(() => _timeOfDay = v);
   }
 
   Future<void> _pickDate() async {
     final v = await showTaskDatePicker(context, initial: _date);
-    if (v != null) setState(() => _date = v);
+    if (v != null && mounted) setState(() => _date = v);
   }
 
   Future<void> _pickDuration() async {
     final v = await showDurationPicker(context, current: _durationMin);
-    if (v != null) setState(() => _durationMin = v);
+    if (v != null && mounted) setState(() => _durationMin = v);
   }
 
   Future<void> _pickRepeat() async {
     final v = await showRepeatPicker(context, current: _repeat, date: _date);
-    if (v != null) setState(() => _repeat = v);
+    if (v != null && mounted) setState(() => _repeat = v);
   }
 }
 
@@ -665,25 +666,37 @@ class _DetailRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: last ? null : Border(bottom: BorderSide(color: colors.border)),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(label, style: AppText.sans(size: 17, color: colors.text)),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      height: 36,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
-                      child: Text(
-                        value,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.sans(size: 15, color: colors.textMed),
+                child: LayoutBuilder(
+                  builder: (context, constraints) => Row(
+                    children: [
+                      Expanded(
+                        child: Text(label, style: AppText.sans(size: 17, color: colors.text)),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      // Its natural width, up to 60% of the row; past that the
+                      // value ellipsizes. Unbounded, as an inflexible Row child
+                      // is, the ellipsis never ran and a long value overflowed.
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: constraints.maxWidth * 0.6),
+                        child: Container(
+                          height: 36,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                          // widthFactor 1: hug the value (a bounded Align
+                          // would stretch the pill to the cap).
+                          child: Center(
+                            widthFactor: 1,
+                            child: Text(
+                              value,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sans(size: 15, color: colors.textMed),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

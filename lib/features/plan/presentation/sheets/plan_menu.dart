@@ -64,69 +64,74 @@ class _PlanMenuPopoverState extends State<_PlanMenuPopover> {
       alignment: Alignment.topRight,
       child: Padding(
         padding: const EdgeInsets.only(top: 40, right: 12),
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            // 220 as drawn; a longer label (large text) widens it rather than
-            // wrapping.
-            constraints: const BoxConstraints(minWidth: 220, maxWidth: 300),
-            padding: const EdgeInsets.symmetric(vertical: 8),
+        // The surface colour lives on the Material itself: the rows' ripples
+        // paint on it, and under the opaque Container it used to sit beneath
+        // they were never seen. The shadow stays outside, on its own box.
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2E000000),
+                blurRadius: 44,
+                offset: Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Material(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(20),
             clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: colors.surface,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x2E000000),
-                  blurRadius: 44,
-                  offset: Offset(0, 14),
-                ),
-              ],
-            ),
-            child: IntrinsicWidth(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _MenuRow(
-                    icon: 'event_note',
-                    label: 'Reschedule tasks',
-                    dimmed: dimActions,
-                    onTap: () => Navigator.of(context).pop(PlanMenuResult.reschedule),
-                  ),
-                  // Hidden while the planner is showing a future day. This
-                  // logs against the *selected* date, so on a Thursday viewing
-                  // Saturday it wrote a Saturday mood — a day that has not
-                  // happened, which then draws a tinted band in the weekly
-                  // report and is silently overwritten by the real check-in.
-                  if (widget.canLogMood)
+            child: Container(
+              // 220 as drawn; a longer label (large text) widens it up to 300,
+              // then ellipsizes.
+              constraints: const BoxConstraints(minWidth: 220, maxWidth: 300),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: IntrinsicWidth(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     _MenuRow(
-                      icon: 'favorite_border',
-                      label: 'Log mood',
+                      icon: 'event_note',
+                      label: 'Reschedule tasks',
                       dimmed: dimActions,
-                      onTap: () => Navigator.of(context).pop(PlanMenuResult.logMood),
+                      onTap: () => Navigator.of(context).pop(PlanMenuResult.reschedule),
                     ),
-                  if (!_groupingOpen) _Divider(color: colors.border, vertical: 6),
-                  _GroupingHeader(
-                    open: _groupingOpen,
-                    onTap: () => setState(() => _groupingOpen = !_groupingOpen),
-                  ),
-                  if (_groupingOpen) ...[
-                    _Divider(color: colors.border, vertical: 4),
-                    _GroupingOption(
-                      icon: 'list_view',
-                      label: 'List',
-                      selected: widget.currentGrouping == PlanViewMode.list,
-                      onTap: () => Navigator.of(context).pop(PlanMenuResult.groupingList),
+                    // Hidden while the planner is showing a future day. This
+                    // logs against the *selected* date, so on a Thursday viewing
+                    // Saturday it wrote a Saturday mood — a day that has not
+                    // happened, which then draws a tinted band in the weekly
+                    // report and is silently overwritten by the real check-in.
+                    if (widget.canLogMood)
+                      _MenuRow(
+                        icon: 'favorite_border',
+                        label: 'Log mood',
+                        dimmed: dimActions,
+                        onTap: () => Navigator.of(context).pop(PlanMenuResult.logMood),
+                      ),
+                    if (!_groupingOpen) _Divider(color: colors.border, vertical: 6),
+                    _GroupingHeader(
+                      open: _groupingOpen,
+                      onTap: () => setState(() => _groupingOpen = !_groupingOpen),
                     ),
-                    _GroupingOption(
-                      icon: 'planner',
-                      label: 'Timeline',
-                      selected: widget.currentGrouping == PlanViewMode.timeline,
-                      onTap: () => Navigator.of(context).pop(PlanMenuResult.groupingTimeline),
-                    ),
+                    if (_groupingOpen) ...[
+                      _Divider(color: colors.border, vertical: 4),
+                      _GroupingOption(
+                        icon: 'list_view',
+                        label: 'List',
+                        selected: widget.currentGrouping == PlanViewMode.list,
+                        onTap: () => Navigator.of(context).pop(PlanMenuResult.groupingList),
+                      ),
+                      _GroupingOption(
+                        icon: 'planner',
+                        label: 'Timeline',
+                        selected: widget.currentGrouping == PlanViewMode.timeline,
+                        onTap: () => Navigator.of(context).pop(PlanMenuResult.groupingTimeline),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -175,11 +180,14 @@ class _MenuRow extends StatelessWidget {
             children: [
               Ic(icon, size: 19, color: colors.text),
               const SizedBox(width: 13),
-              Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: AppText.sans(size: 17, color: colors.text),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(size: 17, color: colors.text),
+                ),
               ),
             ],
           ),
@@ -254,12 +262,17 @@ class _GroupingOption extends StatelessWidget {
               ],
               Ic(icon, size: 19, color: colors.text),
               const SizedBox(width: 12),
-              Text(
-                label,
-                style: AppText.sans(
-                  size: 17,
-                  weight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: colors.text,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(
+                    size: 17,
+                    weight: selected ? FontWeight.w800 : FontWeight.w600,
+                    color: colors.text,
+                  ),
                 ),
               ),
             ],

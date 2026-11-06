@@ -80,11 +80,18 @@ class TagChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (lead != null) ...[lead, const SizedBox(width: 6)],
-                Text(
-                  label,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: AppText.sans(size: 15, color: textColor),
+                // A long tag ellipsizes instead of overflowing its Wrap row. A
+                // cap rather than Flexible: chips also sit in horizontal scroll
+                // rows, where there is no bounded width to flex into.
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(size: 15, color: textColor),
+                  ),
                 ),
                 if (onRemove != null) ...[
                   const SizedBox(width: 6),

@@ -126,25 +126,30 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(adaChatProvider.notifier).applyPlan(messageId);
-      // Ada's entire budget is 1 (§7): "'Plan my week' applied to the plan".
-      // Message send, message arrival and streaming tokens are all zero — none
-      // of them is a state change the user caused, and a chat that buzzes as it
-      // types is the fastest way to lose the channel.
-      //
-      // Reuses `taskCreated` rather than minting a 23rd Tier 2 event: what just
-      // happened is that tasks appeared on the plan, which is the same state
-      // change the Plan screen confirms with the same light single. Spec §3
-      // caps the vocabulary at the events it lists, and this needs no new one.
-      ref.read(hapticsProvider).taskCreated();
-      ref.invalidate(dayTasksProvider);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Added to your plan ✓')),
-      );
     } on Object {
+      if (!mounted) return;
       messenger.showSnackBar(
         const SnackBar(content: Text("Couldn't apply this plan.")),
       );
+      return;
     }
+    // Checked outside the try: `ref` after dispose throws, and inside it that
+    // throw would land in the catch and report a plan that DID apply as failed.
+    if (!mounted) return;
+    // Ada's entire budget is 1 (§7): "'Plan my week' applied to the plan".
+    // Message send, message arrival and streaming tokens are all zero — none
+    // of them is a state change the user caused, and a chat that buzzes as it
+    // types is the fastest way to lose the channel.
+    //
+    // Reuses `taskCreated` rather than minting a 23rd Tier 2 event: what just
+    // happened is that tasks appeared on the plan, which is the same state
+    // change the Plan screen confirms with the same light single. Spec §3
+    // caps the vocabulary at the events it lists, and this needs no new one.
+    ref.read(hapticsProvider).taskCreated();
+    ref.invalidate(dayTasksProvider);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Added to your plan ✓')),
+    );
   }
 
   /// Approve one of Ada's proposed changes. Nothing was written until now — the
@@ -232,7 +237,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     // nothing is sent until the user taps Send.
     final messenger = ScaffoldMessenger.of(context);
     final files = await openFiles(acceptedTypeGroups: const [typeGroup]);
-    if (files.isEmpty) return;
+    if (files.isEmpty || !mounted) return;
 
     final notifier = ref.read(adaChatProvider.notifier);
     for (final file in files) {
@@ -328,7 +333,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
               bottom: 0,
               child: AdaEdgeFade.bottom(
                 height: inputBottom + kAdaInputHeight / 2,
-                solid: math.max(0.0, inputBottom - AppScaffold.navBreathing),
+                solid: math.max(0, inputBottom - AppScaffold.navBreathing),
               ),
             ),
           Positioned(

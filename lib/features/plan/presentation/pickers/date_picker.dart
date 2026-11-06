@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../core/utils/date_format.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../widgets/plan_sheet.dart';
@@ -16,7 +17,7 @@ Future<DateTime?> showTaskDatePicker(
 }) {
   return showPlanSheet<DateTime>(
     context,
-    builder: (_) => _DatePickerSheet(initial: initial ?? DateTime.now()),
+    builder: (_) => _DatePickerSheet(initial: initial ?? AppDate.today()),
   );
 }
 
@@ -63,7 +64,9 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final today = _dateOnly(DateTime.now());
+    // The planner's today: the fixture date in mock mode, so "Today" here is
+    // the day the Plan screen calls today.
+    final today = AppDate.today();
     final firstCol = DateTime(_month.year, _month.month).weekday - 1;
     final total = DateTime(_month.year, _month.month + 1, 0).day;
     final accentDay =
@@ -108,9 +111,11 @@ class _QuickChipsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = _dateOnly(DateTime.now());
-    final tomorrow = today.add(const Duration(days: 1));
-    final nextWeek = today.add(const Duration(days: 7));
+    final today = AppDate.today();
+    // Calendar days, not 24-hour steps: across a DST change those land an hour
+    // off midnight and never equal the (date-only) selection.
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+    final nextWeek = DateTime(today.year, today.month, today.day + 7);
     final other = selected != today && selected != tomorrow && selected != nextWeek;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
