@@ -3,31 +3,38 @@ import 'dart:math' as math;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/ada_action.dart';
 import '../../../data/models/ada_message.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/repositories/ada_repository.dart';
-import '../../../data/sources/ada_source.dart';
 import '../../../services/haptics/haptics_service.dart';
+import '../../../services/reminder_scheduler.dart';
 import '../../../services/voice_input_service.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/dismiss_keyboard.dart';
-import '../../../shared/widgets/markdown_text.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/voice_feedback.dart';
 import '../../../shared/widgets/voice_recording_bar.dart';
 import '../../plan/providers/plan_providers.dart';
+import 'widgets/ada_chrome.dart';
+import 'widgets/ada_look.dart';
+import 'widgets/ada_thread.dart';
 import 'widgets/chat_history_sheet.dart';
+import 'widgets/proposal_card.dart';
 
-/// FRAMES `ada-empty` / `ada-chat` — the Ada tab (intro when empty, conversation
-/// once started). History opens as a slide-over.
+/// FRAMES `ada-empty` / `ada-chat` / `ada-thinking` / `ada-proposals` /
+/// `ada-proposals-end` / `ada-applied` — the Ada tab: the intro when empty, the
+/// thread once started. History opens as a slide-over (`ada-history`).
+///
+/// v11 lays it out like Gemini: a 72 header on the page colour, the thread
+/// scrolling under an eased fade beneath it, and a floating glass text box
+/// docked above the nav — with the proposal tray above that when two or more
+/// of Ada's changes wait. The thread runs under all of it.
 class AdaScreen extends ConsumerStatefulWidget {
   const AdaScreen({super.key});
 
@@ -39,7 +46,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   final _input = TextEditingController();
   final _focus = FocusNode();
 
-  /// Lets the "N changes waiting" bar scroll the transcript to its cards.
+  /// Lets the "N waiting" tray scroll the transcript to its cards.
   final _list = GlobalKey<_MessageListState>();
   late final _dictation = Dictation(_input);
 
@@ -63,6 +70,8 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
 
   void _send([String? text]) {
     final chat = ref.read(adaChatProvider);
+    // While a reply is on its way the arrow is Stop: one turn at a time.
+    if (chat.awaitingReply) return;
     final value = (text ?? _input.text).trim();
     if (value.isEmpty && chat.pendingAttachments.isEmpty) return;
     // Sending ends any dictation, started or merely starting. Cancel rather
@@ -73,6 +82,10 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     _input.clear();
     unawaited(ref.read(adaChatProvider.notifier).send(value));
   }
+
+  /// Send became Stop (`ada-thinking`): stop waiting for this reply. There is
+  /// no server cancel; the controller just drops the answer when it lands.
+  void _stop() => ref.read(adaChatProvider.notifier).stop();
 
   /// Opens the mic. While it is open the input bar becomes the recording pill,
   /// whose buttons are the three handlers below. The words still land in the
@@ -144,7 +157,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
       _refreshAffected(action.resource);
     } else {
       messenger.showSnackBar(
-        SnackBar(content: Text("Couldn't apply “${action.title}”.")),
+        SnackBar(content: Text("Couldn't apply “${proposalHeadline(action)}”.")),
       );
     }
   }
@@ -166,6 +179,25 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                 : '$applied change${applied == 1 ? '' : 's'} applied ✓',
           ),
         ),
+      );
+    }
+  }
+
+  /// Undo on an added task (`ada-applied`). Deletes the task the approval
+  /// created — only offered when the app knows exactly which one — then
+  /// refreshes what the Plan's own Delete refreshes.
+  Future<void> _undo(AdaAction action) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final undone = await ref.read(adaChatProvider.notifier).undoAction(action.id);
+    if (!mounted) return;
+    if (undone) {
+      ref
+        ..invalidate(dayTasksProvider)
+        ..invalidate(weeklyCompletedProvider);
+      unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't undo that. It's still on your plan.")),
       );
     }
   }
@@ -220,59 +252,112 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   Widget build(BuildContext context) {
     final chat = ref.watch(adaChatProvider);
     final voice = ref.watch(voiceInputProvider);
-    // Sit above the keyboard when typing, otherwise above the floating nav.
+    final look = AdaLook.of(context);
+    // Sit above the keyboard when typing, otherwise above the floating nav
+    // (the design docks the box ~20 clear of the bar's top edge).
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final inputBottom = keyboard > 0 ? keyboard + 8 : AppScaffold.navClearanceOf(context);
 
+    final tray = chat.outstandingActions.length > 1;
+    final staged = chat.uploading || chat.pendingAttachments.isNotEmpty;
+    // Whatever floats on top of the text box, so content can clear it.
+    final above = (tray ? kAdaTrayHeight + kAdaTrayGap : 0.0) +
+        (staged ? AdaAttachmentRow.height + kAdaTrayGap : 0.0);
+    final boxTop = inputBottom + kAdaInputHeight + above;
+
     return DismissKeyboard(
-      child: Column(
+      child: Stack(
         children: [
-          _Header(
-            onHistory: () => unawaited(showChatHistory(context)),
-            onUpload: chat.uploading ? null : () => unawaited(_pickAndUpload()),
-            uploading: chat.uploading,
-          ),
-          Expanded(
-            child: chat.isEmpty
-                ? _EmptyState(onSuggest: _send)
-                : _MessageList(
-                    key: _list,
-                    messages: chat.messages,
-                    typing: chat.typing,
-                    error: chat.error,
-                    onRetry: () => unawaited(
-                      ref.read(adaChatProvider.notifier).retryLast(),
-                    ),
-                    onDismissError:
-                        ref.read(adaChatProvider.notifier).clearError,
-                    onApplyPlan: _applyPlan,
-                    actionsByMessage: chat.actionsByMessage,
-                    decidingIds: chat.decidingActionIds,
-                    onApprove: _approve,
-                    onReject: _reject,
+          if (chat.isEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: AdaGlowPainter(core: look.glowCore, mid: look.glowMid),
                   ),
+                ),
+              ),
+            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AdaHeader(
+                onHistory: () => unawaited(showChatHistory(context)),
+                onUpload: chat.uploading ? null : () => unawaited(_pickAndUpload()),
+                uploading: chat.uploading,
+              ),
+              Expanded(
+                child: chat.isEmpty
+                    ? _Intro(onSuggest: _send, bottomInset: boxTop + 22)
+                    : Stack(
+                        children: [
+                          Positioned.fill(
+                            child: _MessageList(
+                              key: _list,
+                              // The last line rests 48 above the text box, or
+                              // 40 above the tray when there is one.
+                              bottomInset: boxTop + (tray ? 40 : 48),
+                              messages: chat.messages,
+                              typing: chat.typing,
+                              stopped: chat.stoppedReplies,
+                              error: chat.error,
+                              onRetry: () => unawaited(
+                                ref.read(adaChatProvider.notifier).retryLast(),
+                              ),
+                              onDismissError: ref.read(adaChatProvider.notifier).clearError,
+                              onApplyPlan: (id) => unawaited(_applyPlan(id)),
+                              actionsByMessage: chat.actionsByMessage,
+                              decidingIds: chat.decidingActionIds,
+                              onApprove: (a) => unawaited(_approve(a)),
+                              onReject: (a) => unawaited(_reject(a)),
+                              onUndo: (a) => unawaited(_undo(a)),
+                            ),
+                          ),
+                          const Positioned(top: 0, left: 0, right: 0, child: AdaEdgeFade.top()),
+                        ],
+                      ),
+              ),
+            ],
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(10, 8, 10, inputBottom),
+          if (!chat.isEmpty)
+            // Solid up to the nav's top edge, easing out by the text box's
+            // midline — the thread dissolves before the glass and the bar.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AdaEdgeFade.bottom(
+                height: inputBottom + kAdaInputHeight / 2,
+                solid: math.max(0.0, inputBottom - AppScaffold.navBreathing),
+              ),
+            ),
+          Positioned(
+            left: kAdaGlassInset,
+            right: kAdaGlassInset,
+            bottom: inputBottom,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (chat.outstandingActions.length > 1)
-                  _DecideAllBar(
+                if (tray) ...[
+                  AdaProposalTray(
                     count: chat.outstandingActions.length,
                     busy: chat.decidingActionIds.isNotEmpty,
                     onShow: () => _list.currentState?.scrollToFirstPending(),
                     onApproveAll: () => unawaited(_decideAll(approve: true)),
-                    onRejectAll: () => unawaited(_decideAll(approve: false)),
+                    onDeclineAll: () => unawaited(_decideAll(approve: false)),
                   ),
-                if (chat.uploading || chat.pendingAttachments.isNotEmpty)
-                  _AttachmentPreview(
+                  const SizedBox(height: kAdaTrayGap),
+                ],
+                if (staged) ...[
+                  AdaAttachmentRow(
                     uploading: chat.uploading,
                     attachments: chat.pendingAttachments,
                     onRemove: (key) =>
                         ref.read(adaChatProvider.notifier).removePendingAttachment(key),
                   ),
+                  const SizedBox(height: kAdaTrayGap),
+                ],
                 AnimatedSwitcher(
                   duration: MediaQuery.disableAnimationsOf(context)
                       ? Duration.zero
@@ -287,27 +372,32 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
                     ),
                   ),
                   child: voice.isActiveFor(this)
-                      ? VoiceRecordingBar(
+                      ? SizedBox(
                           key: const ValueKey('recording'),
-                          listening: voice.isListeningFor(this),
-                          level: _voice.level,
-                          onDiscard: _discardVoice,
-                          onStop: _stopVoice,
-                          onSend: () => unawaited(_sendVoice()),
+                          height: kAdaInputHeight,
+                          child: Center(
+                            child: VoiceRecordingBar(
+                              listening: voice.isListeningFor(this),
+                              level: _voice.level,
+                              onDiscard: _discardVoice,
+                              onStop: _stopVoice,
+                              onSend: () => unawaited(_sendVoice()),
+                            ),
+                          ),
                         )
-                      : _InputBar(
+                      : AdaInputBar(
                           key: const ValueKey('typing'),
                           controller: _input,
                           focusNode: _focus,
-                          compact: !chat.isEmpty,
-                          onSend: _send,
-                          onAttach: chat.uploading ? null : () => unawaited(_pickAndUpload()),
+                          thread: !chat.isEmpty,
+                          busy: chat.awaitingReply,
                           // Only a phone with no recognizer at all loses the
                           // control; a refused permission keeps it, so the
                           // student can fix it.
-                          voiceAvailable:
-                              voice.unavailable != VoiceUnavailable.unsupported,
+                          voiceAvailable: voice.unavailable != VoiceUnavailable.unsupported,
+                          onSend: _send,
                           onSpeak: () => unawaited(_startVoice()),
+                          onStop: _stop,
                         ),
                 ),
               ],
@@ -319,125 +409,88 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({
-    required this.onHistory,
-    required this.onUpload,
-    this.uploading = false,
-  });
-  final VoidCallback onHistory;
-  final VoidCallback? onUpload;
-  final bool uploading;
+/// `ada-empty`: Ada and her line centred in the space above four suggestions,
+/// laid out as Gemini does — a line icon, the words beside it, 44 a row.
+class _Intro extends StatelessWidget {
+  const _Intro({required this.onSuggest, required this.bottomInset});
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: colors.border))),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onHistory,
-            child: Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: colors.surface, shape: BoxShape.circle, boxShadow: colors.cardShadow),
-              child: AppIcon(Icons.menu, size: 15, color: colors.text),
-            ),
-          ),
-          const SizedBox(width: 9),
-          Text('Ada', style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text)),
-          const Spacer(),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onUpload,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-              decoration: BoxDecoration(
-                color: colors.bg,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: uploading
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 10,
-                          height: 10,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.6,
-                            color: colors.textMed,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Uploading…',
-                          style: AppText.sans(
-                            size: 10,
-                            weight: FontWeight.w700,
-                            color: colors.textDim,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Text(
-                      '↑ Upload',
-                      style: AppText.sans(
-                        size: 10,
-                        weight: FontWeight.w700,
-                        color: onUpload == null ? colors.textDim : colors.text,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onSuggest});
   final ValueChanged<String> onSuggest;
 
-  static const _chips = ['Plan my week', "I'm overwhelmed", 'Break this down', 'Deadline help'];
+  /// From the bottom of the screen to where the suggestions must end.
+  final double bottomInset;
+
+  static const _suggestions = [
+    ('planner', 'Plan my week'),
+    ('self_improvement', "I'm overwhelmed"),
+    ('account_tree', 'Break this down'),
+    ('alarm', 'Deadline help'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const AdaMascot(size: 72),
-        const SizedBox(height: 16),
-        Text(
-          "Drop your thoughts.\nI'll turn them into a plan.",
-          textAlign: TextAlign.center,
-          style: AppText.sans(size: 17, weight: FontWeight.w700, height: 1.4, color: colors.text),
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final c in _chips)
-                GestureDetector(
-                  onTap: () => onSuggest(c),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                      border: Border.all(color: colors.accent.alpha8(0x44)),
+    final look = AdaLook.of(context);
+    // Scrolls only when there is not room (a short phone with the keyboard
+    // up); otherwise it fills the space and centres Ada in it.
+    return CustomScrollView(
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const AdaMascot(size: 78),
+                        const SizedBox(height: 15),
+                        Text(
+                          "Drop your thoughts.\nI'll turn them into a plan.",
+                          textAlign: TextAlign.center,
+                          style: AppText.sans(size: 20, weight: FontWeight.w700, height: 1.4, color: colors.text),
+                        ),
+                      ],
                     ),
-                    child: Text(c, style: AppText.sans(size: 10, color: colors.accent)),
                   ),
                 ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 0, 6, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final (icon, label) in _suggestions)
+                        Semantics(
+                          button: true,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => onSuggest(label),
+                            child: SizedBox(
+                              height: 44,
+                              child: Row(
+                                children: [
+                                  Ic(icon, size: 22, color: look.reply),
+                                  const SizedBox(width: 14),
+                                  Flexible(
+                                    child: Text(
+                                      label,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppText.sans(size: 17, weight: FontWeight.w500, color: look.reply),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -448,8 +501,10 @@ class _EmptyState extends StatelessWidget {
 class _MessageList extends StatefulWidget {
   const _MessageList({
     super.key,
+    required this.bottomInset,
     required this.messages,
     required this.typing,
+    required this.stopped,
     required this.error,
     required this.onRetry,
     required this.onDismissError,
@@ -458,9 +513,17 @@ class _MessageList extends StatefulWidget {
     required this.decidingIds,
     required this.onApprove,
     required this.onReject,
+    required this.onUndo,
   });
+
+  /// From the bottom of the screen to where the last line may sit: clear of
+  /// the glass (tray + text box) and the nav, which all float over the thread.
+  final double bottomInset;
   final List<AdaMessage> messages;
   final bool typing;
+
+  /// User messages whose reply was stopped.
+  final Set<String> stopped;
 
   /// Why the last turn failed, or null. Rendered in the transcript rather than
   /// as a snackbar: a snackbar for a minute-long request is gone before the
@@ -474,6 +537,7 @@ class _MessageList extends StatefulWidget {
   final Set<String> decidingIds;
   final ValueChanged<AdaAction> onApprove;
   final ValueChanged<AdaAction> onReject;
+  final ValueChanged<AdaAction> onUndo;
 
   @override
   State<_MessageList> createState() => _MessageListState();
@@ -482,8 +546,8 @@ class _MessageList extends StatefulWidget {
 /// The transcript, kept at the newest message.
 ///
 /// It never scrolled by itself: a reply with five cards landed below the fold
-/// — under the keyboard, behind the "N changes waiting" bar — and the user
-/// asked "where is it?" while the cards sat just out of sight.
+/// — under the keyboard, behind the "N waiting" tray — and the user asked
+/// "where is it?" while the cards sat just out of sight.
 class _MessageListState extends State<_MessageList> {
   final _scroll = ScrollController();
   final _keys = <String, GlobalKey>{};
@@ -495,12 +559,13 @@ class _MessageListState extends State<_MessageList> {
   }
 
   @override
-  void didUpdateWidget(_MessageList old) {
-    super.didUpdateWidget(old);
-    if (widget.messages.length != old.messages.length ||
-        widget.typing != old.typing ||
-        widget.error != old.error ||
-        _cardCount(widget) != _cardCount(old)) {
+  void didUpdateWidget(_MessageList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.messages.length != oldWidget.messages.length ||
+        widget.typing != oldWidget.typing ||
+        widget.error != oldWidget.error ||
+        widget.bottomInset != oldWidget.bottomInset ||
+        _cardCount(widget) != _cardCount(oldWidget)) {
       _toEnd(animate: true);
     }
   }
@@ -541,958 +606,63 @@ class _MessageListState extends State<_MessageList> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  List<Widget> _items() {
     final w = widget;
-    return ListView(
+    final items = <Widget>[];
+    for (final m in w.messages) {
+      final key = _keys.putIfAbsent(m.id, GlobalKey.new);
+      if (m.role == AdaRole.user) {
+        items.add(YouSay(key: key, text: m.text));
+        if (w.stopped.contains(m.id)) items.add(const AdaStoppedNote());
+        continue;
+      }
+      // A replaced card is history, not a choice: the newer one carries it.
+      final cards = [
+        for (final a in w.actionsByMessage[m.id] ?? const <AdaAction>[])
+          if (a.status != AdaActionStatus.superseded) a,
+      ];
+      final below = <Widget>[];
+      final firstGap = m.text.trim().isEmpty ? 0.0 : 10.0;
+      if (m.hasPlan) {
+        below.addAll([SizedBox(height: firstGap), AdaApplyPlanButton(onTap: () => w.onApplyPlan(m.id))]);
+      }
+      for (final a in cards) {
+        below
+          ..add(SizedBox(height: below.isEmpty ? firstGap : 8))
+          ..add(
+            AdaProposalCard(
+              action: a,
+              busy: w.decidingIds.contains(a.id),
+              onApprove: () => w.onApprove(a),
+              onDecline: () => w.onReject(a),
+              onUndo: () => w.onUndo(a),
+            ),
+          );
+      }
+      items.add(AdaSay(key: key, text: m.text, below: below));
+    }
+    if (w.typing) items.add(const AdaThinking());
+    if (w.error != null) {
+      items.add(
+        AdaErrorNote(
+          message: w.error!,
+          onRetry: w.onRetry,
+          onDismiss: w.onDismissError,
+        ),
+      );
+    }
+    return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = _items();
+    return ListView.separated(
       controller: _scroll,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      children: [
-        for (final m in w.messages)
-          _Bubble(
-            key: _keys.putIfAbsent(m.id, GlobalKey.new),
-            message: m,
-            onApplyPlan: w.onApplyPlan,
-            // A replaced card is history, not a choice: the newer one carries it.
-            actions: [
-              for (final a in w.actionsByMessage[m.id] ?? const <AdaAction>[])
-                if (a.status != AdaActionStatus.superseded) a,
-            ],
-            decidingIds: w.decidingIds,
-            onApprove: w.onApprove,
-            onReject: w.onReject,
-          ),
-        if (w.typing) const _TypingBubble(),
-        if (w.error != null)
-          _ErrorBubble(
-            message: w.error!,
-            onRetry: w.onRetry,
-            onDismiss: w.onDismissError,
-          ),
-      ],
-    );
-  }
-}
-
-class _Bubble extends StatelessWidget {
-  const _Bubble({
-    super.key,
-    required this.message,
-    required this.onApplyPlan,
-    this.actions = const [],
-    this.decidingIds = const {},
-    required this.onApprove,
-    required this.onReject,
-  });
-  final AdaMessage message;
-  final ValueChanged<String> onApplyPlan;
-  final List<AdaAction> actions;
-  final Set<String> decidingIds;
-  final ValueChanged<AdaAction> onApprove;
-  final ValueChanged<AdaAction> onReject;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final isUser = message.role == AdaRole.user;
-    final bubble = Container(
-      constraints: BoxConstraints(maxWidth: isUser ? 170 : 185),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: isUser ? colors.accent : colors.bg,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(12),
-          topRight: const Radius.circular(12),
-          bottomLeft: Radius.circular(isUser ? 12 : 3),
-          bottomRight: Radius.circular(isUser ? 3 : 12),
-        ),
-      ),
-      child: isUser
-          // The user's own text is never Markdown — render it verbatim so a
-          // literal asterisk stays an asterisk.
-          ? Text(
-              message.text,
-              style: AppText.sans(size: 12, height: 1.55, color: Colors.white),
-            )
-          : MarkdownText(
-              message.text,
-              style: AppText.sans(size: 12, height: 1.55, color: colors.text),
-              muted: colors.textMed,
-              accent: colors.accent,
-            ),
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            const Padding(padding: EdgeInsets.only(top: 2), child: AdaMascot(size: 22)),
-            const SizedBox(width: 7),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                bubble,
-                if (!isUser && message.hasPlan) ...[
-                  const SizedBox(height: 6),
-                  _ApplyPlanButton(onTap: () => onApplyPlan(message.id)),
-                ],
-                for (final action in actions) ...[
-                  const SizedBox(height: 6),
-                  _ActionCard(
-                    action: action,
-                    busy: decidingIds.contains(action.id),
-                    onApprove: () => onApprove(action),
-                    onReject: () => onReject(action),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Add to my plan" CTA shown under an Ada message that proposed a schedule.
-class _ApplyPlanButton extends StatelessWidget {
-  const _ApplyPlanButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
-          color: colors.accent,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppIcon(Icons.playlist_add_check, size: 15, color: Colors.white),
-            const SizedBox(width: 6),
-            Text(
-              'Add to my plan',
-              style: AppText.sans(size: 11, weight: FontWeight.w800, color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A change Ada wants to make, with the user's approve/decline gate.
-///
-/// Nothing behind this card has happened yet: the backend holds it as a pending
-/// action and applies it only when Approve is tapped. Once decided the card
-/// freezes into a receipt so the conversation stays readable on reload.
-class _ActionCard extends StatelessWidget {
-  const _ActionCard({
-    required this.action,
-    required this.busy,
-    required this.onApprove,
-    required this.onReject,
-  });
-
-  final AdaAction action;
-  final bool busy;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
-
-  Color _accentFor(AppColors colors) => switch (action.operation) {
-        AdaActionOperation.delete => const Color(0xFFFF5C7C),
-        AdaActionOperation.create => colors.accent,
-        AdaActionOperation.update => colors.accent,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final accent = _accentFor(colors);
-    final decided = action.status.isDecided;
-
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 230),
-      padding: const EdgeInsets.fromLTRB(11, 9, 11, 9),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: decided ? colors.border : accent.alpha8(0x55),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: accent.alpha8(0x1A),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  action.operation.label.toUpperCase(),
-                  style: AppText.sans(size: 8, weight: FontWeight.w800, color: accent),
-                ),
-              ),
-              const Spacer(),
-              if (decided) _StatusChip(status: action.status),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            action.title,
-            style: AppText.sans(size: 12, weight: FontWeight.w700, height: 1.35, color: colors.text),
-          ),
-          if (action.fields.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            for (final f in action.fields) _FieldRow(field: f),
-          ],
-          if (action.warning != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              action.warning!,
-              style: AppText.sans(size: 10, height: 1.35, color: const Color(0xFFFF5C7C)),
-            ),
-          ],
-          if (action.status.isFailed && action.error != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              action.error!,
-              style: AppText.sans(size: 10, height: 1.35, color: const Color(0xFFFF5C7C)),
-            ),
-          ],
-          if (!decided) ...[
-            const SizedBox(height: 9),
-            Row(
-              children: [
-                Expanded(
-                  child: _ActionButton(
-                    label: 'Approve',
-                    filled: true,
-                    accent: accent,
-                    busy: busy,
-                    onTap: busy ? null : onApprove,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: _ActionButton(
-                    label: 'Decline',
-                    filled: false,
-                    accent: colors.textMed,
-                    busy: false,
-                    onTap: busy ? null : onReject,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _FieldRow extends StatelessWidget {
-  const _FieldRow({required this.field});
-  final AdaActionField field;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 72,
-            child: Text(
-              field.label,
-              style: AppText.sans(size: 10, color: colors.textDim),
-            ),
-          ),
-          Expanded(
-            child: field.isChange
-                // Show the old value struck through so a change reads as a
-                // change, not as a fresh value the user has to reason about.
-                ? Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        field.from!,
-                        style: AppText.sans(size: 10, color: colors.textDim).copyWith(
-                          decoration: TextDecoration.lineThrough,
-                        ),
-                      ),
-                      Text('  →  ', style: AppText.sans(size: 10, color: colors.textDim)),
-                      Text(
-                        field.to ?? '—',
-                        style: AppText.sans(size: 10, weight: FontWeight.w700, color: colors.text),
-                      ),
-                    ],
-                  )
-                : Text(
-                    field.to ?? '—',
-                    style: AppText.sans(size: 10, weight: FontWeight.w700, color: colors.text),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-  final AdaActionStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final (label, color) = switch (status) {
-      AdaActionStatus.executed => ('Applied ✓', const Color(0xFF34C759)),
-      AdaActionStatus.rejected => ('Declined', colors.textDim),
-      AdaActionStatus.failed => ('Failed', const Color(0xFFFF5C7C)),
-      _ => ('Done', colors.textDim),
-    };
-    return Text(
-      label,
-      style: AppText.sans(size: 9, weight: FontWeight.w800, color: color),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.filled,
-    required this.accent,
-    required this.busy,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool filled;
-  final Color accent;
-  final bool busy;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: filled ? accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: filled ? null : Border.all(color: colors.border),
-        ),
-        child: busy
-            ? SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.6,
-                  color: filled ? Colors.white : accent,
-                ),
-              )
-            : Text(
-                label,
-                style: AppText.sans(
-                  size: 11,
-                  weight: FontWeight.w800,
-                  color: filled ? Colors.white : colors.textMed,
-                ),
-              ),
-      ),
-    );
-  }
-}
-
-/// Shown above the input when Ada has proposed several changes at once.
-class _DecideAllBar extends StatelessWidget {
-  const _DecideAllBar({
-    required this.count,
-    required this.busy,
-    required this.onApproveAll,
-    required this.onRejectAll,
-    required this.onShow,
-  });
-
-  final int count;
-  final bool busy;
-
-  /// Scroll to the cards this bar is counting.
-  final VoidCallback onShow;
-  final VoidCallback onApproveAll;
-  final VoidCallback onRejectAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-        decoration: BoxDecoration(
-          color: colors.accent.alpha8(0x14),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: colors.accent.alpha8(0x33)),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onShow,
-                child: Text(
-                  '$count changes waiting · show',
-                  style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.text),
-                ),
-              ),
-            ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: busy ? null : onRejectAll,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(
-                  'Decline all',
-                  style: AppText.sans(size: 11, weight: FontWeight.w700, color: colors.textMed),
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: busy ? null : onApproveAll,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: colors.accent,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: busy
-                    ? const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 1.6, color: Colors.white),
-                      )
-                    : Text(
-                        'Approve all',
-                        style: AppText.sans(size: 11, weight: FontWeight.w800, color: Colors.white),
-                      ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// "Ada is thinking", with the wait made visible.
-///
-/// An Ada turn is several provider calls and can legitimately run past a
-/// minute when it opens an attachment. A static line for that long reads as a
-/// hang — the thing you look at to decide whether the app is still alive. A
-/// loop that keeps moving answers that question without claiming progress it
-/// cannot measure, which a spinner or a percentage would.
-class _TypingBubble extends StatefulWidget {
-  const _TypingBubble();
-
-  @override
-  State<_TypingBubble> createState() => _TypingBubbleState();
-}
-
-class _TypingBubbleState extends State<_TypingBubble>
-    with SingleTickerProviderStateMixin {
-  /// Slow enough to read as breathing rather than loading. A fast pulse on a
-  /// 60-second wait is agitating; this one is meant to be ignorable.
-  late final AnimationController _wave = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  )..repeat();
-
-  @override
-  void dispose() {
-    _wave.dispose();
-    super.dispose();
-  }
-
-  /// One dot's position in the travelling wave, 0 at rest and 1 at the peak.
-  /// [phase] staggers each dot so the crest moves left to right.
-  double _lift(double t, double phase) {
-    final local = (t - phase) % 1.0;
-    // The crest occupies the first 45% of the cycle; the rest is the pause that
-    // stops three dots looking like a stutter.
-    if (local > 0.45) return 0;
-    return math.sin((local / 0.45) * math.pi);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    // Honour the OS "reduce motion" setting. Vestibular triggers aside, this is
-    // the one widget on screen during a long wait, so a user who has asked for
-    // stillness should not be given the most persistent movement in the app.
-    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: still
-                ? const AdaMascot(size: 22)
-                : AnimatedBuilder(
-                    animation: _wave,
-                    builder: (context, child) => Transform.scale(
-                      // Barely there — enough to read as alive, not as a pulse.
-                      scale: 1 + 0.05 * _lift(_wave.value, 0),
-                      child: child,
-                    ),
-                    child: const AdaMascot(size: 22),
-                  ),
-          ),
-          const SizedBox(width: 7),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            decoration: BoxDecoration(
-              color: colors.bg,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-                bottomLeft: Radius.circular(3),
-                bottomRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Ada is thinking',
-                  style: AppText.sans(size: 12, color: colors.textMed),
-                ),
-                const SizedBox(width: 6),
-                if (still)
-                  Text('…', style: AppText.sans(size: 12, color: colors.textMed))
-                else
-                  AnimatedBuilder(
-                    animation: _wave,
-                    builder: (context, _) => Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (var i = 0; i < 3; i++) ...[
-                          if (i > 0) const SizedBox(width: 4),
-                          _Dot(lift: _lift(_wave.value, i * 0.16), color: colors.accent),
-                        ],
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A failed turn, said out loud in the transcript.
-///
-/// Sits where Ada's reply would have been, because that is where the user is
-/// looking when they wonder what happened to their message. A snackbar would be
-/// wrong here twice over: an Ada turn can take a minute, so the snackbar is long
-/// gone by the time anyone looks back, and it carries no way to retry.
-class _ErrorBubble extends StatelessWidget {
-  const _ErrorBubble({
-    required this.message,
-    required this.onRetry,
-    required this.onDismiss,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: AppIcon(Icons.error_outline, size: 17, color: colors.danger),
-          ),
-          const SizedBox(width: 7),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              decoration: BoxDecoration(
-                // Tinted rather than solid danger: this is information, not an
-                // alarm, and the chat should not turn red because a request
-                // timed out.
-                color: colors.danger.alpha8(0x14),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                  bottomLeft: Radius.circular(3),
-                  bottomRight: Radius.circular(12),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    message,
-                    style: AppText.sans(size: 12.5, height: 1.4, color: colors.text),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton(
-                        onPressed: onRetry,
-                        style: TextButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          'Retry',
-                          style: AppText.sans(
-                            size: 12,
-                            weight: FontWeight.w800,
-                            color: colors.accent,
-                          ),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: onDismiss,
-                        style: TextButton.styleFrom(
-                          minimumSize: Size.zero,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        child: Text(
-                          'Dismiss',
-                          style: AppText.sans(size: 12, color: colors.textMed),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// One dot of the thinking indicator. [lift] is 0 at rest, 1 at the crest.
-class _Dot extends StatelessWidget {
-  const _Dot({required this.lift, required this.color});
-
-  final double lift;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: Offset(0, -2.5 * lift),
-      child: Container(
-        width: 5,
-        height: 5,
-        decoration: BoxDecoration(
-          // Never fully transparent: a dot that vanishes makes the row change
-          // width to the eye, which reads as jitter rather than rhythm.
-          color: color.withValues(alpha: 0.35 + 0.65 * lift),
-          shape: BoxShape.circle,
-        ),
-      ),
-    );
-  }
-}
-
-class _AttachmentPreview extends StatelessWidget {
-  const _AttachmentPreview({
-    required this.uploading,
-    required this.attachments,
-    required this.onRemove,
-  });
-
-  final bool uploading;
-  final List<AdaAttachmentRef> attachments;
-  final ValueChanged<String> onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            for (final a in attachments) ...[
-              _AttachmentChip(
-                name: a.name,
-                onRemove: () => onRemove(a.key),
-              ),
-              const SizedBox(width: 6),
-            ],
-            if (uploading)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: colors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  border: Border.all(color: colors.border),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.8,
-                        color: colors.accent,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      'Uploading…',
-                      style: AppText.sans(size: 11, color: colors.textMed),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttachmentChip extends StatelessWidget {
-  const _AttachmentChip({required this.name, required this.onRemove});
-
-  final String name;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 220),
-      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppIcon(Icons.attach_file, size: 13, color: colors.accent),
-          const SizedBox(width: 5),
-          Flexible(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppText.sans(size: 11, color: colors.text),
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: AppIcon(Icons.close, size: 14, color: colors.textMed),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InputBar extends StatelessWidget {
-  const _InputBar({
-    required this.controller,
-    required this.focusNode,
-    required this.compact,
-    required this.onSend,
-    required this.onSpeak,
-    required this.voiceAvailable,
-    required this.onAttach,
-    super.key,
-  });
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final bool compact;
-  final VoidCallback onSend;
-  final VoidCallback onSpeak;
-
-  /// Null while a file is uploading.
-  final VoidCallback? onAttach;
-
-  /// False only on a phone with no speech recognizer.
-  final bool voiceAvailable;
-
-  static const _ink = Color(0xFF1A1320);
-
-  /// Soft keyboard Return inserts a newline; hardware Cmd/Ctrl+Enter still sends.
-  static const int _minLines = 1;
-  static const int _maxLines = 6;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: compact ? 8 : 10),
-      decoration: BoxDecoration(
-        color: colors.bg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.border),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          // ADA-11: the only way to attach was a small pill up in the header,
-          // and a tester told to attach a file could not find it. Beside the
-          // text box is where everyone looks.
-          Tooltip(
-            message: 'Attach a file',
-            child: Semantics(
-              button: true,
-              enabled: onAttach != null,
-              label: 'Attach a file',
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: onAttach,
-                behavior: HitTestBehavior.opaque,
-                child: SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: AppIcon(
-                    Icons.attach_file,
-                    size: 18,
-                    color: onAttach == null ? colors.textDim.withValues(alpha: 0.5) : colors.textMed,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: CallbackShortcuts(
-              bindings: <ShortcutActivator, VoidCallback>{
-                const SingleActivator(LogicalKeyboardKey.enter, meta: true): onSend,
-                const SingleActivator(LogicalKeyboardKey.enter, control: true): onSend,
-              },
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                style: AppText.sans(size: 12, color: colors.text),
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                minLines: _minLines,
-                maxLines: _maxLines,
-                // Intentionally no onSubmitted — Enter must insert a newline, not send.
-                decoration: InputDecoration(
-                  isDense: true,
-                  border: InputBorder.none,
-                  hintText: compact ? 'Ask Ada anything...' : "What's on your mind?",
-                  hintStyle: AppText.sans(size: 12, color: colors.textDim),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Opens the mic; while it is open this whole bar is swapped for the
-          // recording pill. The empty chat gets the labelled pill, a running
-          // conversation a quieter mic.
-          if (voiceAvailable) ...[
-            Semantics(
-              button: true,
-              label: 'Speak to Ada',
-              excludeSemantics: true,
-              child: GestureDetector(
-                onTap: onSpeak,
-                child: compact
-                    ? Container(
-                        width: 30,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: colors.border),
-                        ),
-                        child: AppIcon(Icons.mic_none, size: 16, color: colors.textDim),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _ink.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text('◈', style: TextStyle(fontSize: 12, color: Colors.white, height: 1)),
-                            const SizedBox(width: 5),
-                            Text('Speak', style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white)),
-                          ],
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-          GestureDetector(
-            onTap: onSend,
-            child: Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(color: _ink, shape: BoxShape.circle),
-              child: const Text('↑', style: TextStyle(fontSize: 14, color: Colors.white, height: 1)),
-            ),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.fromLTRB(16, kAdaEdgeFade + 2, 16, widget.bottomInset),
+      itemCount: items.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 16),
+      itemBuilder: (_, i) => items[i],
     );
   }
 }

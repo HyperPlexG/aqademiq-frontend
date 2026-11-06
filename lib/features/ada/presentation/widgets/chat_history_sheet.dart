@@ -6,15 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/ada_repository.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
+import 'ada_chrome.dart';
 
 /// FRAMES `ada-history` — chat-history slide-over panel. Lists the user's past
-/// Ada conversations; tapping one loads it into the chat, and the compose icon
-/// starts a fresh conversation.
+/// Ada conversations; tapping one loads it into the chat, and the compose
+/// button starts a fresh conversation. The same chat-history button that
+/// opened it closes it, and so does a tap on the dimmed screen beside it.
 Future<void> showChatHistory(BuildContext context) {
   return showGeneralDialog<void>(
     context: context,
-    barrierLabel: 'Chat history',
+    barrierLabel: 'Close chat history',
+    barrierDismissible: true,
     barrierColor: const Color(0x33140F1C),
     transitionDuration: const Duration(milliseconds: 240),
     pageBuilder: (_, _, _) => const _ChatHistoryPanel(),
@@ -40,6 +43,9 @@ String _dateLabel(DateTime d) =>
 class _ChatHistoryPanel extends ConsumerWidget {
   const _ChatHistoryPanel();
 
+  /// The dimmed Ada screen left showing on the right.
+  static const double _peek = 24;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
@@ -55,98 +61,93 @@ class _ChatHistoryPanel extends ConsumerWidget {
       Navigator.of(context).pop();
     }
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FractionallySizedBox(
-        widthFactor: 0.86,
-        child: Material(
-          color: colors.surface,
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 14, top: 8),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => Navigator.of(context).pop(),
+    return Padding(
+      padding: const EdgeInsets.only(right: _peek),
+      child: Material(
+        color: colors.surface,
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        shadowColor: const Color(0x1F000000),
+        elevation: 12,
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          right: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 16, bottom: 18),
+                  child: Row(
+                    children: [
+                      AdaMenuButton(
+                        label: 'Close chat history',
+                        onTap: () => Navigator.of(context).pop(),
+                      ),
+                      const Spacer(),
+                      Semantics(
+                        button: true,
+                        label: 'New chat',
+                        excludeSemantics: true,
+                        child: GestureDetector(
+                          onTap: newConversation,
                           child: Container(
-                            width: 32,
-                            height: 32,
+                            width: 44,
+                            height: 44,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
                               color: colors.surface,
                               shape: BoxShape.circle,
                               boxShadow: colors.cardShadow,
                             ),
-                            child: AppIcon(Icons.close, size: 15, color: colors.text),
+                            child: Ic('edit', size: 21, color: colors.text),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Text(
-                        'Chat history',
-                        style: AppText.sans(
-                          size: 26,
-                          weight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                          color: colors.text,
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: newConversation,
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: colors.surface,
-                            shape: BoxShape.circle,
-                            boxShadow: colors.cardShadow,
-                          ),
-                          child: AppIcon(Icons.edit_note, size: 17, color: colors.text),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: convos.when(
-                      loading: () => Center(
-                        child: CircularProgressIndicator(
-                          color: colors.accent,
-                          strokeWidth: 2.5,
-                        ),
+                ),
+                Text(
+                  'Chat history',
+                  style: AppText.sans(
+                    size: 34,
+                    weight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: colors.text,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: convos.when(
+                    loading: () => Center(
+                      child: CircularProgressIndicator(
+                        color: colors.accent,
+                        strokeWidth: 2.5,
                       ),
-                      error: (_, _) => _Empty(
-                        colors: colors,
-                        label: "Couldn't load your chats",
-                      ),
-                      data: (list) {
-                        if (list.isEmpty) {
-                          return _Empty(
-                            colors: colors,
-                            label: 'No chats yet — start one with Ada',
-                          );
-                        }
-                        return ListView.separated(
-                          padding: EdgeInsets.zero,
-                          itemCount: list.length,
-                          separatorBuilder: (_, _) => const SizedBox(height: 16),
-                          itemBuilder: (_, i) {
-                            final c = list[i];
-                            return GestureDetector(
+                    ),
+                    error: (_, _) => _Empty(
+                      colors: colors,
+                      label: "Couldn't load your chats",
+                    ),
+                    data: (list) {
+                      if (list.isEmpty) {
+                        return _Empty(
+                          colors: colors,
+                          label: 'No chats yet — start one with Ada',
+                        );
+                      }
+                      return ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        itemCount: list.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 16),
+                        itemBuilder: (_, i) {
+                          final c = list[i];
+                          return Semantics(
+                            button: true,
+                            child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTap: () => openConversation(c.id),
                               child: Column(
@@ -155,9 +156,9 @@ class _ChatHistoryPanel extends ConsumerWidget {
                                   Text(
                                     _dateLabel(c.updatedAt),
                                     style: AppText.sans(
-                                      size: 9,
+                                      size: 12,
                                       weight: FontWeight.w800,
-                                      letterSpacing: AppText.em(0.08, 9),
+                                      letterSpacing: AppText.em(0.08, 12),
                                       color: colors.textDim,
                                     ),
                                   ),
@@ -165,21 +166,21 @@ class _ChatHistoryPanel extends ConsumerWidget {
                                   Text(
                                     c.title,
                                     style: AppText.sans(
-                                      size: 15,
+                                      size: 17,
                                       weight: FontWeight.w700,
                                       color: colors.text,
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -200,7 +201,7 @@ class _Empty extends StatelessWidget {
       child: Text(
         label,
         textAlign: TextAlign.center,
-        style: AppText.sans(size: 12.5, color: colors.textMed),
+        style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
       ),
     );
   }

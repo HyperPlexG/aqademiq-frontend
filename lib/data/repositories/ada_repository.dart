@@ -11,6 +11,11 @@ import '../models/ada_action.dart';
 import '../models/ada_message.dart';
 import '../models/enums.dart';
 import '../sources/ada_source.dart';
+import 'tasks_repository.dart';
+
+// The attachment and history records the Ada screens hold, so presentation can
+// name them without importing the source.
+export '../sources/ada_source.dart' show AdaAttachmentRef, AdaConversationDto;
 
 /// One assistant turn as the UI sees it: the message plus the changes Ada is
 /// asking permission to make.
@@ -81,6 +86,8 @@ class AdaChatState {
   const AdaChatState({
     this.messages = const [],
     this.typing = false,
+    this.awaitingReply = false,
+    this.stoppedReplies = const {},
     this.uploading = false,
     this.pendingAttachments = const [],
     this.actionsByMessage = const {},
@@ -89,7 +96,19 @@ class AdaChatState {
   });
 
   final List<AdaMessage> messages;
+
+  /// Shows "Ada is thinking" — while a reply is on its way, and while a past
+  /// conversation loads.
   final bool typing;
+
+  /// A message has gone and its reply has not come back. Only this — not a
+  /// conversation loading — turns send into stop.
+  final bool awaitingReply;
+
+  /// User messages whose reply the student stopped waiting for. There is no
+  /// server cancel: the agent may still finish and save its answer, which then
+  /// shows when the conversation is opened again. The app just stops listening.
+  final Set<String> stoppedReplies;
 
   /// True while a picked file is being uploaded to staging (not yet sent).
   final bool uploading;
@@ -125,6 +144,8 @@ class AdaChatState {
   AdaChatState copyWith({
     List<AdaMessage>? messages,
     bool? typing,
+    bool? awaitingReply,
+    Set<String>? stoppedReplies,
     bool? uploading,
     List<AdaAttachmentRef>? pendingAttachments,
     Map<String, List<AdaAction>>? actionsByMessage,
@@ -135,6 +156,8 @@ class AdaChatState {
       AdaChatState(
         messages: messages ?? this.messages,
         typing: typing ?? this.typing,
+        awaitingReply: awaitingReply ?? this.awaitingReply,
+        stoppedReplies: stoppedReplies ?? this.stoppedReplies,
         uploading: uploading ?? this.uploading,
         pendingAttachments: pendingAttachments ?? this.pendingAttachments,
         actionsByMessage: actionsByMessage ?? this.actionsByMessage,
@@ -182,6 +205,16 @@ class AdaChatController extends Notifier<AdaChatState> {
   @override
   AdaChatState build() => const AdaChatState();
 
+  /// Bumped whenever the chat moves on — a new message, Stop, another
+  /// conversation. An answer that comes back under an older number belongs to
+  /// a turn nobody is waiting for any more, and is dropped.
+  int _turn = 0;
+
+  /// Cards whose added task was taken back with Undo, kept for the app session
+  /// so the receipt stays honest when the conversation is opened again from
+  /// history (the server still has them as executed).
+  final _undone = <String>{};
+
   Future<void> send(String text) async {
     final trimmed = text.trim();
     final attachments = state.pendingAttachments;
@@ -201,9 +234,11 @@ class AdaChatController extends Notifier<AdaChatState> {
       text: payload,
       createdAt: DateTime.now(),
     );
+    final turn = ++_turn;
     state = state.copyWith(
       messages: [...state.messages, userMsg],
       typing: true,
+      awaitingReply: true,
       pendingAttachments: const [],
       clearError: true,
     );
@@ -213,20 +248,53 @@ class AdaChatController extends Notifier<AdaChatState> {
             state.messages,
             attachments: attachments,
           );
-      _appendTurn(reply, typing: false);
+      // Stopped, or the chat moved on while the agent worked.
+      if (turn != _turn) return;
+      _appendTurn(reply, typing: false, awaitingReply: false);
       unawaited(_reconcile());
     } on Object catch (e) {
+      if (turn != _turn) return;
       // Say what happened. This used to be `catch (_)` with no message at all:
       // the thinking indicator stopped and no reply arrived, which is
       // indistinguishable from Ada ignoring the message — and left the user
       // with nothing to act on when the cause was something they could fix.
       state = state.copyWith(
         typing: false,
+        awaitingReply: false,
         // Restore staged files so a retry costs no re-upload.
         pendingAttachments: attachments,
         error: adaErrorMessage(e),
       );
     }
+  }
+
+  /// Stop waiting for the reply in flight (v11 `ada-thinking`: send becomes
+  /// stop).
+  ///
+  /// There is no server cancel, so this is the client letting go: the request
+  /// is left to finish and its answer is dropped when it lands. The agent may
+  /// still save a reply — and any cards it proposed — to the conversation; the
+  /// cards come back through [_reconcile] like any other the app missed, and
+  /// the text shows when the chat is reopened. Nothing is undone server-side,
+  /// and the transcript says only that the student stopped it.
+  void stop() {
+    if (!state.awaitingReply) return;
+    _turn++;
+    String? asked;
+    for (final m in state.messages.reversed) {
+      if (m.role == AdaRole.user) {
+        asked = m.id;
+        break;
+      }
+    }
+    state = state.copyWith(
+      typing: false,
+      awaitingReply: false,
+      stoppedReplies: {
+        ...state.stoppedReplies,
+        if (asked != null) asked,
+      },
+    );
   }
 
   /// Dismiss the error banner without resending.
@@ -254,7 +322,10 @@ class AdaChatController extends Notifier<AdaChatState> {
     await send(last.text);
   }
 
-  void clear() => state = const AdaChatState();
+  void clear() {
+    _turn++;
+    state = const AdaChatState();
+  }
 
   /// Upload [file] into staging only — does **not** send a chat message.
   Future<void> stageAttachment(XFile file) async {
@@ -288,26 +359,81 @@ class AdaChatController extends Notifier<AdaChatState> {
 
   /// Load a past conversation into the chat view.
   Future<void> openConversation(String id) async {
+    // A reply still on its way belongs to the chat being left; it must not be
+    // appended to this one.
+    final turn = ++_turn;
     state = const AdaChatState(typing: true);
     try {
       final turns = await ref.read(adaRepositoryProvider).openConversation(id);
+      if (turn != _turn) return;
       state = AdaChatState(
         messages: turns.map((t) => t.message).toList(growable: false),
         actionsByMessage: {
           for (final t in turns)
-            if (t.actions.isNotEmpty) t.message.id: t.actions,
+            if (t.actions.isNotEmpty) t.message.id: t.actions.map(_withUndo).toList(growable: false),
         },
       );
     } on Object {
+      if (turn != _turn) return;
       state = const AdaChatState();
     }
   }
 
   /// Start a fresh conversation (clears the view + drops the active id).
   void newConversation() {
+    _turn++;
     ref.read(adaRepositoryProvider).startNewConversation();
     state = const AdaChatState();
   }
+
+  /// Take back a task Ada added (v11 `ada-applied`: "Added to today" · Undo).
+  ///
+  /// Only for a card that [AdaAction.canUndo]: the app knows the exact one-off
+  /// task the approval created. Undo deletes that task through the ordinary
+  /// tasks repository — the same call as Delete on the Plan, mock or live — and
+  /// marks the card undone. No Ada endpoint is involved, so the server's record
+  /// of the approval is unchanged; the card's new wording says only what is
+  /// true: the task is no longer on the plan. Returns true when it was removed.
+  Future<bool> undoAction(String actionId) async {
+    final action = _find(actionId);
+    final taskId = action?.createdTaskId;
+    if (action == null || taskId == null || !action.canUndo) return false;
+    if (state.decidingActionIds.contains(actionId)) return false;
+    state = state.copyWith(
+      decidingActionIds: {...state.decidingActionIds, actionId},
+    );
+    try {
+      await ref.read(tasksRepositoryProvider).delete(taskId);
+      _undone.add(actionId);
+      state = state.copyWith(
+        actionsByMessage: {
+          for (final e in state.actionsByMessage.entries)
+            e.key: [for (final a in e.value) a.id == actionId ? a.copyWith(undone: true) : a],
+        },
+      );
+      return true;
+    } on Object {
+      return false;
+    } finally {
+      state = state.copyWith(
+        decidingActionIds: {...state.decidingActionIds}..remove(actionId),
+      );
+    }
+  }
+
+  AdaAction? _find(String actionId) {
+    for (final list in state.actionsByMessage.values) {
+      for (final a in list) {
+        if (a.id == actionId) return a;
+      }
+    }
+    return null;
+  }
+
+  /// A card the student undid earlier this session, as the server sends it
+  /// back (still `executed`), re-marked so it does not read "Added" again.
+  AdaAction _withUndo(AdaAction a) =>
+      _undone.contains(a.id) && !a.undone ? a.copyWith(undone: true) : a;
 
   /// Apply Ada's proposed schedule (from [messageId]) — legacy plan path.
   Future<void> applyPlan(String messageId) =>
@@ -388,17 +514,18 @@ class AdaChatController extends Notifier<AdaChatState> {
   /// A card can arrive again under a newer message: when Ada re-proposes a
   /// change that is already waiting, the server reuses that card and moves it
   /// to the latest reply. It is taken off the older message so it shows once.
-  void _appendTurn(AdaReplyResult turn, {bool? typing}) {
+  void _appendTurn(AdaReplyResult turn, {bool? typing, bool? awaitingReply}) {
     final incoming = {for (final a in turn.actions) a.id};
     state = state.copyWith(
       messages: [...state.messages, turn.message],
       typing: typing ?? state.typing,
+      awaitingReply: awaitingReply ?? state.awaitingReply,
       actionsByMessage: turn.actions.isEmpty
           ? state.actionsByMessage
           : {
               for (final e in state.actionsByMessage.entries)
                 e.key: [for (final a in e.value) if (!incoming.contains(a.id)) a],
-              turn.message.id: turn.actions,
+              turn.message.id: turn.actions.map(_withUndo).toList(growable: false),
             },
     );
   }
@@ -465,10 +592,11 @@ class AdaChatController extends Notifier<AdaChatState> {
 
   /// Swap an action for its post-decision version, wherever it lives.
   void _replaceAction(AdaAction updated) {
+    final marked = _withUndo(updated);
     final next = <String, List<AdaAction>>{};
     for (final entry in state.actionsByMessage.entries) {
       next[entry.key] = [
-        for (final a in entry.value) a.id == updated.id ? updated : a,
+        for (final a in entry.value) a.id == updated.id ? marked : a,
       ];
     }
     state = state.copyWith(actionsByMessage: next);

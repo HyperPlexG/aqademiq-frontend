@@ -163,6 +163,11 @@ class MockAdaSource implements AdaSource {
   @override
   Future<AdaDecisionResult> approveAction(String actionId) {
     final current = _actions[actionId];
+    // No `createdTaskId` here, and that is the honest mock: approving in the
+    // mock never adds a task to the mock plan (the mock tasks store is its own
+    // source), so there is nothing to undo. The live server sends the created
+    // task back as `result` (backend `pendingDto`, v2), which is what gives a
+    // live one-off "add task" card its Undo.
     final applied = (current ?? _placeholder(actionId))
         .copyWith(status: AdaActionStatus.executed);
     _actions[actionId] = applied;

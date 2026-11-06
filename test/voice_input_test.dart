@@ -213,7 +213,7 @@ void main() {
     ) async {
       await _pumpAda(tester);
 
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
 
       expect(find.byType(VoiceRecordingBar), findsOneWidget);
@@ -227,7 +227,7 @@ void main() {
       tester,
     ) async {
       final t = await _pumpAda(tester);
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
       t.engine.hears('plan my week around the chemistry exam');
       await _settle(tester);
@@ -246,7 +246,7 @@ void main() {
         reason: 'dictation must never send on its own',
       );
 
-      await tester.tap(find.text('↑'));
+      await tester.tap(find.byKey(const Key('ada-send')));
       await _settle(tester);
       expect(t.chat.sent, ['plan my week around the chemistry exam']);
     });
@@ -257,7 +257,7 @@ void main() {
       // The recognizer's final result arrives a moment after it is told to
       // stop. Sending on the tap itself would send "plan my" and drop "week".
       final t = await _pumpAda(tester);
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
       t.engine.hears('plan my');
       await _settle(tester);
@@ -278,7 +278,7 @@ void main() {
       tester,
     ) async {
       final t = await _pumpAda(tester);
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
       t.engine.hears('remind me to revise');
       await tester.tap(find.byKey(const Key('voice-send')));
@@ -297,7 +297,7 @@ void main() {
       tester,
     ) async {
       final t = await _pumpAda(tester);
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
       t.engine.hears('um I I need to revise uh chemistry');
       await _settle(tester);
@@ -316,7 +316,7 @@ void main() {
       // Anything typed before the mic opened survives; only the dictation goes.
       final t = await _pumpAda(tester);
       await tester.enterText(find.byType(TextField), 'Plan my ');
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _swap(tester);
       t.engine.hears('chemistry week');
       await _settle(tester);
@@ -340,7 +340,7 @@ void main() {
       // talk into a mic that was not capturing yet.
       final t = await _pumpAda(tester, autoReady: false);
 
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _settle(tester);
       expect(find.byType(VoiceRecordingBar), findsOneWidget);
       expect(_waveformActive(tester), isFalse);
@@ -360,7 +360,7 @@ void main() {
         // the screen was still subscribed to it, and Flutter asserted on
         // rebuilding a torn-down widget — swiping Quick Add away mid-sentence.
         final t = await _pumpAda(tester);
-        await tester.tap(find.text('Speak'));
+        await tester.tap(find.byKey(const Key('ada-speak')));
         await _swap(tester);
         t.engine.hears('half a thought');
         await _settle(tester);
@@ -384,13 +384,13 @@ void main() {
     ) async {
       await _pumpAda(tester, initialises: false, permitted: false);
 
-      await tester.tap(find.text('Speak'));
+      await tester.tap(find.byKey(const Key('ada-speak')));
       await _settle(tester);
 
       expect(find.textContaining('Turn it on in Settings'), findsOneWidget);
       expect(find.widgetWithText(SnackBarAction, 'Settings'), findsOneWidget);
       expect(find.byType(VoiceRecordingBar), findsNothing);
-      expect(find.text('Speak'), findsOneWidget);
+      expect(find.byKey(const Key('ada-speak')), findsOneWidget);
     });
 
     testWidgets(
@@ -398,10 +398,10 @@ void main() {
       (tester) async {
         await _pumpAda(tester, initialises: false);
 
-        await tester.tap(find.text('Speak'));
+        await tester.tap(find.byKey(const Key('ada-speak')));
         await _settle(tester);
 
-        expect(find.text('Speak'), findsNothing);
+        expect(find.byKey(const Key('ada-speak')), findsNothing);
         expect(
           find.textContaining("isn't available on this phone"),
           findsOneWidget,
