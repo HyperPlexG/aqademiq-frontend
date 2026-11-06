@@ -133,14 +133,16 @@ class IceBreakerRow extends ConsumerWidget {
     final watched = ref.watch(
       iceBreakersProvider.select((s) => s.watchedIds.contains(breaker.id)),
     );
+    void open() => unawaited(context.push(Routes.iceBreaker(breaker.id)));
 
     return Semantics(
       button: true,
       label: '${breaker.title}, ${breaker.runtime}${watched ? ', watched' : ''}',
       excludeSemantics: true,
+      onTap: open,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
+        onTap: open,
         child: Container(
           constraints: const BoxConstraints(minHeight: 52),
           padding: EdgeInsets.symmetric(vertical: tight ? 7 : 9),
@@ -223,6 +225,7 @@ class IceBreakersProgress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
+          width: double.infinity,
           height: 5,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(

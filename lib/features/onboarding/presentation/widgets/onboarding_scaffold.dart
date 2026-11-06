@@ -7,8 +7,8 @@ import '../../../../shared/widgets/onboarding_dots.dart';
 /// page, step dots, a scrollable [body], and a pinned [footer] (the CTA + any
 /// skip link).
 ///
-/// [centerBody] centres a short body in the space above the footer — the
-/// age gate and the loading screen — and still scrolls when it doesn't fit.
+/// [centerBody] centres a short body in the space above the footer — used by
+/// the under-18 block screen — and still scrolls when it doesn't fit.
 class OnboardingScaffold extends StatelessWidget {
   const OnboardingScaffold({
     super.key,

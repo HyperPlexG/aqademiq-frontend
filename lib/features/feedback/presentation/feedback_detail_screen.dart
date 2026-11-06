@@ -400,25 +400,30 @@ class _FollowPill extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final following = ref.watch(feedbackSubscriptionProvider).value ?? false;
+    Future<void> toggle() async {
+      if (ref.read(isGuestProvider)) {
+        unawaited(showCreateAccountPrompt(context, ref, reason: 'follow suggestions'));
+        return;
+      }
+      final ok = await ref.read(feedbackSubscriptionProvider.notifier).toggle();
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Couldn't update that. Try again.")),
+        );
+      }
+    }
+
     return Semantics(
       button: true,
       toggled: following,
       label: following ? 'Following this suggestion' : 'Follow this suggestion',
       excludeSemantics: true,
+      // excludeSemantics drops the GestureDetector's own tap action, so the
+      // screen-reader tap has to be given here.
+      onTap: () => unawaited(toggle()),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () async {
-          if (ref.read(isGuestProvider)) {
-            unawaited(showCreateAccountPrompt(context, ref, reason: 'follow suggestions'));
-            return;
-          }
-          final ok = await ref.read(feedbackSubscriptionProvider.notifier).toggle();
-          if (!ok && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Couldn't update that. Try again.")),
-            );
-          }
-        },
+        onTap: () => unawaited(toggle()),
         child: Container(
           height: 36,
           padding: const EdgeInsets.fromLTRB(12, 0, 14, 0),

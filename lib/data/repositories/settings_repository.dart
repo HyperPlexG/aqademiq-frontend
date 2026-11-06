@@ -57,11 +57,17 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 });
 
 /// The signed-in user's notification preferences (loaded once per screen open).
-final notificationPrefsProvider = FutureProvider<NotificationPrefs>(
+///
+/// autoDispose on purpose: the screen seeds its editable copy from the
+/// loading → data transition (`ref.listen`), which a cached value would never
+/// produce on a second visit — and a cached value would also be stale, since
+/// edits are written straight to the repository, not back into this provider.
+final notificationPrefsProvider = FutureProvider.autoDispose<NotificationPrefs>(
   (ref) => ref.watch(settingsRepositoryProvider).getNotificationPrefs(),
 );
 
-/// The signed-in user's marketing-email preferences.
-final emailPrefsProvider = FutureProvider<EmailPrefs>(
+/// The signed-in user's marketing-email preferences (loaded once per screen
+/// open; autoDispose for the same reason as [notificationPrefsProvider]).
+final emailPrefsProvider = FutureProvider.autoDispose<EmailPrefs>(
   (ref) => ref.watch(settingsRepositoryProvider).getEmailPrefs(),
 );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,7 +44,7 @@ class WelcomeScreen extends ConsumerWidget {
                   children: [
                     PrimaryButton(
                       label: 'Sign in / Sign up',
-                      onPressed: () => context.push(Routes.signin),
+                      onPressed: () => unawaited(context.push(Routes.signin)),
                     ),
                     const SizedBox(height: 9),
                     PrimaryButton(

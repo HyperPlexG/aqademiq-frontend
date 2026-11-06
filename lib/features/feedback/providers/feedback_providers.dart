@@ -256,10 +256,12 @@ class FeedbackSubscriptionController extends AsyncNotifier<bool> {
       final now = await ref
           .read(feedbackRepositoryProvider)
           .setSubscribed(id, subscribed: !current);
-      state = AsyncData(now);
+      // The selected post may have changed (rebuilding this notifier) while
+      // the request was in flight; a disposed ref must not be written to.
+      if (ref.mounted) state = AsyncData(now);
       return true;
     } on Object {
-      state = AsyncData(current);
+      if (ref.mounted) state = AsyncData(current);
       return false;
     }
   }

@@ -95,6 +95,9 @@ class VotePill extends StatelessWidget {
       toggled: voted,
       label: voted ? 'Voted, $votes votes' : 'Vote, $votes votes',
       excludeSemantics: true,
+      // excludeSemantics drops the GestureDetector's own tap action, so the
+      // screen-reader tap has to be given here.
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,

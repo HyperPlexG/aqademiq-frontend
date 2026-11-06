@@ -34,7 +34,9 @@ class IceBreakersState {
   /// The one the section leads with — "START HERE" on a fresh install.
   IceBreaker? get next => unwatched.isEmpty ? null : unwatched.first;
 
-  int get watchedCount => watchedIds.length;
+  /// Watched entries still in the catalogue. Not `watchedIds.length`: the store
+  /// keeps ids of videos since retired, which would push progress past 100%.
+  int get watchedCount => kIceBreakers.where((b) => watchedIds.contains(b.id)).length;
   int get total => kIceBreakers.length;
 
   /// 0..1, for the progress track.

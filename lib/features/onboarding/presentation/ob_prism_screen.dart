@@ -45,13 +45,15 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
   }
 
   @override
-  void dispose() {
+  void deactivate() {
     // Fires on back-pop and stack replacement; the forward push to obLoading
     // keeps this state alive, so that path is covered by the CTA below.
+    // Here rather than in dispose(): Riverpod 3 refuses `ref` once the widget
+    // is being disposed.
     unawaited(
       ref.read(prismAudioControllerProvider.notifier).stopPreview(),
     );
-    super.dispose();
+    super.deactivate();
   }
 
   @override

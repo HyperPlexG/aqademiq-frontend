@@ -330,7 +330,14 @@ class _TagsCard extends ConsumerWidget {
                 children: [
                   StudyTagMark(label: t.label, color: hexColor(t.color)),
                   const SizedBox(width: 6),
-                  Text(t.label, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                  Flexible(
+                    child: Text(
+                      t.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                    ),
+                  ),
                   Semantics(
                     button: true,
                     label: 'Remove ${t.label}',

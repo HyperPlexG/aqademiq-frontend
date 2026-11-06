@@ -116,7 +116,7 @@ class _Body extends ConsumerWidget {
                 children: [
                   _CircleIcon(icon: 'ios_share', onTap: () => unawaited(showShareSheet(context))),
                   const SizedBox(width: 2),
-                  _CircleIcon(icon: 'settings', onTap: () => context.push(Routes.settings)),
+                  _CircleIcon(icon: 'settings', onTap: () => unawaited(context.push(Routes.settings))),
                 ],
               ),
             ),
@@ -596,7 +596,7 @@ class _LinksCard extends ConsumerWidget {
       ('Rate the app', () => unawaited(showRateSheet(context))),
       // Opens the in-app feedback board (backed by /feedback), not a mailto —
       // the old mail link silently did nothing on web and never reached the board.
-      ('Share feedback', () => context.push(Routes.settingsFeedback)),
+      ('Share feedback', () => unawaited(context.push(Routes.settingsFeedback))),
       ('FAQ', () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/faq')))),
       ('Follow us on Instagram', () => unawaited(openExternal(context, Uri.parse('https://www.instagram.com/tryaqademiq/')))),
     ];

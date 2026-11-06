@@ -43,7 +43,8 @@ class _RateBodyState extends ConsumerState<_RateBody> {
     } on Object {
       // Non-fatal — thank the user regardless of a transient write failure.
     }
-    navigator.pop();
+    // Swiped away mid-request: popping now would close the screen underneath.
+    if (mounted) navigator.pop();
     messenger.showSnackBar(
       const SnackBar(content: Text('Thanks for the feedback! 💜')),
     );

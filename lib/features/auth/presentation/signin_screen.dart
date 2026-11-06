@@ -214,7 +214,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
               Center(
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => context.push(Routes.signup),
+                  onTap: () => unawaited(context.push(Routes.signup)),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text.rich(

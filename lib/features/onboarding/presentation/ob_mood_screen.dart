@@ -123,10 +123,15 @@ class _SubjectMoodCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                subject,
-                style: AppText.sans(size: 17, weight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  subject,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.sans(size: 17, weight: FontWeight.w700),
+                ),
               ),
+              const SizedBox(width: 8),
               Text(
                 MoodScale.labels[activeIdx],
                 style: AppText.sans(

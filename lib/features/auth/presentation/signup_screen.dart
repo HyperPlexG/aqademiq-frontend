@@ -38,6 +38,17 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _create() async {
+    // Local check first, so a typo in the confirm field never costs a round
+    // trip (or, worse, an account with a password nobody meant to set).
+    if (_password.text != _confirm.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text("Those two passwords don't match."),
+        ),
+      );
+      return;
+    }
     final ok = await ref.read(authControllerProvider.notifier).signUp(
           name: _email.text.split('@').first,
           email: _email.text,

@@ -267,7 +267,6 @@ class _Banner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
           const AdaMascot(size: 34, bubbles: 2),

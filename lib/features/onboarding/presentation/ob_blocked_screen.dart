@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/ic.dart';
@@ -8,8 +9,10 @@ import '../../../shared/widgets/primary_button.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// `ob-age-gate`: the under-18 block. Reached from the age screen when the
-/// entered age is below 18. There is no way forward — only "Go back" to the
-/// age step (pops this route).
+/// entered age is below 18, or from the loading screen (via `go`, so there is
+/// no stack) when the server refuses. There is no way forward — only "Go back"
+/// to the age step (pops this route, or goes to the age step if there is
+/// nothing to pop).
 class ObBlockedScreen extends StatelessWidget {
   const ObBlockedScreen({super.key});
 
@@ -60,7 +63,7 @@ class ObBlockedScreen extends StatelessWidget {
         child: PrimaryButton(
           label: 'Go back',
           icon: Icons.arrow_back,
-          onPressed: () => context.pop(),
+          onPressed: () => context.canPop() ? context.pop() : context.go(Routes.obAge),
         ),
       ),
     );
