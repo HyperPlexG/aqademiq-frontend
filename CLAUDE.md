@@ -233,7 +233,10 @@ v11 also gave the surfaces the icon pack's `aq_cube_session` as the timer
 (trimmed to time left, over `aq_cube_frozen`), and the shared state one more
 field, `weekMoods` (0–4 per day, **-1 for no check-in, never null** — iOS
 mirrors the payload to the watch with `updateApplicationContext`, which
-rejects null). A session that runs to its end leaves a "Session done" card on
+rejects null), with `weekOf` (that week's Monday) so a widget blanks the week
+after Monday's rollover instead of drawing last week's moods, and `focusDay`
+beside the device-local focus-minute count so the lock-screen ring reads 0m on
+any other day. A session that runs to its end leaves a "Session done" card on
 the lock screen for 5 minutes (one end call with a dismissal date, not a
 push); ending early still removes it at once, and iOS never keeps an ended
 activity in the Island.
