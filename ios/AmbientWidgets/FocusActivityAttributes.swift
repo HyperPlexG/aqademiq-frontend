@@ -48,6 +48,15 @@ struct FocusActivityAttributes: ActivityAttributes {
 
         var isDone: Bool { done == true }
 
+        /// The `staleDate` this content is published with: a minute past the
+        /// end of a running session, by which point the app should already
+        /// have ended it — so a card still up then is one nothing is keeping
+        /// true, and draws itself as such (`isStale`). Never while held (a
+        /// frozen clock does not run out) or done.
+        var staleAt: Date? {
+            frozen || isDone ? nil : endsAt.addingTimeInterval(60)
+        }
+
         /// What the done card reads: the time spent, `"25:00"`.
         var focusedText: String {
             let focused = max(0, durationSec - remainingSec)

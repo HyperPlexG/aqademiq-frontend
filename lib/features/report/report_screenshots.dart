@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,14 +19,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 abstract final class ReportScreenshots {
   static const MethodChannel _channel = MethodChannel('aqademiq/screenshot');
 
-  /// One event per screenshot, numbered so two in a row are two events.
-  static Stream<int> watch() {
-    var n = 0;
-    late final StreamController<int> controller;
-    controller = StreamController<int>(
-      onListen: () => _channel.setMethodCallHandler((call) async {
-        if (call.method == 'screenshotTaken' && !controller.isClosed) controller.add(++n);
-      }),
+  /// One event per screenshot: the moment it was heard, stamped as the
+  /// handler runs, so an event that arrives late can be told from a fresh one.
+  static Stream<DateTime> watch() {
+    late final StreamController<DateTime> controller;
+    controller = StreamController<DateTime>(
+      onListen: () {
+        // With no handler set, Flutter keeps the last message sent on a
+        // channel and replays it to the next handler — so a screenshot taken
+        // anywhere in the app, any time before, raised the banner the moment
+        // the report opened. No buffer: a screenshot nobody is listening for
+        // is simply gone (and quietly, without the overflow warning).
+        ui.channelBuffers
+          ..resize(_channel.name, 0)
+          ..allowOverflow(_channel.name, true);
+        _channel.setMethodCallHandler((call) async {
+          if (call.method == 'screenshotTaken' && !controller.isClosed) {
+            controller.add(DateTime.now());
+          }
+        });
+      },
       onCancel: () {
         _channel.setMethodCallHandler(null);
         unawaited(controller.close());
@@ -35,6 +48,6 @@ abstract final class ReportScreenshots {
   }
 }
 
-/// The screenshot count while the report is watching. Auto-disposed, so the
-/// channel is held exactly as long as the screen is.
-final reportScreenshotProvider = StreamProvider.autoDispose<int>((ref) => ReportScreenshots.watch());
+/// When the last screenshot was heard while the report is watching.
+/// Auto-disposed, so the channel is held exactly as long as the screen is.
+final reportScreenshotProvider = StreamProvider.autoDispose<DateTime>((ref) => ReportScreenshots.watch());

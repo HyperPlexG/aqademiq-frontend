@@ -665,8 +665,10 @@ class FreezeMonitorService : Service() {
             // Something is frozen: the pack's freeze glyph (v11). A status
             // bar masks icons to one colour, so frozen has to survive as
             // outline alone (CLAUDE.md). Generated, like ic_stat_ada, by
-            // tool/generate_ada_android.py.
-            .setSmallIcon(R.drawable.ic_stat_freeze)
+            // tool/generate_ada_android.py. Idle ("App freeze is on", the
+            // only title noticeText gives nothing-frozen) is Ada's mark, as
+            // the paused notice is: the glyph would claim a freeze there isn't.
+            .setSmallIcon(if (title == IDLE_TITLE) R.drawable.ic_stat_ada else R.drawable.ic_stat_freeze)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(openFreeze())

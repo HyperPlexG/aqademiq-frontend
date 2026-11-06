@@ -96,7 +96,9 @@ enum ActivityEcho {
                 // pinned when it started.
                 state.endsAt = Date().addingTimeInterval(TimeInterval(state.remainingSec))
             }
-            await activity.update(ActivityContent(state: state, staleDate: nil))
+            // The same stale date the app publishes with (none while held), so
+            // a resume from the lock screen does not leave the card without one.
+            await activity.update(ActivityContent(state: state, staleDate: state.staleAt))
         }
     }
 

@@ -86,10 +86,20 @@ int? _moodOf(MoodLog? log) {
 
 String _key(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
+/// A local calendar day as `yyyy-MM-dd`: the key the surfaces compare with
+/// their own clock (`weekOf`, `focusDay`), so a payload left over from another
+/// day or week is never drawn as this one.
+String ambientDay(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
+    '${d.month.toString().padLeft(2, '0')}-'
+    '${d.day.toString().padLeft(2, '0')}';
+
 /// Build the glanceable payload the widgets read.
 ///
 /// [session] is threaded through untouched: publishing what the widgets show
 /// must never disturb a running session, and the two are written together.
+///
+/// [todayFocusMin] is the caller's count for the day [now] falls on; the
+/// payload is stamped with that day, and with the Monday of the week row.
 AmbientState glanceState({
   required List<Task> tasks,
   required List<MoodLog> weekLogs,
@@ -98,7 +108,9 @@ AmbientState glanceState({
   AmbientSession? session,
   DateTime? now,
 }) {
-  final next = nextTaskFrom(tasks, now: now);
+  // One clock for the whole payload, so the week row and its stamp agree.
+  final at = now ?? DateTime.now();
+  final next = nextTaskFrom(tasks, now: at);
   final tag = next == null ? null : tagsById[next.tagId];
   return AmbientState(
     session: session,
@@ -107,8 +119,10 @@ AmbientState glanceState({
         next?.startTime == null ? null : AppDate.time12h(next!.startTime!),
     nextTaskSubject: tag?.label,
     nextTaskTint: tag?.color,
-    weekDays: weekDaysFrom(weekLogs, now: now),
-    weekMoods: weekMoodsFrom(weekLogs, now: now),
+    weekDays: weekDaysFrom(weekLogs, now: at),
+    weekMoods: weekMoodsFrom(weekLogs, now: at),
+    weekOf: ambientDay(AppDate.mondayOf(at)),
     todayFocusMin: todayFocusMin,
+    focusDay: ambientDay(at),
   );
 }

@@ -150,7 +150,9 @@ class AmbientState {
     this.nextTaskTint,
     this.weekDays = const [],
     this.weekMoods = const [],
+    this.weekOf,
     this.todayFocusMin = 0,
+    this.focusDay,
   });
 
   factory AmbientState.fromMap(Map<String, Object?> map) => AmbientState(
@@ -167,7 +169,9 @@ class AmbientState {
                 ?.map((e) => e is int && e >= 0 && e <= 4 ? e : null)
                 .toList() ??
             const [],
+        weekOf: map['weekOf'] as String?,
         todayFocusMin: map['todayFocusMin'] as int? ?? 0,
+        focusDay: map['focusDay'] as String?,
       );
 
   /// The running session, or null when there is none.
@@ -200,8 +204,20 @@ class AmbientState {
   /// has no null, and one null would fail the whole push.
   final List<int?> weekMoods;
 
-  /// Minutes focused today, for the lock-screen ring.
+  /// The Monday [weekDays] and [weekMoods] belong to, `yyyy-MM-dd`, local.
+  ///
+  /// The payload is only rewritten when the app publishes, so a widget drawn
+  /// after Monday's rollover would otherwise lay last week's moods on this
+  /// week's row. A surface whose own Monday differs draws every day as no
+  /// check-in: an empty outline, never last week's face.
+  final String? weekOf;
+
+  /// Minutes focused today on this phone, for the lock-screen ring.
   final int todayFocusMin;
+
+  /// The local day [todayFocusMin] counts, `yyyy-MM-dd`. The ring reads 0 on
+  /// any other day, for the same reason [weekOf] exists.
+  final String? focusDay;
 
   Map<String, Object?> toMap() => {
         if (session != null) 'session': session!.toMap(),
@@ -211,6 +227,10 @@ class AmbientState {
         if (nextTaskTint != null) 'nextTaskTint': nextTaskTint,
         'weekDays': weekDays,
         'weekMoods': [for (final mood in weekMoods) mood ?? -1],
+        // Strings, and left out rather than null: the watch takes a property
+        // list, which has no null.
+        if (weekOf != null) 'weekOf': weekOf,
         'todayFocusMin': todayFocusMin,
+        if (focusDay != null) 'focusDay': focusDay,
       };
 }

@@ -187,7 +187,11 @@ class LocalNotifications {
     required Duration focused,
     String? taskTitle,
   }) async {
-    if (!_ready || defaultTargetPlatform != TargetPlatform.iOS) return;
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    // The session can end before anything else has initialised the plugin
+    // (it is idempotent, so waiting on it here costs nothing otherwise).
+    await ensureInitialized();
+    if (!_ready) return;
     try {
       final art = await _attachmentCopy(_sessionDoneArt, 'session_done');
       await plugin.show(

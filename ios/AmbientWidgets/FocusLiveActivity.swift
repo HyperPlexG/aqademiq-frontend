@@ -83,7 +83,8 @@ struct FocusLiveActivity: Widget {
 
                         if #available(iOS 17.0, *) {
                             if !context.state.isDone {
-                                SessionPills(frozen: context.state.frozen)
+                                SessionPills(frozen: context.state.frozen,
+                                             endOnly: context.sessionIsStale)
                             }
                         }
                     }
@@ -125,6 +126,20 @@ struct FocusLiveActivity: Widget {
     static func title(_ attributes: FocusActivityAttributes) -> String {
         let given = attributes.taskTitle.trimmingCharacters(in: .whitespaces)
         return given.isEmpty ? "Focus session" : given
+    }
+}
+
+@available(iOS 16.1, *)
+extension ActivityViewContext where Attributes == FocusActivityAttributes {
+    /// A running session past its stale date — a minute after its end, with
+    /// the app not there to end it (it was not running when the clock ran
+    /// out). The clock already reads 0:00; what changes is that Freeze goes,
+    /// since there is nothing left to hold, and End stays, so the card can
+    /// still be cleared. Never while held or done: neither is given a stale
+    /// date.
+    var sessionIsStale: Bool {
+        guard #available(iOS 16.2, *) else { return false }
+        return isStale && !state.isDone && !state.frozen
     }
 }
 
@@ -322,8 +337,9 @@ struct LockScreenCard: View {
             if #available(iOS 17.0, *) {
                 // One press, no unlock. An interrupted student holds the
                 // session without finding the app, and without it dying.
-                // Done, there is nothing left to press.
-                if !state.isDone {
+                // Done, there is nothing left to press; stale, nothing left to
+                // hold.
+                if !state.isDone && !context.sessionIsStale {
                     FreezeButton(frozen: state.frozen, fill: palette.button, ink: palette.buttonInk)
                 }
             }
@@ -378,7 +394,8 @@ struct StandByCard: View {
                         // Propped on a desk is exactly when a student gets
                         // interrupted and cannot reach for the phone properly.
                         if !state.isDone {
-                            SessionPills(frozen: state.frozen, scale: s)
+                            SessionPills(frozen: state.frozen, scale: s,
+                                         endOnly: context.sessionIsStale)
                                 .frame(width: 300 * s)
                                 .padding(.top, 10 * s)
                         }
@@ -426,15 +443,20 @@ struct LaRail: View {
 struct SessionPills: View {
     var frozen: Bool
     var scale: CGFloat = 1
+    /// A stale card: End alone, since a clock that has run out has nothing
+    /// left to freeze.
+    var endOnly: Bool = false
 
     var body: some View {
         HStack(spacing: 8 * scale) {
             // Two separate buttons rather than one with a chosen intent: the
             // intents are distinct types, so a ternary cannot produce them.
-            if frozen {
-                Button(intent: ResumeSessionIntent()) { pill(.play, "Resume") }
-            } else {
-                Button(intent: FreezeSessionIntent()) { pill(.freeze, "Freeze") }
+            if !endOnly {
+                if frozen {
+                    Button(intent: ResumeSessionIntent()) { pill(.play, "Resume") }
+                } else {
+                    Button(intent: FreezeSessionIntent()) { pill(.freeze, "Freeze") }
+                }
             }
             Button(intent: EndSessionIntent()) { pill(.end, "End") }
         }

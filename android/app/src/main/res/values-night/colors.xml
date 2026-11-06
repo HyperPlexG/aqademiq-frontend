@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- The accent the session card and App freeze's notices are tinted
+         with; the same by night (the system adjusts it for contrast). -->
+    <color name="notification_color">#FF6B5CF0</color>
     <!-- AppColors.surface, dark. -->
     <color name="splash_background">#FF1B1B1B</color>
     <!-- The session card on a dark shade (v11 notif-android, dark). -->
@@ -14,6 +17,8 @@
     <color name="widget_ink">#FFFFFFFF</color>
     <color name="widget_label">#FFA1A1A8</color>
     <color name="widget_accent">#FF6B5CF0</color>
+    <!-- White on the accent pill by night too: the pill stays the accent. -->
+    <color name="widget_on_accent">#FFFFFFFF</color>
     <color name="widget_well">#1AFFFFFF</color>
     <color name="widget_dim">#FF505050</color>
     <color name="widget_day_empty">#FFD8D4CC</color>

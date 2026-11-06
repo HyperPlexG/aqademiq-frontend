@@ -115,15 +115,32 @@ struct AmbientState {
     /// goes to the watch as a property list, which has no null.
     var weekMoods: [Int?] = []
 
+    /// The Monday the week row belongs to, `yyyy-MM-dd`, local. The payload is
+    /// only rewritten when the app publishes, so after Monday's rollover it
+    /// still holds last week's moods; another Monday than this one means
+    /// every day is drawn as no check-in.
+    var weekOf: String?
+
     var todayFocusMin: Int = 0
 
+    /// The local day `todayFocusMin` counts, `yyyy-MM-dd`.
+    var focusDay: String?
+
     init() {}
+
+    /// Minutes focused today: the published count on the day it counts, and
+    /// zero on any other — yesterday's total is not today's.
+    var focusMinToday: Int {
+        focusDay == AmbientDay.key(Date()) ? todayFocusMin : 0
+    }
 
     /// The mood to draw for a day, or nil for an empty outline.
     ///
     /// A payload from before `weekMoods` existed still says which days were
     /// shown up for; those wear Ada at her best rather than going blank.
+    /// Either way only if the payload is this week's.
     func mood(at index: Int) -> Int? {
+        guard weekOf == AmbientDay.mondayKey(Date()) else { return nil }
         if !weekMoods.isEmpty {
             guard index < weekMoods.count, let mood = weekMoods[index] else { return nil }
             return min(max(mood, 0), 4)
@@ -143,6 +160,8 @@ struct AmbientState {
         state.nextTaskTint = "#1F6FAE"
         state.weekDays = [true, true, false, false, false, false, false]
         state.weekMoods = [3, 2, nil, nil, nil, nil, nil]
+        // Always this week: the sample is drawn, never read back.
+        state.weekOf = AmbientDay.mondayKey(Date())
         return state
     }
 
@@ -160,7 +179,39 @@ struct AmbientState {
             guard let mood = raw as? Int, (0...4).contains(mood) else { return nil }
             return mood
         } ?? []
+        weekOf = json["weekOf"] as? String
         todayFocusMin = json["todayFocusMin"] as? Int ?? 0
+        focusDay = json["focusDay"] as? String
+    }
+}
+
+/// Days as the app writes them (`ambientDay` in ambient_glance.dart): a local
+/// calendar day as `yyyy-MM-dd`, the week starting on Monday.
+///
+/// Gregorian on purpose, in the device's own time zone: Dart's calendar is
+/// Gregorian, and `Calendar.current` is not on a phone set to the Buddhist or
+/// Japanese calendar, where the year alone would never match.
+enum AmbientDay {
+    private static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar
+    }
+
+    static func key(_ date: Date) -> String {
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    /// The Monday of the week `date` falls in — `AppDate.mondayOf` in the app.
+    static func mondayKey(_ date: Date) -> String {
+        let calendar = self.calendar
+        let day = calendar.startOfDay(for: date)
+        // Weekday is 1 for Sunday in the Gregorian calendar: Monday-first
+        // index, as the week row's own `todayIndex` computes it.
+        let sinceMonday = (calendar.component(.weekday, from: day) + 5) % 7
+        let monday = calendar.date(byAdding: .day, value: -sinceMonday, to: day) ?? day
+        return key(monday)
     }
 }
 

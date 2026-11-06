@@ -45,7 +45,7 @@
         android:background="@drawable/widget_button"
         android:textStyle="bold"
         android:textSize="15sp"
-        android:textColor="#FFFFFFFF"
+        android:textColor="@color/widget_on_accent"
         android:text="Start 5 min" />
 
     <!-- Two status views rather than one recoloured at runtime, so each keeps

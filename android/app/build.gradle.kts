@@ -90,10 +90,13 @@ dependencies {
     // works on older Android versions. Pairs with isCoreLibraryDesugaringEnabled.
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
-    // Pinned, not inherited. androidx.core arrives transitively through Flutter
-    // at whatever version the plugins happen to agree on, and the status-bar
-    // chip needs NotificationCompat.setShortCriticalText /
-    // setRequestPromotedOngoing, which only exist from 1.17.0. Left to the
-    // transitive resolution the chip silently never appears.
+    // Pinned, not inherited. androidx.core otherwise arrives transitively
+    // through Flutter at whatever version the plugins happen to agree on, and
+    // the session card and App freeze's notices are built on its
+    // NotificationCompat / ContextCompat — a pin keeps them on one known
+    // version across plugin bumps. (1.17 also carries the Android 16
+    // promoted-notification calls; they are deliberately unused, because the
+    // card's custom layout is chosen over the status-bar chip — CLAUDE.md,
+    // "Ambient surfaces".)
     implementation("androidx.core:core-ktx:1.17.0")
 }

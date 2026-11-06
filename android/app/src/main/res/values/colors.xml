@@ -23,6 +23,8 @@
     <color name="widget_ink">#FF111111</color>
     <color name="widget_label">#FF6E6E73</color>
     <color name="widget_accent">#FF6B5CF0</color>
+    <!-- Ink on the accent: the Focus widget's "Start 5 min" pill. -->
+    <color name="widget_on_accent">#FFFFFFFF</color>
     <color name="widget_well">#FFECE9FB</color>
     <!-- This week: the letters (DIM; today wears the accent), and the dashed
          outline of a day with no check-in, the same in both themes. -->

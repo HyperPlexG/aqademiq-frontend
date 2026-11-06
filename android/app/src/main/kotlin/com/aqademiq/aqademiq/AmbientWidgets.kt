@@ -92,8 +92,14 @@ internal class Glance(
          * The week's moods. A payload from before `weekMoods` existed still
          * says which days were shown up for; those wear Ada at her best rather
          * than going blank.
+         *
+         * Only if the payload is this week's (`weekOf`, its Monday): it is
+         * rewritten only when the app publishes, so after Monday's rollover
+         * it still holds last week's moods, and those are not this week's.
+         * Every day is then an empty outline until the app says otherwise.
          */
         private fun weekMoods(json: JSONObject): List<Int?> {
+            if (json.text("weekOf") != thisMonday()) return List(7) { null }
             val moods = json.optJSONArray("weekMoods")
             val days = json.optJSONArray("weekDays")
             return List(7) { index ->
@@ -105,6 +111,16 @@ internal class Glance(
                 }
             }
         }
+
+        /**
+         * This week's Monday as `yyyy-MM-dd`, local — the app's
+         * `ambientDay(AppDate.mondayOf(now))`. java.time (desugared below 26)
+         * rather than Calendar, which is not Gregorian in every locale.
+         */
+        private fun thisMonday(): String =
+            java.time.LocalDate.now()
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+                .toString()
 
         private fun JSONObject.text(key: String): String? =
             if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
@@ -264,26 +280,5 @@ class FocusWidget : AmbientWidget() {
         views.setOnClickPendingIntent(android.R.id.background, start)
         views.setOnClickPendingIntent(R.id.focus_button, start)
         return views
-    }
-}
-
-/** One Ada, generated from the painter's geometry (tool/generate_ada_android.py). */
-internal object Ada {
-    fun drawable(stage: Int, frozen: Boolean): Int = if (frozen) {
-        when (stage) {
-            0 -> R.drawable.ada_frost_0
-            1 -> R.drawable.ada_frost_1
-            2 -> R.drawable.ada_frost_2
-            3 -> R.drawable.ada_frost_3
-            else -> R.drawable.ada_frost_4
-        }
-    } else {
-        when (stage) {
-            0 -> R.drawable.ada_stage_0
-            1 -> R.drawable.ada_stage_1
-            2 -> R.drawable.ada_stage_2
-            3 -> R.drawable.ada_stage_3
-            else -> R.drawable.ada_stage_4
-        }
     }
 }

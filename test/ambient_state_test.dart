@@ -155,7 +155,9 @@ void main() {
         nextTaskTint: '#6b5cf0',
         weekDays: const [true, true, false, true, true, false, false],
         weekMoods: const [3, 2, null, 4, 0, null, null],
+        weekOf: '2026-08-10',
         todayFocusMin: 42,
+        focusDay: '2026-08-12',
       );
 
       final revived = AmbientState.fromMap(original.toMap());
@@ -165,7 +167,18 @@ void main() {
       expect(revived.nextTaskTime, '14:00');
       expect(revived.weekDays, original.weekDays);
       expect(revived.weekMoods, original.weekMoods);
+      expect(revived.weekOf, '2026-08-10');
       expect(revived.todayFocusMin, 42);
+      expect(revived.focusDay, '2026-08-12');
+    });
+
+    // The same property-list rule: an unstamped payload leaves the stamps
+    // out rather than writing null.
+    test('the week and day stamps are left out, never null, when unset', () {
+      final map = const AmbientState().toMap();
+      expect(map.containsKey('weekOf'), isFalse);
+      expect(map.containsKey('focusDay'), isFalse);
+      expect(AmbientState.fromMap(map).weekOf, isNull);
     });
 
     // iOS mirrors this payload to the watch with updateApplicationContext,

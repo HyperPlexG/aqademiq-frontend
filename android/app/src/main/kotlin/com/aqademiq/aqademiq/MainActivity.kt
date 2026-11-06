@@ -118,7 +118,11 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
-        AmbientBridge.detach()
+        // Swiped away, backed out of, or reclaimed: the engine (and the session
+        // it holds) goes with this activity, so the card and the stored session
+        // go too. Not for a configuration change, where the activity is only
+        // being recreated.
+        AmbientBridge.detach(applicationContext, standDown = !isChangingConfigurations)
         HapticsBridge.detach()
         screenshotChannel = null
         super.onDestroy()

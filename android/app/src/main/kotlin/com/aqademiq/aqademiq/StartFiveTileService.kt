@@ -46,7 +46,9 @@ class StartFiveTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("aqademiq://focus/start5"))
+        // Explicit, as the widgets' taps are: the link is ours to read, and an
+        // implicit VIEW of a custom scheme could be offered to another app.
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("aqademiq://focus/start5"), this, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {

@@ -61,7 +61,10 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
   /// back sooner, so the core is seen forming rather than flashing.
   static const _minDrill = Duration(milliseconds: 1450);
 
-  late final Future<void> _drilled = Future<void>.delayed(_minDrill);
+  /// Started with the screen, not with the data: a lazy field would only
+  /// start counting when the week arrived, and hold a fast answer for the
+  /// whole minimum on top of the wait.
+  final Future<void> _drilled = Future<void>.delayed(_minDrill);
 
   /// A screenshot was just taken (`core-screenshot`): the banner is up.
   bool _shot = false;
@@ -70,6 +73,10 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
 
   /// How long the banner stays before it eases away on its own.
   static const _shotHold = Duration(seconds: 6);
+
+  /// A screenshot older than this when it reaches the screen was taken of
+  /// something else (the share screen, pushed over the report).
+  static const _shotFresh = Duration(seconds: 2);
 
   @override
   void dispose() {
@@ -116,10 +123,16 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     final freeze = ref.watch(freezeControllerProvider);
     // Screenshots, heard only while this screen is mounted: the provider is
     // auto-disposed, and lets go of the channel when the report closes.
-    ref.listen<AsyncValue<int>>(reportScreenshotProvider, (_, next) {
-      // Only while the report is the page in front: a screenshot of the share
-      // screen pushed over it is not a screenshot of the report.
-      if (next.hasValue && (ModalRoute.of(context)?.isCurrent ?? true)) _showShot();
+    ref.listen<AsyncValue<DateTime>>(reportScreenshotProvider, (_, next) {
+      final heardAt = next.value;
+      if (heardAt == null) return;
+      // Only a screenshot of the report: fresh, and with the report the page
+      // in front. A listener whose screen is covered can be paused (Riverpod
+      // 3), and then a screenshot of the share screen is handed over late, on
+      // the pop — with the report in front again, so only its age gives it
+      // away.
+      final fresh = DateTime.now().difference(heardAt) < _shotFresh;
+      if (fresh && (ModalRoute.of(context)?.isCurrent ?? true)) _showShot();
     });
     final report = async.value;
 

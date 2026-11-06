@@ -1,5 +1,6 @@
 import Flutter
 import Foundation
+import UIKit
 import WidgetKit
 
 #if canImport(ActivityKit)
@@ -57,6 +58,15 @@ final class AmbientPlugin: NSObject {
         // foreground. Main queue, because the other end is a Flutter channel.
         NotificationCenter.default.addObserver(
             forName: AmbientStore.pressParked, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.drainPendingAction()
+        }
+        // Every foreground, under the scene lifecycle too. With a scene
+        // manifest UIKit tells the scene, not the app delegate, so
+        // `applicationDidBecomeActive` is not a call to rely on; draining on
+        // both is harmless, since a drain consumes what it delivers.
+        NotificationCenter.default.addObserver(
+            forName: UIScene.didActivateNotification, object: nil, queue: .main
         ) { [weak self] _ in
             self?.drainPendingAction()
         }
@@ -124,15 +134,19 @@ final class AmbientPlugin: NSObject {
         // aqademiq://focus/start5 → "focus/start5"
         let route = ((url.host ?? "") + url.path).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard !route.isEmpty else { return false }
-        // Park it as well as sending it.
+        // Park it, then drain — never park *and* send.
         //
-        // A tap on a widget cold-launches the app, and this runs long before
-        // Dart is listening on the channel — so the invoke below goes nowhere
-        // and the student lands on whatever screen the app opens on. Parked, it
-        // is drained on the first `applicationDidBecomeActive`, which is after
-        // Dart has attached.
+        // A tap on a widget cold-launches the app, and this runs before Dart
+        // is listening on the channel. Parked, it is drained by Dart's `ready`.
+        // Sending it as well delivered it twice: Flutter buffers the last
+        // message sent to a channel with no handler and replays it to the
+        // first one installed, and the parked copy then drained on `ready` —
+        // and a Start 5 route handled twice, before the first start has
+        // landed, starts two sessions. With the app already running the drain
+        // delivers it at once, and nothing is left parked for the next
+        // foreground (now drained on scene activation too) to deliver again.
         defaults?.set(route, forKey: Self.pendingRouteKey)
-        channel.invokeMethod("route", arguments: route)
+        drainPendingAction()
         return true
     }
 
@@ -238,11 +252,23 @@ final class AmbientPlugin: NSObject {
         )
 
         do {
-            let activity = try Activity.request(
-                attributes: attributes,
-                contentState: state,
-                pushType: nil
-            )
+            let activity: Activity<FocusActivityAttributes>
+            if #available(iOS 16.2, *) {
+                // With a stale date, so a card the app never got to end (it
+                // was not running at the end) says so rather than sitting at
+                // 0:00 with a Freeze button for hours.
+                activity = try Activity.request(
+                    attributes: attributes,
+                    content: ActivityContent(state: state, staleDate: state.staleAt),
+                    pushType: nil
+                )
+            } else {
+                activity = try Activity.request(
+                    attributes: attributes,
+                    contentState: state,
+                    pushType: nil
+                )
+            }
             currentActivityID = activity.id
             NSLog("Ambient: Live Activity started (\(activity.id)).")
         } catch {
@@ -256,15 +282,22 @@ final class AmbientPlugin: NSObject {
     private func updateActivity(_ args: [String: Any]) {
         #if canImport(ActivityKit)
         guard #available(iOS 16.1, *), let state = contentState(args) else { return }
-        guard let activity = Activity<FocusActivityAttributes>.activities
-            .first(where: { $0.id == currentActivityID }) ?? Activity<FocusActivityAttributes>.activities.first
+        // Live ones only. An ended activity stays listed until it is
+        // dismissed — the last session's "Session done" card lingers for
+        // minutes — and updating that would leave this session with nothing.
+        let live = Activity<FocusActivityAttributes>.activities.filter { Self.isLive($0) }
+        guard let activity = live.first(where: { $0.id == currentActivityID }) ?? live.first
         else {
             // Nothing on screen to update — the session outlived its activity
             // (an app restart, usually), so put one back.
             startActivity(args)
             return
         }
-        Task { await activity.update(using: state) }
+        if #available(iOS 16.2, *) {
+            Task { await activity.update(ActivityContent(state: state, staleDate: state.staleAt)) }
+        } else {
+            Task { await activity.update(using: state) }
+        }
         #endif
     }
 
@@ -288,7 +321,9 @@ final class AmbientPlugin: NSObject {
         guard #available(iOS 16.1, *) else { return }
         currentActivityID = nil
         for activity in Activity<FocusActivityAttributes>.activities {
-            guard let focusedSec, activity.activityState == .active else {
+            // Stale counts as live here: a session that ran to its end while
+            // its card had gone stale still earns the done card.
+            guard let focusedSec, Self.isLive(activity) else {
                 Task { await activity.end(dismissalPolicy: .immediate) }
                 continue
             }
@@ -308,6 +343,16 @@ final class AmbientPlugin: NSObject {
     }
 
     #if canImport(ActivityKit)
+    /// Still running as far as ActivityKit is concerned: active, or past its
+    /// stale date (16.2+) but not ended. An ended activity — the done card
+    /// lingering on the lock screen — is not.
+    @available(iOS 16.1, *)
+    private static func isLive(_ activity: Activity<FocusActivityAttributes>) -> Bool {
+        if activity.activityState == .active { return true }
+        if #available(iOS 16.2, *) { return activity.activityState == .stale }
+        return false
+    }
+
     /// The final content of a session that ran to its end: done, not held,
     /// and the time spent as what the card reads ("25:00 focused").
     @available(iOS 16.1, *)

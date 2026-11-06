@@ -35,7 +35,7 @@ struct FocusRingView: View {
     /// An hour is a full ring. Not a target, and never drawn as a shortfall —
     /// this is a record of what happened, not a quota with a gap in it.
     private var fraction: Double {
-        min(Double(state.todayFocusMin) / 60, 1)
+        min(Double(state.focusMinToday) / 60, 1)
     }
 
     var body: some View {
@@ -52,7 +52,9 @@ struct FocusRingView: View {
                 .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .padding(9)
-            Text("\(state.todayFocusMin)m")
+            // Today's count only: the payload can be yesterday's until the
+            // app next publishes.
+            Text("\(state.focusMinToday)m")
                 .font(.system(size: 15, weight: .heavy).monospacedDigit())
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)

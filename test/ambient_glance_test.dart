@@ -212,6 +212,10 @@ void main() {
       expect(state.todayFocusMin, 42);
       expect(state.weekDays.length, 7);
       expect(state.weekMoods, [3, null, null, null, null, null, null]);
+      // Stamped with the row's Monday and the count's day, so a surface drawn
+      // after the rollover can tell the week (or the day) has moved on.
+      expect(state.weekOf, '2026-08-10');
+      expect(state.focusDay, '2026-08-12');
     });
 
     test('an empty day says nothing rather than something wrong', () {

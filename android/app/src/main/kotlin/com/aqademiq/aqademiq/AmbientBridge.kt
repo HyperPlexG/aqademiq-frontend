@@ -47,9 +47,19 @@ object AmbientBridge {
         // drain happens.
     }
 
-    fun detach() {
+    /**
+     * The engine is going away with the activity.
+     *
+     * The session lives in Dart and is not kept anywhere else, so once the
+     * engine is gone nothing will ever end it: swiping the app away used to
+     * leave the card counting down for ever and parked every later press for
+     * an app that would never ask for it. [standDown] (everything but a
+     * configuration change) takes the card and the stored session with it.
+     */
+    fun detach(context: Context, standDown: Boolean) {
         channel?.setMethodCallHandler(null)
         channel = null
+        if (standDown && state(context).has("session")) endSession(context)
     }
 
     private fun handle(context: Context, call: MethodCall, result: MethodChannel.Result) {
@@ -60,17 +70,18 @@ object AmbientBridge {
                     result.error("bad_args", "session payload missing", null)
                     return
                 }
-                sendToService(context, AmbientSessionService.ACTION_START, args)
+                val action = if (call.method == "startSession") {
+                    AmbientSessionService.ACTION_START
+                } else {
+                    AmbientSessionService.ACTION_UPDATE
+                }
+                sendToService(context, action, args)
                 storeSession(context, args)
                 result.success(null)
             }
 
             "endSession" -> {
-                context.startService(
-                    Intent(context, AmbientSessionService::class.java)
-                        .setAction(AmbientSessionService.ACTION_STOP),
-                )
-                storeSession(context, null)
+                endSession(context)
                 result.success(null)
             }
 
@@ -113,10 +124,43 @@ object AmbientBridge {
                 (args["durationSec"] as? Number)?.toInt() ?: 0,
             )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(intent)
+        if (action == AmbientSessionService.ACTION_START) {
+            // Only the start promotes the service. It comes from a session
+            // begun in the app, so the app is in front, where Android allows it.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
         } else {
-            context.startService(intent)
+            // An update only redraws the card of a service already in the
+            // foreground, mostly with the screen off (a melt stage). Another
+            // startForegroundService for it can be refused from the
+            // background on Android 12+; a plain start of a service that is
+            // running in the foreground is allowed.
+            try {
+                context.startService(intent)
+            } catch (e: IllegalStateException) {
+                // No service to redraw and no right to start one: the card is
+                // already gone, which is the state the next start rebuilds.
+            }
+        }
+    }
+
+    /**
+     * Stand the session down: forget it first, so the widgets stop saying "In
+     * session" even if the service cannot be reached, then take the card away.
+     */
+    private fun endSession(context: Context) {
+        storeSession(context, null)
+        val stop = Intent(context, AmbientSessionService::class.java)
+            .setAction(AmbientSessionService.ACTION_STOP)
+        try {
+            context.startService(stop)
+        } catch (e: IllegalStateException) {
+            // Refused from the background (nothing in the foreground to make
+            // the start legal). Stopping needs no permission.
+            context.stopService(stop)
         }
     }
 
@@ -176,10 +220,14 @@ object AmbientBridge {
         } else {
             prefs(context).edit().putString(KEY_PENDING_ACTION, action).apply()
             // Bring the app up so the session can actually change; without this
-            // a press on a dead process would do nothing at all.
-            context.packageManager.getLaunchIntentForPackage(context.packageName)
-                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ?.let(context::startActivity)
+            // a press on a dead process would do nothing at all. Below Android
+            // 12 only: from 12 an activity started by a service a notification
+            // action started (a trampoline) is blocked, and the call is dropped.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                context.packageManager.getLaunchIntentForPackage(context.packageName)
+                    ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ?.let(context::startActivity)
+            }
         }
     }
 
@@ -215,20 +263,17 @@ object AmbientBridge {
     /**
      * ISO-8601 UTC, as written by [AmbientSession.toMap] on the Dart side.
      * Internal so the Focus widget can trim the session cube to the time left.
+     *
+     * java.time on every API level (core library desugaring backports it to
+     * 24 and 25). Dart writes microseconds — six fractional digits — and the
+     * old SimpleDateFormat fallback read `SSS` against them as milliseconds,
+     * putting the end minutes out on those versions.
      */
     internal fun parseInstant(iso: String?): Long {
         if (iso.isNullOrBlank()) return 0L
         return try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                java.time.Instant.parse(iso).toEpochMilli()
-            } else {
-                val format = java.text.SimpleDateFormat(
-                    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                    java.util.Locale.US,
-                ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                format.parse(iso)?.time ?: 0L
-            }
-        } catch (e: Exception) {
+            java.time.Instant.parse(iso).toEpochMilli()
+        } catch (e: java.time.format.DateTimeParseException) {
             0L
         }
     }

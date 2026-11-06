@@ -56,6 +56,10 @@ import UIKit
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     let messenger = engineBridge.applicationRegistrar.messenger()
     ambient = AmbientPlugin(messenger: messenger)
+    if let url = pendingAmbientURL {
+      pendingAmbientURL = nil
+      ambient?.handle(url: url)
+    }
     haptics = HapticsPlugin(messenger: messenger)
     deviceImport = DeviceImportPlugin(messenger: messenger)
     appFreeze = AppFreezePlugin(messenger: messenger)
@@ -80,9 +84,29 @@ import UIKit
     open url: URL,
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
-    if ambient?.handle(url: url) == true { return true }
+    if handleAmbientURL(url) { return true }
     return super.application(app, open: url, options: options)
   }
+
+  /// The ambient URL handler on its own. False for anything that is not ours,
+  /// so the caller can pass it on. (`FlutterSceneDelegate` forwards a scene's
+  /// opened URLs here; if a device ever shows widget taps not routing under
+  /// the scene lifecycle, `SceneDelegate.scene(_:openURLContexts:)` is the
+  /// place to call this from — verify the override against Flutter's header.)
+  @discardableResult
+  func handleAmbientURL(_ url: URL) -> Bool {
+    guard let ambient = ambient else {
+      // The engine (and so the plugin) is not up yet. Ours is held until it
+      // is, rather than dropped; anything else goes back to the caller.
+      guard url.scheme == "aqademiq" else { return false }
+      pendingAmbientURL = url
+      return true
+    }
+    return ambient.handle(url: url)
+  }
+
+  /// A widget's link that arrived before `ambient` existed.
+  private var pendingAmbientURL: URL?
 
   // Hand the APNs device token to Firebase Messaging explicitly. Under the new
   // implicit-engine AppDelegate lifecycle, Firebase's swizzled hook doesn't

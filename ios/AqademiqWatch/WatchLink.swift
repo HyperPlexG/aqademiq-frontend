@@ -34,7 +34,7 @@ struct WatchSession: Equatable {
     init?(_ raw: [String: Any]) {
         guard
             let iso = raw["endsAt"] as? String,
-            let endsAt = WatchSession.formatter.date(from: iso)
+            let endsAt = WatchSession.date(fromISO: iso)
         else { return nil }
         self.endsAt = endsAt
         remainingSec = raw["remainingSec"] as? Int ?? 0
@@ -55,6 +55,36 @@ struct WatchSession: Equatable {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
+
+    private static let plain = ISO8601DateFormatter()
+
+    /// Parse the instant Dart wrote, whatever precision it happened to use.
+    ///
+    /// A port of `Date.fromAmbientISO` (ios/AmbientWidgets/AmbientState.swift),
+    /// which this target does not compile. Dart writes *micro*seconds — six
+    /// fractional digits — whenever they are non-zero, which is nearly always,
+    /// and `withFractionalSeconds` accepts only three: without the trim below
+    /// the watch read almost every session as no session. Truncating to
+    /// milliseconds costs nothing; the countdown is drawn to the second.
+    static func date(fromISO raw: String) -> Date? {
+        if let date = formatter.date(from: raw) { return date }
+        if let date = plain.date(from: raw) { return date }
+
+        // Trim an over-long fraction down to three digits and retry.
+        if let dot = raw.firstIndex(of: "."),
+           let zone = raw.rangeOfCharacter(from: CharacterSet(charactersIn: "Z+-"),
+                                           options: [],
+                                           range: raw.index(after: dot)..<raw.endIndex) {
+            let fraction = raw[raw.index(after: dot)..<zone.lowerBound]
+            if fraction.count > 3 {
+                let trimmed = raw[raw.startIndex...dot]
+                    + fraction.prefix(3)
+                    + raw[zone.lowerBound...]
+                return formatter.date(from: String(trimmed))
+            }
+        }
+        return nil
+    }
 }
 
 private extension String {

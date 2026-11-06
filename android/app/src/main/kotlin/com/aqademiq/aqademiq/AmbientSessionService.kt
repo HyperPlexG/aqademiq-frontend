@@ -11,8 +11,10 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.text.format.DateUtils
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -65,9 +67,10 @@ class AmbientSessionService : Service() {
         const val EXTRA_DURATION_SEC = "durationSec"
 
         /**
-         * Shared with the locally-scheduled reminders so a session and its
-         * reminders sit in one row of the system notification settings rather
-         * than looking like two different features.
+         * The session card's own channel ("Focus sessions"), low importance
+         * and silent. Deliberately not the reminders' `aqademiq_default`
+         * (high importance, shared with server pushes): the card must never
+         * alert, and muting reminders must not take the session card with it.
          */
         private const val CHANNEL_ID = "aqademiq_focus_session"
         private const val NOTIFICATION_ID = 0x4144 // 'AD'
@@ -76,11 +79,26 @@ class AmbientSessionService : Service() {
         private const val CUBE_LEVELS = 20
     }
 
+    /** Whether [showCard] has put this instance in the foreground. */
+    private var foreground = false
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START, ACTION_UPDATE -> showCard(intent)
+            ACTION_START -> showCard(intent)
+            // A redraw: re-notify the card already up. Only a service that is
+            // somehow not in the foreground yet tries to get there, and stands
+            // down if Android refuses (a background start on 12+).
+            ACTION_UPDATE -> if (foreground) {
+                updateCard(intent)
+            } else {
+                try {
+                    showCard(intent)
+                } catch (e: IllegalStateException) {
+                    stopSelf()
+                }
+            }
             ACTION_STOP -> stopCard()
             ACTION_FREEZE -> AmbientBridge.dispatch(this, "freeze")
             ACTION_RESUME -> AmbientBridge.dispatch(this, "resume")
@@ -104,9 +122,25 @@ class AmbientSessionService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        foreground = true
+    }
+
+    /**
+     * Redraw the card in place: the same id as the foreground notification,
+     * so the system swaps its content rather than posting a second one.
+     */
+    private fun updateCard(intent: Intent) {
+        ensureChannel()
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        try {
+            manager.notify(NOTIFICATION_ID, buildCard(intent))
+        } catch (e: SecurityException) {
+            // Notifications not allowed (Android 13+): the session still runs.
+        }
     }
 
     private fun stopCard() {
+        foreground = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
@@ -124,7 +158,6 @@ class AmbientSessionService : Service() {
         val endsAt: Long,
         val remainingSec: Int,
         val durationSec: Int,
-        val meltStage: Int,
     ) {
         /**
          * Seconds left as the card is drawn. Running, from the end instant —
@@ -177,7 +210,6 @@ class AmbientSessionService : Service() {
             endsAt = intent.getLongExtra(EXTRA_ENDS_AT, 0L),
             remainingSec = intent.getIntExtra(EXTRA_REMAINING, 0),
             durationSec = intent.getIntExtra(EXTRA_DURATION_SEC, 0),
-            meltStage = intent.getIntExtra(EXTRA_MELT_STAGE, 0).coerceIn(0, 4),
         )
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -199,7 +231,9 @@ class AmbientSessionService : Service() {
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setColor(0xFF6B5CF0.toInt())
+            // The accent, as a resource with a night twin (CLAUDE.md), the
+            // same one App freeze's notices are tinted with.
+            .setColor(ContextCompat.getColor(this, R.color.notification_color))
             .setColorized(false)
             // The spec's own card (§6), in the frame Android gives it. The
             // frame is the system's and not negotiable since Android 12: its
@@ -270,10 +304,13 @@ class AmbientSessionService : Service() {
         return views
     }
 
-    private fun formatRemaining(totalSec: Int): String {
-        val safe = max(0, totalSec)
-        return "%d:%02d".format(safe / 60, safe % 60)
-    }
+    /**
+     * The held time in the Chronometer's own format — `MM:SS`, `H:MM:SS` from
+     * an hour — since freezing swaps one for the other in the same spot:
+     * `DateUtils.formatElapsedTime` is what Chronometer draws with.
+     */
+    private fun formatRemaining(totalSec: Int): String =
+        DateUtils.formatElapsedTime(max(0, totalSec).toLong())
 
     private fun actionIntent(action: String): PendingIntent {
         val intent = Intent(this, AmbientSessionService::class.java).setAction(action)
