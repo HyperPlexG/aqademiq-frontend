@@ -44,7 +44,7 @@ class ObMoodScreen extends ConsumerWidget {
         children: [
           Text(
             'How do you feel\nabout each?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 14),
           for (var s = 0; s < subjects.length; s++) ...[
@@ -73,9 +73,10 @@ class ObMoodScreen extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     "I'll schedule the subjects you dread in shorter, gentler "
-                    'sessions — and pair them with Prism focus audio.',
+                    'sessions, and pair them with Prism focus audio.',
                     style: AppText.sans(
-                      size: 11,
+                      size: 15,
+                      weight: FontWeight.w500,
                       height: 1.5,
                       color: colors.text,
                     ),
@@ -124,12 +125,12 @@ class _SubjectMoodCard extends StatelessWidget {
             children: [
               Text(
                 subject,
-                style: AppText.sans(size: 13, weight: FontWeight.w700),
+                style: AppText.sans(size: 17, weight: FontWeight.w700),
               ),
               Text(
                 MoodScale.labels[activeIdx],
                 style: AppText.sans(
-                  size: 10,
+                  size: 13,
                   weight: FontWeight.w700,
                   color: moodColors[activeIdx],
                 ),
@@ -158,11 +159,11 @@ class _SubjectMoodCard extends StatelessWidget {
               children: [
                 Text(
                   'Dread it',
-                  style: AppText.sans(size: 8.5, color: colors.textDim),
+                  style: AppText.sans(size: 12, weight: FontWeight.w500, color: colors.textDim),
                 ),
                 Text(
                   'Love it',
-                  style: AppText.sans(size: 8.5, color: colors.textDim),
+                  style: AppText.sans(size: 12, weight: FontWeight.w500, color: colors.textDim),
                 ),
               ],
             ),
@@ -189,20 +190,25 @@ class _MoodCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: active ? color.withAlpha(0x1C) : Colors.transparent,
-          border: Border.all(
-            width: 2,
-            color: active ? color : Colors.transparent,
+    return Semantics(
+      button: true,
+      selected: active,
+      label: MoodScale.labels[idx],
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.all(3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: active ? color.withAlpha(0x1C) : Colors.transparent,
+            border: Border.all(
+              width: 2,
+              color: active ? color : Colors.transparent,
+            ),
           ),
+          child: MoodBlob(idx: idx, size: 26),
         ),
-        child: MoodBlob(idx: idx, size: 26),
       ),
     );
   }

@@ -32,7 +32,7 @@ class ComingSoon extends StatelessWidget {
             Text(
               subtitle ?? 'Built out in Phase B.',
               textAlign: TextAlign.center,
-              style: AppText.sans(size: 13, color: colors.textMed),
+              style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
             ),
           ],
         ),

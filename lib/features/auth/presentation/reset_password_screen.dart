@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
+import 'widgets/password_eye.dart';
 
 /// Final step of a password reset: choose the new password.
 ///
@@ -91,34 +91,27 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       backgroundColor: colors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(22, 30, 22, 24),
+          padding: const EdgeInsets.fromLTRB(22, 10, 22, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Set a new password',
-                style: AppText.sans(size: 27, weight: FontWeight.w800, color: colors.text),
+                style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2, color: colors.text),
               ),
               const SizedBox(height: 6),
               Text(
                 email == null
                     ? 'Choose a password for your account.'
                     : 'Choose a password for $email.',
-                style: AppText.sans(size: 12, height: 1.5, color: colors.textMed),
+                style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
               ),
               const SizedBox(height: 22),
               const FieldLabel('New password'),
               AppTextField(
                 controller: _password,
                 obscureText: _obscure,
-                suffix: IconButton(
-                  icon: AppIcon(
-                    _obscure ? Icons.visibility_off : Icons.visibility,
-                    size: 17,
-                    color: colors.textMed,
-                  ),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
+                suffix: PasswordEye(obscured: _obscure, onTap: () => setState(() => _obscure = !_obscure)),
               ),
               const SizedBox(height: 12),
               const FieldLabel('Confirm password'),
@@ -127,7 +120,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 const SizedBox(height: 10),
                 Text(
                   _error!,
-                  style: AppText.sans(size: 11.5, height: 1.45, color: colors.danger),
+                  style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.45, color: colors.danger),
                 ),
               ],
               const SizedBox(height: 18),
@@ -139,7 +132,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               Text(
                 "You'll be signed in straight away.",
                 textAlign: TextAlign.center,
-                style: AppText.sans(size: 11, color: colors.textDim),
+                style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
               ),
             ],
           ),

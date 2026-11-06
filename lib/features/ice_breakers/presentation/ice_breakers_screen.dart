@@ -7,14 +7,15 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/circle_back_button.dart';
+import '../../../shared/widgets/ic.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
 import 'ice_breakers_card.dart';
 
-/// The whole series, behind "See all".
+/// The whole series, behind "See all" (v11 `ib-section-s` / `ib-watched`).
 ///
 /// Four states, and the copy is the difference between them: the first visit
 /// leads with START HERE, the middle ones just list what is left, the fifth
@@ -27,6 +28,10 @@ class IceBreakersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final state = ref.watch(iceBreakersProvider);
+    final rest = _rest(state);
+    // Day 0 is six items in order and nothing else: no tally of zero, no
+    // promise of more. Both arrive once something has been watched.
+    final started = state.watchedCount > 0;
 
     return Scaffold(
       backgroundColor: colors.bg,
@@ -34,23 +39,7 @@ class IceBreakersScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Row(
-                children: [
-                  _BackCircle(onTap: () => context.pop()),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Ice Breakers',
-                    style: AppText.sans(
-                      size: 20,
-                      weight: FontWeight.w800,
-                      color: colors.text,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            IceBreakersHead(onBack: () => context.pop()),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -59,52 +48,42 @@ class IceBreakersScreen extends ConsumerWidget {
                     const _AllWatchedBanner()
                   else if (state.oneLeft)
                     const _OneLeftBanner()
-                  else if (state.next != null && state.watchedCount == 0)
+                  else if (state.next != null && !started)
                     _StartHereHero(breaker: state.next!),
 
                   // On a first visit the hero already carries #01, so it is not
                   // repeated in the list beneath it.
-                  if (_rest(state).isNotEmpty) ...[
-                    const SizedBox(height: 12),
+                  if (rest.isNotEmpty || started) ...[
+                    SizedBox(height: started ? 10 : 9),
                     AppCard(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: started
+                          ? const EdgeInsets.fromLTRB(14, 6, 14, 12)
+                          : const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                       child: Column(
                         children: [
-                          for (final breaker in _rest(state)) ...[
-                            IceBreakerRow(breaker: breaker),
-                            if (breaker != _rest(state).last)
-                              Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: colors.border,
-                              ),
+                          for (final breaker in rest) ...[
+                            IceBreakerRow(breaker: breaker, tight: !started),
+                            if (breaker != rest.last) const IceBreakerRowDivider(),
                           ],
-                          if (state.watchedCount > 0) ...[
-                            Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: colors.border,
-                            ),
-                            _WatchedDisclosure(state: state),
+                          if (started) ...[
+                            if (rest.isNotEmpty) const SizedBox(height: 2),
+                            _WatchedDisclosure(state: state, first: rest.isEmpty),
+                            const SizedBox(height: 8),
+                            IceBreakersProgress(state: state),
                           ],
-                          const SizedBox(height: 12),
-                          IceBreakersProgress(state: state),
-                          const SizedBox(height: 12),
                         ],
                       ),
                     ),
                   ],
-                  const SizedBox(height: 18),
-                  Center(
-                    child: Text(
-                      'More coming soon',
-                      style: AppText.sans(
-                        size: 11.5,
-                        weight: FontWeight.w700,
-                        color: colors.textDim,
+                  if (started) ...[
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Text(
+                        'More coming soon',
+                        style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -124,6 +103,30 @@ class IceBreakersScreen extends ConsumerWidget {
   }
 }
 
+/// The section pages' head (v11 `IBHead`): the 44 back button and a 22 title.
+class IceBreakersHead extends StatelessWidget {
+  const IceBreakersHead({super.key, required this.onBack});
+
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      child: Row(
+        children: [
+          CircleBackButton(onTap: onBack),
+          const SizedBox(width: 12),
+          Text(
+            'Ice Breakers',
+            style: AppText.sans(size: 22, weight: FontWeight.w800, color: context.colors.text),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The first visit. One video is singled out so the student has exactly one
 /// thing to do — the same argument the whole series makes about tasks.
 class _StartHereHero extends StatelessWidget {
@@ -135,43 +138,40 @@ class _StartHereHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AppCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(11),
       onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // The poster: a portrait still with the play badge, never a band.
           Container(
-            width: 58,
-            height: 66,
+            width: 44,
+            height: 64,
             decoration: BoxDecoration(
-              color: colors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              color: colors.accentSoft,
+              borderRadius: BorderRadius.circular(11),
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const AdaMascot(size: 30),
+                const AdaMascot(size: 26, bubbles: 2),
                 Positioned(
                   right: 4,
                   bottom: 4,
                   child: Container(
-                    width: 21,
-                    height: 21,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2B2B2B),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const AppIcon(
-                      Icons.play_arrow,
-                      size: 12,
-                      color: Colors.white,
+                    width: 16,
+                    height: 16,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(color: Color(0xD1111111), shape: BoxShape.circle),
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 1),
+                      child: Ic('play', size: 14, color: Colors.white),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,53 +179,52 @@ class _StartHereHero extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: colors.text,
+                        color: colors.ink,
                         borderRadius: BorderRadius.circular(100),
                       ),
                       child: Text(
                         'START HERE',
                         style: AppText.sans(
-                          size: 9,
+                          size: 11,
                           weight: FontWeight.w800,
-                          letterSpacing: AppText.em(0.06, 9),
-                          color: colors.bg,
+                          letterSpacing: AppText.em(0.08, 11),
+                          color: Colors.white,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${breaker.number} · ${breaker.runtime}',
-                      style: AppText.sans(
-                        size: 10.5,
-                        weight: FontWeight.w700,
-                        color: colors.textDim,
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '${breaker.number} · ${breaker.runtime}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(
+                          size: 12,
+                          weight: FontWeight.w800,
+                          letterSpacing: AppText.em(0.04, 12),
+                          color: colors.textDim,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   breaker.title,
                   style: AppText.sans(
-                    size: 14.5,
+                    size: 17,
                     weight: FontWeight.w800,
-                    height: 1.15,
+                    letterSpacing: -0.2,
+                    height: 1.2,
                     color: colors.text,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   breaker.blurb,
-                  style: AppText.sans(
-                    size: 11.5,
-                    height: 1.4,
-                    color: colors.textMed,
-                  ),
+                  style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.4, color: colors.textMed),
                 ),
               ],
             ),
@@ -268,28 +267,23 @@ class _Banner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return AppCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          const AdaMascot(size: 34),
-          const SizedBox(width: 12),
+          const AdaMascot(size: 34, bubbles: 2),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: AppText.sans(
-                    size: 14,
-                    weight: FontWeight.w800,
-                    height: 1.2,
-                    color: colors.text,
-                  ),
+                  style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1.25, color: colors.text),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   body,
-                  style: AppText.sans(size: 11.5, color: colors.textMed),
+                  style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.45, color: colors.textMed),
                 ),
               ],
             ),
@@ -300,14 +294,17 @@ class _Banner extends StatelessWidget {
   }
 }
 
-/// Watched items, folded away.
+/// Watched items, folded away (v11 `IBWatchedDisclosure`).
 ///
 /// They collapse rather than disappear so the list's height is stable and the
 /// student can still find something they have already seen.
 class _WatchedDisclosure extends StatefulWidget {
-  const _WatchedDisclosure({required this.state});
+  const _WatchedDisclosure({required this.state, this.first = false});
 
   final IceBreakersState state;
+
+  /// Nothing above it in the card, so no hairline on top.
+  final bool first;
 
   @override
   State<_WatchedDisclosure> createState() => _WatchedDisclosureState();
@@ -322,60 +319,38 @@ class _WatchedDisclosureState extends State<_WatchedDisclosure> {
     final watched = widget.state.watched;
     return Column(
       children: [
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => setState(() => _open = !_open),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 11),
-            child: Row(
-              children: [
-                AppIcon(
-                  _open ? Icons.expand_less : Icons.expand_more,
-                  size: 17,
-                  color: colors.textMed,
-                ),
-                const SizedBox(width: 9),
-                Text(
-                  'Watched (${watched.length})',
-                  style: AppText.sans(
-                    size: 12,
-                    weight: FontWeight.w700,
-                    color: colors.textMed,
+        Semantics(
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _open = !_open),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 52),
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                border: widget.first ? null : Border(top: BorderSide(color: colors.border)),
+              ),
+              child: Row(
+                children: [
+                  Ic(_open ? 'chevron_up' : 'chevron_down', size: 20, color: colors.textDim),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Watched (${watched.length})',
+                      style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textMed),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
         if (_open)
-          for (final breaker in watched) IceBreakerRow(breaker: breaker),
+          for (final breaker in watched) ...[
+            if (breaker != watched.first) const IceBreakerRowDivider(),
+            IceBreakerRow(breaker: breaker),
+          ],
       ],
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          shape: BoxShape.circle,
-          boxShadow: colors.cardShadow,
-        ),
-        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
-      ),
     );
   }
 }

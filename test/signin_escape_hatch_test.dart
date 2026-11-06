@@ -17,7 +17,7 @@
 import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/features/auth/presentation/signin_screen.dart';
-import 'package:aqademiq/shared/widgets/circle_back_button.dart';
+import 'package:aqademiq/features/freeze/presentation/widgets/fz_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,7 +49,8 @@ void main() {
     // Sign-up and OTP both had one; sign-in did not, which is what turned a
     // failed SSO call into a dead end rather than an annoyance.
     expect(
-      find.byType(CircleBackButton),
+      // v11: a 44 well-fill circle on the white page (FzHeadButton `back`).
+      find.byType(FzHeadButton),
       findsOneWidget,
       reason: 'Sign-in must have an escape hatch — every other control on this '
           'screen can be disabled at once by the busy flag.',

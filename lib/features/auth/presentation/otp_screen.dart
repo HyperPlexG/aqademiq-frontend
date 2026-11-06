@@ -8,8 +8,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
-import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
 import 'widgets/otp_field.dart';
@@ -118,14 +118,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: CircleBackButton(onTap: () => context.pop()),
+                child: FzHeadButton(icon: 'back', fill: FzFill.well, onTap: () => context.pop()),
               ),
               const SizedBox(height: 20),
               Text(
                 "Verify it's you",
                 style: AppText.sans(
-                  size: 28,
+                  size: 34,
                   weight: FontWeight.w800,
+                  height: 1.2,
                   color: colors.text,
                 ),
               ),
@@ -133,12 +134,12 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               Text.rich(
                 TextSpan(
                   text: 'We sent a 6-digit code to\n',
-                  style: AppText.sans(size: 12.5, height: 1.6, color: colors.textMed),
+                  style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.6, color: colors.textMed),
                   children: [
                     TextSpan(
                       text: email,
                       style: AppText.sans(
-                        size: 12.5,
+                        size: 17,
                         weight: FontWeight.w700,
                         color: colors.text,
                       ),
@@ -163,18 +164,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               const SizedBox(height: 16),
               Center(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: canResend ? _resend : null,
                   child: Text.rich(
                     TextSpan(
                       text: "Didn't get a code? ",
-                      style: AppText.sans(size: 11.5, height: 1.7, color: colors.textMed),
+                      style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.7, color: colors.textMed),
                       children: [
                         TextSpan(
                           text: canResend ? 'Resend' : 'Resend in 0:${_cooldown.toString().padLeft(2, '0')}',
                           style: AppText.sans(
-                            size: 11.5,
+                            size: 15,
                             weight: FontWeight.w700,
-                            color: canResend ? colors.accent : colors.textMed,
+                            height: 1.7,
+                            color: colors.accent,
                           ),
                         ),
                       ],

@@ -47,7 +47,7 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
             child: async.hasError
                 ? Text(
                     "Couldn't load your email settings",
-                    style: AppText.sans(size: 13, color: colors.textMed),
+                    style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
                   )
                 : CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
           ),
@@ -61,10 +61,10 @@ class _EmailSettingsScreenState extends ConsumerState<EmailSettingsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(2, 0, 2, 20),
           child: Text(
-            "We'll only reach out when it's genuinely useful — a new feature, "
+            "We'll only reach out when it's genuinely useful: a new feature, "
             "a study tip, or the occasional offer. You're in control, and you "
             'can change this anytime.',
-            style: AppText.sans(size: 13, height: 1.55, color: colors.text),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.55, color: colors.text),
           ),
         ),
         SetGroup(

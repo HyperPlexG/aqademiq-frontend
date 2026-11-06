@@ -4,8 +4,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
 
-/// Filled form field (prototype input style): `bg` fill, radius 14, 1.5px border,
-/// accent border on focus. Reused across auth, onboarding, subjects, settings.
+/// Filled form field (v11 input): `bg` fill, radius 14, 1.5px border, accent
+/// border on focus, 17 text. Reused across auth, onboarding, subjects, settings.
 class AppTextField extends StatelessWidget {
   const AppTextField({
     super.key,
@@ -42,16 +42,20 @@ class AppTextField extends StatelessWidget {
       autofocus: autofocus,
       textInputAction: textInputAction,
       onSubmitted: onSubmitted,
-      style: AppText.sans(size: 13, color: colors.text),
+      // A password reads as the design's bold, spaced dots.
+      style: obscureText
+          ? AppText.sans(size: 17, weight: FontWeight.w700, letterSpacing: 3, color: colors.text)
+          : AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
       cursorColor: colors.accent,
       decoration: InputDecoration(
         isDense: true,
         filled: true,
         fillColor: colors.bg,
         hintText: hint,
-        hintStyle: AppText.sans(size: 13, color: colors.textDim),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
         suffixIcon: suffix,
+        suffixIconConstraints: const BoxConstraints(minWidth: 44, minHeight: 44),
         enabledBorder: border(colors.border),
         focusedBorder: border(colors.accent),
         border: border(colors.border),
@@ -60,7 +64,8 @@ class AppTextField extends StatelessWidget {
   }
 }
 
-/// The small uppercase field label above an [AppTextField] (prototype `SLabel`).
+/// The small uppercase field label above an [AppTextField] (v11 `SLabel`:
+/// 12/800, 0.12em, dim).
 class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key});
   final String text;
@@ -72,9 +77,9 @@ class FieldLabel extends StatelessWidget {
       child: Text(
         text.toUpperCase(),
         style: AppText.sans(
-          size: 9,
+          size: 12,
           weight: FontWeight.w800,
-          letterSpacing: AppText.em(0.12, 9),
+          letterSpacing: AppText.em(0.12, 12),
           color: context.colors.textDim,
         ),
       ),

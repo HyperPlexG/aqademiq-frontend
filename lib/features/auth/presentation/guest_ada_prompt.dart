@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 
 /// FRAME `guest-ada` — gated-feature prompt shown when a guest taps the locked
@@ -34,7 +34,7 @@ class GuestAdaPrompt extends StatelessWidget {
                   'Meet Ada',
                   textAlign: TextAlign.center,
                   style: AppText.sans(
-                    size: 22,
+                    size: 28,
                     weight: FontWeight.w800,
                     height: 1.25,
                     color: colors.text,
@@ -46,7 +46,8 @@ class GuestAdaPrompt extends StatelessWidget {
                   "you, it needs to know what you're studying.",
                   textAlign: TextAlign.center,
                   style: AppText.sans(
-                    size: 12.5,
+                    size: 17,
+                    weight: FontWeight.w500,
                     height: 1.6,
                     color: colors.textMed,
                   ),
@@ -63,10 +64,14 @@ class GuestAdaPrompt extends StatelessWidget {
                 ),
                 const SizedBox(height: 9),
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => context.pop(),
-                  child: Text(
-                    'Maybe later',
-                    style: AppText.sans(size: 11.5, color: colors.textMed),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Maybe later',
+                      style: AppText.sans(size: 15, color: colors.textMed),
+                    ),
                   ),
                 ),
               ],
@@ -78,7 +83,7 @@ class GuestAdaPrompt extends StatelessWidget {
   }
 }
 
-/// AdaMascot (size 88, happy) with a WARN lock badge at its bottom-right.
+/// AdaMascot (size 88, happy) with a WARN guest badge at its bottom-right.
 class _AdaWithLock extends StatelessWidget {
   const _AdaWithLock();
 
@@ -102,7 +107,7 @@ class _AdaWithLock extends StatelessWidget {
               shape: BoxShape.circle,
               border: Border.all(color: colors.surface, width: 3),
             ),
-            child: const AppIcon(Icons.lock, size: 13, color: Colors.white),
+            child: const Ic('guest', size: 16, color: Colors.white),
           ),
         ),
       ],
@@ -110,8 +115,8 @@ class _AdaWithLock extends StatelessWidget {
   }
 }
 
-/// Benefits card — bg = page bg, no shadow, left-aligned, three check rows with
-/// hairline dividers between (not after the last).
+/// Benefits card — bg = page bg, no shadow, left-aligned, three 52-high check
+/// rows with hairlines inset past the check (not after the last).
 class _BenefitsCard extends StatelessWidget {
   const _BenefitsCard();
 
@@ -135,27 +140,26 @@ class _BenefitsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < _labels.length; i++)
+          for (var i = 0; i < _labels.length; i++) ...[
+            if (i > 0) Padding(padding: const EdgeInsets.only(left: 28), child: Container(height: 1, color: colors.border)),
             Container(
-              decoration: BoxDecoration(
-                border: i == _labels.length - 1
-                    ? null
-                    : Border(bottom: BorderSide(color: colors.border)),
-              ),
+              constraints: const BoxConstraints(minHeight: 52),
+              alignment: Alignment.centerLeft,
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  AppIcon(Icons.check_circle, size: 15, color: colors.accent),
+                  Ic('check_circle:fill', size: 19, color: colors.accent),
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
                       _labels[i],
-                      style: AppText.sans(size: 11.5, color: colors.text),
+                      style: AppText.sans(size: 15, color: colors.text),
                     ),
                   ),
                 ],
               ),
             ),
+          ],
         ],
       ),
     );

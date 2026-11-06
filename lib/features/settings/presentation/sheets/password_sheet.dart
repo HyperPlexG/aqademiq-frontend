@@ -6,7 +6,7 @@ import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/primary_button.dart';
 
-/// Presents the change-password sheet (`settings-password`) on the canonical
+/// Presents the change-password sheet (`settings-password`) on the floating,
 /// keyboard-aware shell. The actual credential change lands with account sync
 /// (§8) — until then the CTA validates locally and reports honestly rather than
 /// faking success.
@@ -26,12 +26,12 @@ class _PasswordBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _PasswordField(label: 'Current password'),
+        const _PasswordField(label: 'Current password', autofocus: true),
         const SizedBox(height: 13),
         const _PasswordField(label: 'New password'),
         const SizedBox(height: 13),
         const _PasswordField(label: 'Confirm new password'),
-        const SizedBox(height: 10),
+        const SizedBox(height: 18),
         PrimaryButton(
           label: 'Update password',
           onPressed: () {
@@ -47,9 +47,10 @@ class _PasswordBody extends StatelessWidget {
 }
 
 class _PasswordField extends StatelessWidget {
-  const _PasswordField({required this.label});
+  const _PasswordField({required this.label, this.autofocus = false});
 
   final String label;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -61,13 +62,13 @@ class _PasswordField extends StatelessWidget {
           child: Text(
             label,
             style: AppText.sans(
-              size: 11.5,
+              size: 15,
               weight: FontWeight.w700,
               color: context.colors.textMed,
             ),
           ),
         ),
-        const AppTextField(obscureText: true),
+        AppTextField(obscureText: true, autofocus: autofocus),
       ],
     );
   }

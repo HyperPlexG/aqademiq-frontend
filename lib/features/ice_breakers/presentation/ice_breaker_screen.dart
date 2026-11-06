@@ -9,8 +9,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/ic.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
+import 'ice_breakers_screen.dart' show IceBreakersHead;
 
 /// One tutorial, played.
 ///
@@ -109,23 +111,7 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-              child: Row(
-                children: [
-                  _BackCircle(onTap: () => context.pop()),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Ice Breakers',
-                    style: AppText.sans(
-                      size: 20,
-                      weight: FontWeight.w800,
-                      color: colors.text,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            IceBreakersHead(onBack: () => context.pop()),
             Expanded(
               child: breaker == null
                   ? _Missing(colors: colors)
@@ -136,9 +122,9 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
                   // are the same as no controls at all. The video takes the
                   // room that is left over instead of dictating the layout.
                   : Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
                       child: AppCard(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.fromLTRB(15, 16, 15, 13),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -148,22 +134,22 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
                             Text(
                               '${breaker.number} · ${breaker.where}',
                               style: AppText.sans(
-                                size: 10.5,
-                                weight: FontWeight.w700,
+                                size: 15,
+                                height: 1.35,
                                 color: colors.textDim,
                               ),
                             ),
-                            const SizedBox(height: 3),
                             Text(
                               breaker.title,
                               style: AppText.sans(
-                                size: 16,
+                                size: 20,
                                 weight: FontWeight.w800,
-                                height: 1.2,
+                                letterSpacing: -0.3,
+                                height: 1.3,
                                 color: colors.text,
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Expanded(
                               child: Center(
                                 child: _Stage(
@@ -174,17 +160,18 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 7),
                             if (_ready && _controller != null)
                               _Transport(
                                 controller: _controller!,
                                 onToggle: _toggle,
                               ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Text(
                               breaker.blurb,
                               style: AppText.sans(
-                                size: 12.5,
+                                size: 17,
+                                weight: FontWeight.w500,
                                 height: 1.45,
                                 color: colors.textMed,
                               ),
@@ -215,6 +202,10 @@ String _clock(Duration d) {
   final seconds = d.inSeconds.clamp(0, 59 * 60);
   return '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
 }
+
+/// The play glyph on the poster disc (v11 INK), fixed: the disc is white in
+/// both themes, where the theme's ink would turn accent.
+const Color _kPosterInk = Color(0xFF111717);
 
 /// The video itself, at the file's own aspect ratio.
 ///
@@ -251,7 +242,7 @@ class _Stage extends StatelessWidget {
             child: failed || player == null
                 ? AppIcon(
                     Icons.videocam_off_outlined,
-                    size: 26,
+                    size: 28,
                     color: colors.textDim,
                   )
                 : SizedBox(
@@ -284,24 +275,26 @@ class _Stage extends StatelessWidget {
                   child!,
                   // Tapping the frame used to pause with no sign that anything
                   // had happened — a still tutorial is indistinguishable from a
-                  // broken one. A paused video now says so on its face.
+                  // broken one. A paused video now says so on its face, with
+                  // the v11 poster's play disc: white, lifted, the glyph in
+                  // ink — readable on any frame of any recording.
                   if (paused)
-                    ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.28),
-                      child: Center(
-                        child: Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.55),
-                            shape: BoxShape.circle,
-                          ),
-                          child: AppIcon(
-                            _isEnd(value) ? Icons.replay : Icons.play_arrow,
-                            size: 26,
-                            color: Colors.white,
-                          ),
+                    Center(
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(
+                          color: Color(0xEBFFFFFF),
+                          shape: BoxShape.circle,
+                          boxShadow: [BoxShadow(color: Color(0x2E000000), blurRadius: 16, offset: Offset(0, 4))],
                         ),
+                        child: _isEnd(value)
+                            ? const AppIcon(Icons.replay, size: 28, color: _kPosterInk)
+                            : const Padding(
+                                padding: EdgeInsets.only(left: 2),
+                                child: Ic('play', size: 31, color: _kPosterInk),
+                              ),
                       ),
                     ),
                 ],
@@ -323,11 +316,16 @@ class _Frame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // IBPhoneShot: accent-soft, corners 30, a 1.5 inner hairline of the
+    // accent at 15% — drawn over the picture so the video cannot cover it.
     return Container(
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: colors.accent.withValues(alpha: 0.15), width: 1.5),
+      ),
       decoration: BoxDecoration(
-        color: colors.accent.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.accent.withValues(alpha: 0.30)),
+        color: colors.accentSoft,
+        borderRadius: BorderRadius.circular(30),
       ),
       clipBehavior: Clip.antiAlias,
       child: child,
@@ -362,19 +360,13 @@ class _Transport extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: colors.accent.withValues(alpha: 0.16),
+                  color: colors.accentSoft,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: AppIcon(
-                  ended
-                      ? Icons.replay
-                      : value.isPlaying
-                          ? Icons.pause
-                          : Icons.play_arrow,
-                  size: 16,
-                  color: colors.accent,
-                ),
+                child: ended
+                    ? AppIcon(Icons.replay, size: 19, color: colors.accent)
+                    : Ic(value.isPlaying ? 'pause' : 'play', size: 21, color: colors.accent),
               ),
             ),
             const SizedBox(width: 10),
@@ -389,14 +381,14 @@ class _Transport extends StatelessWidget {
                 colors: VideoProgressColors(
                   playedColor: colors.accent,
                   bufferedColor: colors.accent.withValues(alpha: 0.22),
-                  backgroundColor: colors.bg,
+                  backgroundColor: colors.accentSoft,
                 ),
               ),
             ),
             const SizedBox(width: 10),
             Text(
               '${_clock(value.position)} / ${_clock(value.duration)}',
-              style: AppText.numeral(size: 11, color: colors.textMed),
+              style: AppText.numeral(size: 17, weight: FontWeight.w700, color: colors.textMed),
             ),
           ],
         );
@@ -420,34 +412,8 @@ class _Missing extends StatelessWidget {
         child: Text(
           "That one isn't here any more.",
           textAlign: TextAlign.center,
-          style: AppText.sans(size: 12.5, color: colors.textMed),
+          style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.45, color: colors.textMed),
         ),
-      ),
-    );
-  }
-}
-
-class _BackCircle extends StatelessWidget {
-  const _BackCircle({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          shape: BoxShape.circle,
-          boxShadow: colors.cardShadow,
-        ),
-        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

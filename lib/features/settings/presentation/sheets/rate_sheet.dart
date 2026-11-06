@@ -4,33 +4,32 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/settings_repository.dart';
 import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/app_bottom_sheet.dart';
+import '../../../../shared/widgets/primary_button.dart';
 
-/// Opens the settings-rate sheet ("Rate Aqademiq").
+/// Opens the settings-rate sheet ("Rate Aqademiq") — the floating sheet over
+/// the dimmed settings.
 ///
 /// The real settings screen behind is dimmed by the barrier — do not rebuild it.
 Future<void> showRateSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    useRootNavigator: true,
-    backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x6B140F1C),
-    isScrollControlled: true,
-    builder: (_) => const _RateSheet(),
+  return showAppBottomSheet<void>(
+    context,
+    title: 'Rate Aqademiq',
+    child: const _RateBody(),
   );
 }
 
-class _RateSheet extends ConsumerStatefulWidget {
-  const _RateSheet();
+class _RateBody extends ConsumerStatefulWidget {
+  const _RateBody();
 
   @override
-  ConsumerState<_RateSheet> createState() => _RateSheetState();
+  ConsumerState<_RateBody> createState() => _RateBodyState();
 }
 
-class _RateSheetState extends ConsumerState<_RateSheet> {
+class _RateBodyState extends ConsumerState<_RateBody> {
   int _rating = 0;
   bool _submitting = false;
 
@@ -55,86 +54,44 @@ class _RateSheetState extends ConsumerState<_RateSheet> {
     final colors = context.colors;
     final hasRating = _rating > 0;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sheetTop),
-          ),
-          boxShadow: colors.sheetShadow,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'How has Aqademiq been treating you?',
+          textAlign: TextAlign.center,
+          style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.4, color: colors.textMed),
         ),
-        padding: const EdgeInsets.fromLTRB(18, 12, 18, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 38,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0DDD7),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text(
-              'Rate Aqademiq',
-              style: AppText.sans(
-                size: 20,
-                weight: FontWeight.w800,
-                color: colors.text,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'How has Aqademiq been treating you?',
-              textAlign: TextAlign.center,
-              style: AppText.sans(size: 12.5, color: colors.textMed),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (var i = 1; i <= 5; i++) ...[
-                  if (i > 1) const SizedBox(width: 14),
-                  GestureDetector(
-                    onTap: () => setState(() => _rating = i),
-                    child: AppIcon(
-                      i <= _rating ? Icons.star : Icons.star_outline,
-                      size: 30,
-                      color: i <= _rating
-                          ? colors.accent
-                          : const Color(0xFFC9C5BD),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: hasRating && !_submitting ? () => unawaited(_submit()) : null,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                decoration: BoxDecoration(
-                  color: hasRating ? colors.ink : colors.hilite,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  _submitting ? 'Submitting…' : 'Submit rating',
-                  textAlign: TextAlign.center,
-                  style: AppText.sans(
-                    size: 13.5,
-                    weight: FontWeight.w800,
-                    color: hasRating ? Colors.white : const Color(0xFFB0AAA2),
+            for (var i = 1; i <= 5; i++) ...[
+              if (i > 1) const SizedBox(width: 14),
+              Semantics(
+                button: true,
+                selected: i <= _rating,
+                label: '$i star${i == 1 ? '' : 's'}',
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => setState(() => _rating = i),
+                  child: AppIcon(
+                    i <= _rating ? Icons.star : Icons.star_outline,
+                    size: 30,
+                    color: i <= _rating ? colors.accent : const Color(0xFFC9C5BD),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+        PrimaryButton(
+          label: _submitting ? 'Submitting…' : 'Submit rating',
+          enabled: hasRating && !_submitting,
+          onPressed: () => unawaited(_submit()),
+        ),
+      ],
     );
   }
 }

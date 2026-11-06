@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/launch_external.dart';
 import '../../../../data/models/enums.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
-import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/ic.dart';
+import '../../../../shared/widgets/primary_button.dart';
 import '../widgets/feedback_bits.dart';
 
 /// What the "Make a suggestion" sheet returns to the board screen.
@@ -19,8 +18,8 @@ typedef FeedbackDraft = ({
   FeedbackCategory category,
 });
 
-/// The Tiimo-style "Make a suggestion" composer: category picker, title,
-/// optional details, and a direct-support nudge when Bug is selected.
+/// The "Make a suggestion" composer (v11 `feedback-suggest`): category picker,
+/// title, optional details, and a direct-support nudge when Bug is selected.
 /// [initial] prefills the form (used to retry a draft after a failed submit).
 Future<FeedbackDraft?> showNewSuggestionSheet(
   BuildContext context, {
@@ -29,7 +28,7 @@ Future<FeedbackDraft?> showNewSuggestionSheet(
   return showAppBottomSheet<FeedbackDraft>(
     context,
     title: 'Make a suggestion',
-    subtitle: 'Share an idea — the community votes on what gets built.',
+    subtitle: 'Share an idea. The community votes on what gets built.',
     child: _SuggestionBody(initial: initial),
   );
 }
@@ -91,8 +90,7 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
         Row(
           children: [
             for (final category in FeedbackCategory.values) ...[
-              if (category != FeedbackCategory.values.first)
-                const SizedBox(width: 7),
+              if (category != FeedbackCategory.values.first) const SizedBox(width: 7),
               Expanded(
                 child: _CategoryOption(
                   category: category,
@@ -103,43 +101,40 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
             ],
           ],
         ),
-        const SizedBox(height: 14),
-        const FieldLabel('Title'),
-        AppTextField(
+        const SizedBox(height: 16),
+        const _Label('Title'),
+        _SheetField(
           controller: _title,
           hint: 'One clear sentence',
           autofocus: true,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 12),
-        const FieldLabel('Details (optional)'),
-        _MultilineField(
+        const SizedBox(height: 15),
+        const _Label('Details (optional)'),
+        _SheetField(
           controller: _body,
           hint: 'What problem does it solve? How should it work?',
+          multiline: true,
         ),
         if (_category == FeedbackCategory.bug) ...[
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.fromLTRB(14, 11, 12, 11),
             decoration: BoxDecoration(
               color: colors.danger.alpha8(0x14),
-              borderRadius: BorderRadius.circular(AppRadius.rowInput),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               children: [
-                AppIcon(Icons.bug_report_outlined, size: 15, color: colors.danger),
-                const SizedBox(width: 8),
+                Ic('bug_report', size: 20, color: colors.danger),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Blocked by a bug right now? Email the team and we will help directly.',
-                    style: AppText.sans(
-                      size: 10.5,
-                      height: 1.4,
-                      color: colors.text,
-                    ),
+                    style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.4, color: colors.text),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => unawaited(
@@ -150,43 +145,49 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
                   ),
                   child: Text(
                     'Email →',
-                    style: AppText.sans(
-                      size: 11,
-                      weight: FontWeight.w800,
-                      color: colors.accent,
-                    ),
+                    style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.accent),
                   ),
                 ),
               ],
             ),
           ),
         ],
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: _canSubmit ? _submit : null,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            decoration: BoxDecoration(
-              color: _canSubmit ? colors.ink : colors.hilite,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-            ),
-            child: Text(
-              'Share suggestion',
-              textAlign: TextAlign.center,
-              style: AppText.sans(
-                size: 13.5,
-                weight: FontWeight.w800,
-                color: _canSubmit ? Colors.white : const Color(0xFFB0AAA2),
-              ),
-            ),
-          ),
+        const SizedBox(height: 18),
+        PrimaryButton(
+          label: 'Share suggestion',
+          enabled: _canSubmit,
+          onPressed: _submit,
         ),
       ],
     );
   }
 }
 
+/// The 12/800 field caption (v11: 0.08em, dim).
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Text(
+        text.toUpperCase(),
+        style: AppText.sans(
+          size: 12,
+          weight: FontWeight.w800,
+          letterSpacing: AppText.em(0.08, 12),
+          color: context.colors.textDim,
+        ),
+      ),
+    );
+  }
+}
+
+/// A kind tile: Feature / Improvement / Bug (v11: radius 12, accent-soft when
+/// chosen, an 18 glyph and 15/700).
 class _CategoryOption extends StatelessWidget {
   const _CategoryOption({
     required this.category,
@@ -202,36 +203,36 @@ class _CategoryOption extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final fg = selected ? colors.accent : colors.textMed;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? colors.accentSoft : colors.bg,
-          borderRadius: BorderRadius.circular(11),
-          border: Border.all(
-            color: selected ? colors.accent : Colors.transparent,
-            width: 1.5,
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? colors.accentSoft : colors.hilite,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? colors.accent : Colors.transparent,
+              width: 1.5,
+            ),
           ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppIcon(category.icon, size: 14, color: fg),
-              const SizedBox(width: 5),
-              Text(
-                category.label,
-                style: AppText.sans(
-                  size: 11.5,
-                  weight: FontWeight.w800,
-                  color: fg,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Ic(category.icon, size: 18, color: fg),
+                const SizedBox(width: 5),
+                Text(
+                  category.label,
+                  style: AppText.sans(size: 15, weight: FontWeight.w700, color: fg),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -239,38 +240,74 @@ class _CategoryOption extends StatelessWidget {
   }
 }
 
-/// Multiline sibling of [AppTextField] (same fill / radius / border recipe).
-class _MultilineField extends StatelessWidget {
-  const _MultilineField({required this.controller, this.hint});
+/// The sheet's input (v11 `feedback-suggest`): a hilite well at rest, white
+/// with the accent hairline while typing. Radius 12, 17 text.
+class _SheetField extends StatefulWidget {
+  const _SheetField({
+    required this.controller,
+    this.hint,
+    this.autofocus = false,
+    this.multiline = false,
+    this.textInputAction,
+  });
 
   final TextEditingController controller;
   final String? hint;
+  final bool autofocus;
+  final bool multiline;
+  final TextInputAction? textInputAction;
+
+  @override
+  State<_SheetField> createState() => _SheetFieldState();
+}
+
+class _SheetFieldState extends State<_SheetField> {
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  void _onFocus() => setState(() {});
+
+  @override
+  void dispose() {
+    _focus
+      ..removeListener(_onFocus)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final focused = _focus.hasFocus;
     OutlineInputBorder border(Color c) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.rowInput),
+          borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: c, width: 1.5),
         );
     return TextField(
-      controller: controller,
-      minLines: 3,
-      maxLines: 5,
-      textInputAction: TextInputAction.newline,
-      style: AppText.sans(size: 13, height: 1.45, color: colors.text),
+      controller: widget.controller,
+      focusNode: _focus,
+      autofocus: widget.autofocus,
+      minLines: widget.multiline ? 2 : 1,
+      maxLines: widget.multiline ? 5 : 1,
+      textInputAction: widget.multiline ? TextInputAction.newline : widget.textInputAction,
+      style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.45, color: colors.text),
       cursorColor: colors.accent,
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor: colors.bg,
-        hintText: hint,
-        hintStyle: AppText.sans(size: 13, height: 1.45, color: colors.textDim),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        enabledBorder: border(colors.border),
+        fillColor: focused ? colors.surface : colors.hilite,
+        hintText: widget.hint,
+        hintMaxLines: 2,
+        hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.45, color: colors.textDim),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        enabledBorder: border(Colors.transparent),
         focusedBorder: border(colors.accent),
-        border: border(colors.border),
+        border: border(Colors.transparent),
       ),
     );
   }

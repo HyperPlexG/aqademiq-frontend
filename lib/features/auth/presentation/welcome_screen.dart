@@ -31,7 +31,7 @@ class WelcomeScreen extends ConsumerWidget {
                     Text(
                       'Welcome to\nAqademiq',
                       textAlign: TextAlign.center,
-                      style: AppText.sans(size: 27, weight: FontWeight.w800, letterSpacing: -0.5, height: 1.2, color: colors.text),
+                      style: AppText.sans(size: 34, weight: FontWeight.w800, letterSpacing: -0.5, height: 1.2, color: colors.text),
                     ),
                   ],
                 ),
@@ -54,10 +54,13 @@ class WelcomeScreen extends ConsumerWidget {
                       },
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      'Jumping in as a guest? Your progress saves the moment you create an account.',
-                      textAlign: TextAlign.center,
-                      style: AppText.sans(size: 10.5, height: 1.5, color: colors.textMed),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'Jumping in as a guest? Your progress saves the moment you create an account.',
+                        textAlign: TextAlign.center,
+                        style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.5, color: colors.textDim),
+                      ),
                     ),
                   ],
                 ),

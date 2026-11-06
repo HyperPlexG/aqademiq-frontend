@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/user_profile.dart';
+import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../providers/profile_controller.dart';
 import 'sheets/gender_sheet.dart';
@@ -21,81 +22,65 @@ String _formatDob(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 /// The eight preset avatars (server stores the chosen index as `avatar_index`).
 const List<String> _avatars = kProfileAvatars;
 
-/// Bottom sheet to pick one of the eight preset avatars; persists via the
+/// Floating sheet to pick one of the eight preset avatars; persists via the
 /// controller (which PATCHes `avatar_index`).
 Future<void> _pickAvatar(
   BuildContext context,
   ProfileController controller,
   int current,
 ) {
-  final colors = context.colors;
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: colors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Choose your avatar',
-                style: AppText.sans(
-                  size: 15,
-                  weight: FontWeight.w800,
-                  color: colors.text,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 14,
-                runSpacing: 14,
-                children: [
-                  for (var i = 0; i < _avatars.length; i++)
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        controller.updateAvatarIndex(i);
-                        Navigator.of(sheetContext).pop();
-                      },
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            center: const Alignment(-0.24, -0.34),
-                            colors: [colors.accentSoft, colors.accent],
-                          ),
-                          border: Border.all(
-                            color: i == current ? colors.text : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        child: Text(
-                          _avatars[i],
-                          style: const TextStyle(fontSize: 28),
-                        ),
+  return showAppBottomSheet<void>(
+    context,
+    title: 'Choose your avatar',
+    child: Builder(
+      builder: (sheetContext) {
+        final colors = sheetContext.colors;
+        return Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            for (var i = 0; i < _avatars.length; i++)
+              Semantics(
+                button: true,
+                selected: i == current,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    controller.updateAvatarIndex(i);
+                    Navigator.of(sheetContext).pop();
+                  },
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        center: const Alignment(-0.24, -0.34),
+                        colors: [colors.accentSoft, colors.accent],
+                      ),
+                      border: Border.all(
+                        color: i == current ? colors.text : Colors.transparent,
+                        width: 3,
                       ),
                     ),
-                ],
+                    child: Text(
+                      _avatars[i],
+                      style: const TextStyle(fontSize: 30, height: 1),
+                    ),
+                  ),
+                ),
               ),
-            ],
-          ),
-        ),
-      );
-    },
+          ],
+        );
+      },
+    ),
   );
 }
 
-/// FRAMES `settings-profile` — edit personal info. Every row reads from and
-/// writes to [ProfileController], so edits persist and reflect everywhere.
+/// FRAMES `settings-profile` (v11 ProfileBody) — edit personal info. Every row
+/// reads from and writes to [ProfileController], so edits persist and reflect
+/// everywhere.
 class SettingsProfileScreen extends ConsumerWidget {
   const SettingsProfileScreen({super.key});
 
@@ -121,14 +106,15 @@ class SettingsProfileScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(center: const Alignment(-0.24, -0.34), colors: [colors.accentSoft, colors.accent]),
+                    boxShadow: [BoxShadow(color: colors.accent.alpha8(0x44), blurRadius: 20, offset: const Offset(0, 6))],
                   ),
                   child: Text(
                     _avatars[profile.avatarIndex.clamp(0, _avatars.length - 1)],
-                    style: const TextStyle(fontSize: 34),
+                    style: const TextStyle(fontSize: 34, height: 1),
                   ),
                 ),
                 const SizedBox(height: 9),
-                Text('Change photo', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.accent)),
+                Text('Change photo', style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.accent)),
               ],
             ),
           ),
@@ -148,7 +134,7 @@ class SettingsProfileScreen extends ConsumerWidget {
               value: profile.gender ?? 'Add',
               showChevron: true,
               onTap: () async {
-                final picked = await showGenderSheet(context);
+                final picked = await showGenderSheet(context, current: profile.gender);
                 if (picked != null) controller.updateGender(picked);
               },
             ),

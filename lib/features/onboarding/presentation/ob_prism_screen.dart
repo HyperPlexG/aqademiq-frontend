@@ -8,9 +8,9 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../focus/providers/prism_audio_provider.dart';
 import '../../settings/providers/prism_settings_provider.dart';
@@ -63,21 +63,25 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
       _PrismMode(
         color: colors.accent,
         name: 'Deep Work',
+        glyph: 'state_deep_focus',
         desc: 'Low-freq focus carrier. Hard cognitive tasks.',
       ),
       _PrismMode(
         color: colors.success,
         name: 'Flow',
+        glyph: 'state_focus',
         desc: 'Smooth ambient. Sustained concentration.',
       ),
       _PrismMode(
         color: colors.warn,
         name: 'Review',
+        glyph: 'state_creative',
         desc: 'Steady midtempo. Reading, flashcards, revision.',
       ),
       _PrismMode(
         color: colors.textMed,
         name: 'Wind-down',
+        glyph: 'state_relax',
         desc: 'Slow, calming. End-of-session decompression.',
       ),
     ];
@@ -89,13 +93,13 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
         children: [
           Text(
             'Meet Prism',
-            style: AppText.sans(size: 26, weight: FontWeight.w800),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 4),
           Text(
             'Psychoacoustic audio that deepens focus. '
             'Auto-plays in sessions.',
-            style: AppText.sans(size: 12, color: colors.textMed),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.4, color: colors.textMed),
           ),
           const SizedBox(height: 22),
           const FieldLabel('Prism modes'),
@@ -128,10 +132,8 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
                         width: 1.5,
                       ),
                     ),
-                    child: CustomPaint(
-                      size: const Size(22, 22),
-                      painter: _PrismGlyph(mode.color),
-                    ),
+                    // v11 PrismGlyph: the mode's Tier 3 state mark.
+                    child: Ic(mode.glyph, size: 22, color: mode.color),
                   ),
                   const SizedBox(width: 11),
                   Expanded(
@@ -140,18 +142,20 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
                       children: [
                         Text(
                           mode.name,
-                          style: AppText.sans(size: 12, weight: FontWeight.w700),
+                          style: AppText.sans(size: 17, weight: FontWeight.w700),
                         ),
                         const SizedBox(height: 1),
                         Text(
                           mode.desc,
-                          style: AppText.sans(size: 10, color: colors.textMed),
+                          style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.35, color: colors.textMed),
                         ),
                       ],
                     ),
                   ),
-                  if (selected == mode.name)
-                    AppIcon(Icons.check_circle, size: 18, color: mode.color),
+                  if (selected == mode.name) ...[
+                    const SizedBox(width: 8),
+                    Ic('check_circle:fill', size: 21, color: mode.color),
+                  ],
                 ],
               ),
             ),
@@ -172,54 +176,17 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
   }
 }
 
-/// One Prism audio mode row (icon color + copy).
+/// One Prism audio mode row (icon color, its state mark + copy).
 class _PrismMode {
   const _PrismMode({
     required this.color,
     required this.name,
+    required this.glyph,
     required this.desc,
   });
 
   final Color color;
   final String name;
+  final String glyph;
   final String desc;
-}
-
-/// The mode icon: an equalizer of 5 vertical bars inside a ring (prototype
-/// `PrismGlyph`, viewBox 0 0 24 24, scaled to the painter size).
-class _PrismGlyph extends CustomPainter {
-  const _PrismGlyph(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas
-      ..save()
-      ..scale(size.width / 24, size.height / 24);
-
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(const Offset(12, 12), 9, stroke);
-
-    const xs = [6.0, 9.0, 12.0, 15.0, 18.0];
-    const heights = [4.0, 7.0, 10.0, 7.0, 4.0];
-    for (var i = 0; i < xs.length; i++) {
-      final half = heights[i] / 2;
-      canvas.drawLine(
-        Offset(xs[i], 12 - half),
-        Offset(xs[i], 12 + half),
-        stroke,
-      );
-    }
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_PrismGlyph oldDelegate) => oldDelegate.color != color;
 }

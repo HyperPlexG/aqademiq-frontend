@@ -12,7 +12,7 @@ import '../../../shared/widgets/settings_row.dart';
 import 'sheets/notif_sound_sheet.dart';
 import 'widgets/settings_scaffold.dart';
 
-/// FRAMES `settings-notif` — the Notifications route. Loads the user's real
+/// FRAMES `settings-notif` / `settings-notif-more` — the Notifications route. Loads the user's real
 /// notification preferences (`/me/notification-preferences`) and persists every
 /// change (sound + times via PATCH, per-event toggles via PUT channels).
 ///
@@ -119,7 +119,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             child: async.hasError
                 ? Text(
                     "Couldn't load your notification settings",
-                    style: AppText.sans(size: 13, color: colors.textMed),
+                    style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
                   )
                 : CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
           ),

@@ -4,20 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../services/haptics/haptic_governor.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../services/sound_settings_service.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../../focus/providers/prism_audio_provider.dart';
-import '../providers/haptic_settings_provider.dart';
 import '../providers/prism_settings_provider.dart';
+import 'widgets/settings_options.dart';
 import 'widgets/settings_scaffold.dart';
 
-/// settings-sounds — Prism (Focus audio + in-app sounds).
+/// settings-sounds — Prism (Focus audio + in-app sounds), v11 SOUNDS_SETTING.
+/// The volumes stay between the two groups; Haptics lives on the Settings
+/// home now (settings-haptics), as v11 has it.
 class PrismSettingsScreen extends ConsumerStatefulWidget {
   const PrismSettingsScreen({super.key});
 
@@ -49,51 +48,27 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
     final picked = await showAppBottomSheet<String>(
       context,
       title: 'Default Prism mode',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final mode in prismModes)
-            _ModeOption(
-              label: mode,
-              selected: mode == current,
-              onTap: () => Navigator.of(context).pop(mode),
-            ),
-        ],
+      child: Builder(
+        builder: (sheet) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final mode in prismModes)
+              SettingsOptionRow(
+                label: mode,
+                selected: mode == current,
+                onTap: () => Navigator.of(sheet).pop(mode),
+              ),
+          ],
+        ),
       ),
     );
     if (picked != null) ref.read(prismDefaultModeProvider.notifier).set(picked);
-  }
-
-  /// Off / Essential / Full (spec §6.5), in the same sheet the default Prism
-  /// mode uses.
-  Future<void> _pickHapticLevel() async {
-    final current = ref.read(hapticSettingProvider);
-    final picked = await showAppBottomSheet<HapticSetting>(
-      context,
-      title: 'Haptics',
-      subtitle: 'Aqademiq never overrides your phone’s own vibration and '
-          'reduce-motion settings — this only makes it quieter.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final level in HapticSetting.values)
-            _ModeOption(
-              label: level.label,
-              sub: level.description,
-              selected: level == current,
-              onTap: () => Navigator.of(context).pop(level),
-            ),
-        ],
-      ),
-    );
-    if (picked != null) ref.read(hapticSettingProvider.notifier).set(picked);
   }
 
   @override
   Widget build(BuildContext context) {
     final defaultMode = ref.watch(prismDefaultModeProvider);
     final autoplay = ref.watch(prismAutoplayProvider);
-    final haptics = ref.watch(hapticSettingProvider);
     final audio = ref.read(prismAudioControllerProvider.notifier);
     return SettingsScaffold(
       title: 'Prism',
@@ -149,20 +124,6 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        const GroupLabel('Haptics'),
-        SetGroup(
-          children: [
-            SettingsRow(
-              label: 'Vibration',
-              sub: 'Follows your phone’s accessibility settings.',
-              value: haptics.label,
-              showChevron: true,
-              last: true,
-              onTap: () => unawaited(_pickHapticLevel()),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
         const GroupLabel('In-app sounds'),
         SetGroup(
           children: [
@@ -200,7 +161,7 @@ class _PrismSettingsScreenState extends ConsumerState<PrismSettingsScreen> {
 }
 
 /// A [SetGroup] row holding a Prism volume slider (matches [SettingsRow]
-/// metrics: 12/15 padding, bottom border unless [last]).
+/// metrics: 17/15 text, 12/15 padding, an inset hairline unless [last]).
 class _VolumeRow extends ConsumerWidget {
   const _VolumeRow({
     required this.label,
@@ -224,26 +185,27 @@ class _VolumeRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    // The inset hairline SettingsRow draws: from the text to the edge.
     return Container(
+      constraints: const BoxConstraints(minHeight: 52),
+      margin: const EdgeInsets.only(left: 15),
+      padding: const EdgeInsets.fromLTRB(0, 12, 15, 12),
       decoration: BoxDecoration(
-        border:
-            last ? null : Border(bottom: BorderSide(color: colors.border)),
+        border: last ? null : Border(bottom: BorderSide(color: colors.border)),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: AppText.sans(size: 13.5, height: 1.3, color: colors.text)),
+                Text(label, style: AppText.sans(size: 17, height: 1.3, color: colors.text)),
                 if (sub != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       sub!,
-                      style: AppText.sans(size: 11, height: 1.4, color: colors.textMed),
+                      style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.4, color: colors.textMed),
                     ),
                   ),
               ],
@@ -251,7 +213,7 @@ class _VolumeRow extends ConsumerWidget {
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 132,
+            width: 140,
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 4,
@@ -259,8 +221,7 @@ class _VolumeRow extends ConsumerWidget {
                 inactiveTrackColor: colors.accentSoft,
                 thumbColor: colors.accent,
                 overlayShape: SliderComponentShape.noOverlay,
-                thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 8),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
               ),
               child: Slider(
                 value: value.clamp(0.0, 1.0),
@@ -274,65 +235,6 @@ class _VolumeRow extends ConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A selectable row in the default-Prism-mode / haptics-level picker sheet.
-class _ModeOption extends StatelessWidget {
-  const _ModeOption({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.sub,
-  });
-
-  final String label;
-  final String? sub;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
-          decoration: BoxDecoration(
-            color: selected ? colors.accentSoft : colors.hilite,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(width: 1.5, color: selected ? colors.accent : Colors.transparent),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(label, style: AppText.sans(size: 13.5, weight: FontWeight.w700, color: selected ? colors.accent : colors.text)),
-                    if (sub != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          sub!,
-                          style: AppText.sans(size: 11, height: 1.4, color: colors.textMed),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              if (selected) ...[
-                const SizedBox(width: 10),
-                AppIcon(Icons.check_circle, size: 20, color: colors.accent),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }

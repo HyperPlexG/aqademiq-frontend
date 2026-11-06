@@ -51,13 +51,13 @@ class _Body extends StatelessWidget {
       children: [
         Row(
           children: [
-            const AdaMascot(size: 30),
-            const SizedBox(width: 10),
+            const AdaMascot(size: 42),
+            const SizedBox(width: 11),
             Expanded(
               child: Text(
                 "You're in guest mode. Create a free account to join the "
                 'conversation — vote on ideas, post suggestions and reply.',
-                style: AppText.sans(size: 11.5, height: 1.5, color: colors.textMed),
+                style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
               ),
             ),
           ],
@@ -70,13 +70,20 @@ class _Body extends StatelessWidget {
             context.go(Routes.signup);
           },
         ),
-        const SizedBox(height: 8),
-        Center(
+        const SizedBox(height: 4),
+        // ObLink: the quiet way out, with a full 44 target.
+        Semantics(
+          button: true,
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => Navigator.of(context).pop(),
-            child: Text(
-              'Not now',
-              style: AppText.sans(size: 11.5, color: colors.textMed),
+            child: Container(
+              height: 44,
+              alignment: Alignment.center,
+              child: Text(
+                'Not now',
+                style: AppText.sans(size: 15, color: colors.textMed),
+              ),
             ),
           ),
         ),

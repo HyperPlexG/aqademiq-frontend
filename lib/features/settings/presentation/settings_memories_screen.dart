@@ -9,6 +9,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../data/models/ada_memory.dart';
 import '../../../data/repositories/ada_memory_repository.dart';
 import '../../../shared/icons/app_icon.dart';
+import '../../../shared/widgets/app_bottom_sheet.dart' show AppScrim;
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/settings_row.dart';
 import 'widgets/settings_scaffold.dart';
@@ -38,7 +39,7 @@ class SettingsMemoriesScreen extends ConsumerWidget {
             "don't have to repeat yourself. Some you've told it; some it "
             "worked out from how you study. Remove anything you'd rather it "
             'forgot.',
-            style: AppText.sans(size: 13, height: 1.55, color: colors.text),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.55, color: colors.text),
           ),
         ),
         ...async.when(
@@ -51,14 +52,14 @@ class SettingsMemoriesScreen extends ConsumerWidget {
             Center(
               child: Text(
                 "Couldn't load what Ada remembers",
-                style: AppText.sans(size: 13, color: colors.textMed),
+                style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
               ),
             ),
             const SizedBox(height: 12),
             Center(
               child: TextButton(
                 onPressed: () => unawaited(ref.read(adaMemoriesProvider.notifier).refresh()),
-                child: Text('Try again', style: AppText.sans(size: 13, color: colors.accent)),
+                child: Text('Try again', style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent)),
               ),
             ),
           ],
@@ -100,7 +101,7 @@ class SettingsMemoriesScreen extends ConsumerWidget {
           onPressed: () => unawaited(_confirmClear(context, ref, memories.length)),
           child: Text(
             'Forget everything',
-            style: AppText.sans(size: 13, color: colors.danger),
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.danger),
           ),
         ),
       ),
@@ -109,29 +110,22 @@ class SettingsMemoriesScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmClear(BuildContext context, WidgetRef ref, int count) async {
-    final colors = context.colors;
-    final ok = await showAppDialog<bool>(
-      context,
-      title: 'Forget everything?',
-      // Says what actually happens rather than only warning: Ada keeps working,
-      // it just starts from nothing again. A confirm that only threatens makes
-      // people hesitate over something they are entitled to do.
-      subtitle: 'Ada will forget all $count thing${count == 1 ? '' : 's'} it knows about '
-          "how you work. It'll still help you plan — it just won't remember any "
-          'of this next time.',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DialogConfirmButton(
-            label: 'Forget everything',
-            onPressed: () => Navigator.of(context).pop(true),
-          ),
-          const SizedBox(height: 4),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Keep them', style: AppText.sans(size: 13, color: colors.textMed)),
-          ),
-        ],
+    // The v11 alert, a little wider than confirmDestructive's so "Keep them"
+    // and "Forget everything" both fit on one line. Closing it is a no.
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierColor: AppScrim.dialog,
+      builder: (_) => AppAlert(
+        title: 'Forget everything?',
+        // Says what actually happens rather than only warning: Ada keeps
+        // working, it just starts from nothing again. A confirm that only
+        // threatens makes people hesitate over something they are entitled to.
+        message: 'Ada will forget all $count thing${count == 1 ? '' : 's'} it knows about '
+            "how you work. It'll still help you plan — it just won't remember any "
+            'of this next time.',
+        confirmLabel: 'Forget everything',
+        cancelLabel: 'Keep them',
+        width: 300,
       ),
     );
     if (ok != true) return;
@@ -158,11 +152,11 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.only(top: 32),
       child: Column(
         children: [
-          AppIcon(Icons.psychology_outlined, size: 34, color: colors.textDim),
+          AppIcon(Icons.psychology_outlined, size: 36, color: colors.textDim),
           const SizedBox(height: 12),
           Text(
             "Ada hasn't picked anything up yet",
-            style: AppText.sans(size: 14, weight: FontWeight.w700, color: colors.text),
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
           ),
           const SizedBox(height: 6),
           Padding(
@@ -171,7 +165,7 @@ class _EmptyState extends StatelessWidget {
               'As you plan together, Ada will start remembering things like when '
               'you focus best and what you have on each week.',
               textAlign: TextAlign.center,
-              style: AppText.sans(size: 12.5, height: 1.5, color: colors.textMed),
+              style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
             ),
           ),
         ],
@@ -213,7 +207,9 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
     final m = widget.memory;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      // The inset hairline SettingsRow draws: from the text to the edge.
+      margin: const EdgeInsets.only(left: 15),
+      padding: const EdgeInsets.fromLTRB(0, 12, 6, 12),
       decoration: BoxDecoration(
         border: widget.last
             ? null
@@ -228,7 +224,7 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
               children: [
                 Text(
                   m.content,
-                  style: AppText.sans(size: 13.5, height: 1.45, color: colors.text),
+                  style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.4, color: colors.text),
                 ),
                 const SizedBox(height: 5),
                 Row(
@@ -238,26 +234,26 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
                     // disagree with, and it should be the easiest to spot.
                     if (m.source.isInferred)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                           color: colors.hilite,
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Text(
                           m.source.label,
-                          style: AppText.sans(size: 10.5, color: colors.textMed),
+                          style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textMed),
                         ),
                       )
                     else
                       Text(
                         m.source.label,
-                        style: AppText.sans(size: 10.5, color: colors.textDim),
+                        style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textDim),
                       ),
                     if (m.expiresAt != null) ...[
                       const SizedBox(width: 8),
                       Text(
                         'until ${_ymd(m.expiresAt!)}',
-                        style: AppText.sans(size: 10.5, color: colors.textDim),
+                        style: AppText.sans(size: 13, weight: FontWeight.w600, color: colors.textDim),
                       ),
                     ],
                   ],
@@ -266,8 +262,8 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
             ),
           ),
           SizedBox(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             child: _removing
                 ? Center(
                     child: SizedBox(
@@ -278,9 +274,9 @@ class _MemoryTileState extends ConsumerState<_MemoryTile> {
                   )
                 : IconButton(
                     onPressed: _forget,
-                    icon: AppIcon(Icons.close, size: 17, color: colors.textDim),
+                    icon: AppIcon(Icons.close, size: 20, color: colors.textDim),
                     tooltip: 'Forget this',
-                    splashRadius: 18,
+                    splashRadius: 20,
                   ),
           ),
         ],

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 
-/// A boxed code input (prototype `auth-otp`). Filled cells show the character on
+/// A boxed code input (v11 `auth-otp`). Filled cells show the character on
 /// an `accentSoft` fill; the active cell shows an accent border + blinking
 /// cursor.
 ///
@@ -24,6 +23,10 @@ class OtpField extends StatefulWidget {
     this.keyboardType = TextInputType.number,
     this.inputFormatters,
     this.textCapitalization = TextCapitalization.none,
+    this.gap = 8,
+    this.groupAfter,
+    this.cellRadius = 14,
+    this.fontSize = 28,
   });
 
   final int length;
@@ -47,6 +50,19 @@ class OtpField extends StatefulWidget {
 
   /// Auto-capitalisation hint for the soft keyboard.
   final TextCapitalization textCapitalization;
+
+  /// Space between cells (v11: 8 for the 6-digit code, 5 for the referral).
+  final double gap;
+
+  /// When set, an extra 7 of space after this many cells — the referral code
+  /// reads as 4 + 4.
+  final int? groupAfter;
+
+  /// Cell corner radius (14 for the code, 11 for the smaller referral cells).
+  final double cellRadius;
+
+  /// The character size in a filled cell; the cursor matches it.
+  final double fontSize;
 
   @override
   State<OtpField> createState() => _OtpFieldState();
@@ -75,7 +91,7 @@ class _OtpFieldState extends State<OtpField> {
           Row(
             children: [
               for (var i = 0; i < widget.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
+                if (i > 0) SizedBox(width: widget.gap + (i == widget.groupAfter ? 7 : 0)),
                 Expanded(child: _cell(colors, i, value)),
               ],
             ],
@@ -123,12 +139,12 @@ class _OtpFieldState extends State<OtpField> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: filled ? colors.accentSoft : colors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.rowInput),
+          borderRadius: BorderRadius.circular(widget.cellRadius),
           border: Border.all(color: border, width: 2),
         ),
         child: filled
-            ? Text(value[i], style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text))
-            : (active ? Container(width: 2, height: 22, color: colors.accent) : null),
+            ? Text(value[i], style: AppText.sans(size: widget.fontSize, weight: FontWeight.w800, color: colors.text))
+            : (active ? Container(width: 2, height: widget.fontSize < 24 ? 20 : 22, color: colors.accent) : null),
       ),
     );
   }

@@ -39,12 +39,12 @@ class ObStudyScreen extends ConsumerWidget {
         children: [
           Text(
             'What are you\nstudying?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 4),
           Text(
             'Ada shapes your plan around your workload',
-            style: AppText.sans(size: 12, color: colors.textMed),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
           ),
           const SizedBox(height: 16),
           const FieldLabel('Level'),
@@ -80,11 +80,7 @@ class ObStudyScreen extends ConsumerWidget {
                   active: draft.subjects.contains(subject),
                   onTap: () => controller.toggleSubject(subject),
                 ),
-              _Chip(
-                label: '+ More',
-                dashed: true,
-                onTap: () => _openAddSubject(context, controller),
-              ),
+              _MoreChip(onTap: () => _openAddSubject(context, controller)),
             ],
           ),
           const SizedBox(height: 24),
@@ -115,55 +111,82 @@ class ObStudyScreen extends ConsumerWidget {
   }
 }
 
-/// Onboarding pill chip (prototype `Chip`). Active = accent border + accent-soft
-/// fill + accent text; inactive = hairline border + surface + muted text. The
-/// [dashed] variant is the accent-tinted "+ More" affordance.
+/// Onboarding pill chip (v11 `Chip`): 36 high, 15/600. Active = accent
+/// border + accent-soft fill + accent text; inactive = hairline border +
+/// surface + muted text.
 class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.onTap,
-    this.active = false,
-    this.dashed = false,
-  });
+  const _Chip({required this.label, required this.active, required this.onTap});
 
   final String label;
-  final VoidCallback onTap;
   final bool active;
-  final bool dashed;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final borderColor = (active || dashed)
-        ? (dashed ? colors.accent.alpha8(0x88) : colors.accent)
-        : colors.border;
-    final fill = active ? colors.accentSoft : colors.surface;
-    final textColor = (active || dashed) ? colors.accent : colors.textMed;
-
-    final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: dashed
-          ? null
-          : BoxDecoration(
-              color: fill,
-              borderRadius: BorderRadius.circular(AppRadius.pill),
-              border: Border.all(color: borderColor, width: 1.5),
-            ),
-      child: Text(
-        label,
-        style: AppText.sans(size: 11, color: textColor),
+    return Semantics(
+      button: true,
+      selected: active,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: active ? colors.accentSoft : colors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(color: active ? colors.accent : colors.border, width: 1.5),
+          ),
+          child: _ChipLabel(label: label, color: active ? colors.accent : colors.textMed, padding: 14),
+        ),
       ),
     );
+  }
+}
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: dashed
-          ? CustomPaint(
-              painter: _DashedPillBorder(color: borderColor),
-              child: chip,
-            )
-          : chip,
+/// The dashed, accent-tinted "+ More" chip (v11 ob2): 36 high, 15/600.
+class _MoreChip extends StatelessWidget {
+  const _MoreChip({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Semantics(
+      button: true,
+      label: 'Add another subject',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: CustomPaint(
+          painter: _DashedPillBorder(color: colors.accent.alpha8(0x88)),
+          child: _ChipLabel(label: '+ More', color: colors.accent, padding: 12),
+        ),
+      ),
+    );
+  }
+}
+
+/// A chip's label, 36 high and only as wide as its text (a Wrap would let an
+/// aligned Container stretch to the full row).
+class _ChipLabel extends StatelessWidget {
+  const _ChipLabel({required this.label, required this.color, required this.padding});
+
+  final String label;
+  final Color color;
+  final double padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: padding),
+        child: Center(
+          widthFactor: 1,
+          child: Text(label, style: AppText.sans(size: 15, color: color)),
+        ),
+      ),
     );
   }
 }

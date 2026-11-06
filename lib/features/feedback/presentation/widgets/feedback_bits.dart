@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/feedback_post.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
+
+/// The v11 board's cool grey for a status that is not moving (FeedbackBody).
+const Color kFeedbackStatusGrey = Color(0xFF9AA3B2);
 
 /// Board-column / badge styling for each [FeedbackStatus].
 extension FeedbackStatusUi on FeedbackStatus {
@@ -20,11 +22,11 @@ extension FeedbackStatusUi on FeedbackStatus {
         FeedbackStatus.declined => 'Declined',
       };
 
-  /// Status accent — semantic tokens chosen to match `feedback_statuses.color`
-  /// on the server (#777777, #6b5cf0, #e8a430, #2a9d6b, #c0c0c0) so the app and
-  /// the board agree on what each state looks like.
+  /// Status dot. Planned / In progress / Shipped keep the semantic tokens that
+  /// match `feedback_statuses.color` on the server (#6b5cf0, #e8a430,
+  /// #2a9d6b); Under review takes the v11 board's cool grey.
   Color color(AppColors colors) => switch (this) {
-        FeedbackStatus.underReview => colors.textMed,
+        FeedbackStatus.underReview => kFeedbackStatusGrey,
         FeedbackStatus.planned => colors.accent,
         FeedbackStatus.inProgress => colors.warn,
         FeedbackStatus.shipped => colors.success,
@@ -32,7 +34,7 @@ extension FeedbackStatusUi on FeedbackStatus {
       };
 }
 
-/// Chip styling for each [FeedbackCategory].
+/// Chip styling for each [FeedbackCategory] (v11 `FB_KIND`).
 extension FeedbackCategoryUi on FeedbackCategory {
   String get label => switch (this) {
         FeedbackCategory.feature => 'Feature',
@@ -40,16 +42,25 @@ extension FeedbackCategoryUi on FeedbackCategory {
         FeedbackCategory.bug => 'Bug',
       };
 
-  IconData get icon => switch (this) {
-        FeedbackCategory.feature => Icons.lightbulb_outline,
-        FeedbackCategory.improvement => Icons.tune,
-        FeedbackCategory.bug => Icons.bug_report_outlined,
+  /// The design name of the category's glyph, for [Ic].
+  String get icon => switch (this) {
+        FeedbackCategory.feature => 'lightbulb',
+        FeedbackCategory.improvement => 'tune',
+        FeedbackCategory.bug => 'bug_report',
       };
 
+  /// The chip's ink.
   Color color(AppColors colors) => switch (this) {
         FeedbackCategory.feature => colors.accent,
-        FeedbackCategory.improvement => const Color(0xFF5CBBFF),
+        FeedbackCategory.improvement => const Color(0xFF2A76B3),
         FeedbackCategory.bug => colors.danger,
+      };
+
+  /// The chip's tint behind that ink.
+  Color tint(AppColors colors) => switch (this) {
+        FeedbackCategory.feature => colors.accentSoft,
+        FeedbackCategory.improvement => const Color(0x245CBBFF),
+        FeedbackCategory.bug => colors.danger.alpha8(0x1C),
       };
 }
 
@@ -59,8 +70,9 @@ String feedbackAgo(DateTime d) {
   return ago == 'now' ? 'just now' : '$ago ago';
 }
 
-/// The ▲-vote control. Voted = accentSoft fill + accent border/text; not yet
-/// voted = surface + hairline border. [compact] is the smaller board-card form.
+/// The vote box (v11 `FeedCard`): 46 × 30, radius 10, a hairline border that
+/// turns accent once voted, the up chevron and the count. [compact] is the
+/// board-card form.
 class VotePill extends StatelessWidget {
   const VotePill({
     super.key,
@@ -78,44 +90,45 @@ class VotePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final fg = voted ? colors.accent : colors.textMed;
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: compact
-            ? const EdgeInsets.fromLTRB(5, 2, 9, 2)
-            : const EdgeInsets.fromLTRB(6, 4, 11, 4),
-        decoration: BoxDecoration(
-          color: voted ? colors.accentSoft : colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.tile),
-          border: Border.all(
-            color: voted ? colors.accent : colors.border,
-            width: 1.5,
+    return Semantics(
+      button: true,
+      toggled: voted,
+      label: voted ? 'Voted, $votes votes' : 'Vote, $votes votes',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: compact ? 28 : 30,
+          constraints: BoxConstraints(minWidth: compact ? 42 : 46),
+          padding: const EdgeInsets.fromLTRB(2, 0, 6, 0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: voted ? colors.accent : colors.border, width: 1.5),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AppIcon(Icons.arrow_drop_up, size: compact ? 16 : 20, color: fg),
-            const SizedBox(width: 1),
-            Text(
-              '$votes',
-              style: AppText.sans(
-                size: compact ? 10.5 : 11.5,
-                weight: FontWeight.w800,
-                color: voted ? colors.accent : colors.text,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Ic('chevron_up', size: compact ? 18 : 20, color: voted ? colors.accent : colors.textMed),
+              Text(
+                '$votes',
+                style: AppText.sans(
+                  size: compact ? 15 : 17,
+                  weight: FontWeight.w800,
+                  color: colors.text,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Status indicator: plain dot + colored label on cards, or a tinted pill
-/// ([tinted]) on the detail screen.
+/// Status indicator: a dot in the status colour and the label (15/700, muted)
+/// on cards, or a tinted pill ([tinted]) on the detail screen.
 class StatusBadge extends StatelessWidget {
   const StatusBadge({super.key, required this.status, this.tinted = false});
 
@@ -124,7 +137,8 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = status.color(context.colors);
+    final colors = context.colors;
+    final c = status.color(colors);
     final dot = Container(
       width: 6,
       height: 6,
@@ -136,31 +150,35 @@ class StatusBadge extends StatelessWidget {
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.ellipsis,
-        style: AppText.sans(size: 10, weight: FontWeight.w800, color: c),
+        style: AppText.sans(
+          size: 15,
+          weight: FontWeight.w700,
+          color: tinted ? colors.text : colors.textMed,
+        ),
       ),
     );
     if (!tinted) {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [dot, const SizedBox(width: 5), label],
+        children: [dot, const SizedBox(width: 6), label],
       );
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
       decoration: BoxDecoration(
         color: c.alpha8(0x1C),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        borderRadius: BorderRadius.circular(100),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [dot, const SizedBox(width: 5), label],
+        children: [dot, const SizedBox(width: 6), label],
       ),
     );
   }
 }
 
-/// Tiny tinted category chip (GradeChip idiom: alpha-tinted bg, icon + w800
-/// text in the category color).
+/// The tinted category chip (v11 `FeedCard`: radius 8, 15/800, a 16 glyph).
 class CategoryChip extends StatelessWidget {
   const CategoryChip({super.key, required this.category});
 
@@ -168,21 +186,24 @@ class CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = category.color(context.colors);
+    final colors = context.colors;
+    final ink = category.color(colors);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: c.alpha8(0x1C),
-        borderRadius: BorderRadius.circular(7),
+        color: category.tint(colors),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppIcon(category.icon, size: 11, color: c),
-          const SizedBox(width: 3),
+          Ic(category.icon, size: 16, color: ink),
+          const SizedBox(width: 4),
           Text(
             category.label,
-            style: AppText.sans(size: 10, weight: FontWeight.w800, color: c),
+            maxLines: 1,
+            softWrap: false,
+            style: AppText.sans(size: 15, weight: FontWeight.w800, color: ink),
           ),
         ],
       ),
@@ -190,8 +211,8 @@ class CategoryChip extends StatelessWidget {
   }
 }
 
-/// A suggestion row in the list view: title + `#number`, two-line excerpt,
-/// status / comments / category meta, vote pill on the right.
+/// A suggestion in the list view (v11 `FeedCard`): title + `#number`, a
+/// two-line excerpt, status / comments / category, the vote box on the right.
 class FeedbackPostCard extends StatelessWidget {
   const FeedbackPostCard({
     super.key,
@@ -212,10 +233,10 @@ class FeedbackPostCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.card),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: colors.cardShadow,
         ),
-        padding: const EdgeInsets.fromLTRB(13, 11, 11, 11),
+        padding: const EdgeInsets.fromLTRB(15, 13, 12, 10),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,67 +247,50 @@ class FeedbackPostCard extends StatelessWidget {
                   Text.rich(
                     TextSpan(
                       text: post.title,
-                      style: AppText.sans(
-                        size: 13,
-                        weight: FontWeight.w800,
-                        height: 1.25,
-                        color: colors.text,
-                      ),
                       children: [
                         TextSpan(
-                          text: '  #${post.number}',
-                          style: AppText.sans(
-                            size: 10.5,
-                            weight: FontWeight.w700,
-                            color: colors.textDim,
-                          ),
+                          text: ' #${post.number}',
+                          style: AppText.sans(size: 17, weight: FontWeight.w700, height: 1.25, color: colors.textDim),
                         ),
                       ],
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1.25, color: colors.text),
                   ),
                   if (post.body.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       post.body,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(
-                        size: 11,
-                        height: 1.45,
-                        weight: FontWeight.w500,
-                        color: colors.textMed,
-                      ),
+                      style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.42, color: colors.textMed),
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
+                  // The chip keeps its width on the right; when the line runs
+                  // short it is the status label that gives way.
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(child: StatusBadge(status: post.status)),
-                      const SizedBox(width: 11),
-                      AppIcon(
-                        Icons.chat_bubble_outline,
-                        size: 11.5,
-                        color: colors.textDim,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        '${post.commentCount}',
-                        style: AppText.sans(
-                          size: 10,
-                          weight: FontWeight.w700,
-                          color: colors.textDim,
+                      Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(child: StatusBadge(status: post.status)),
+                            const SizedBox(width: 12),
+                            _CommentCount(count: post.commentCount),
+                          ],
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       CategoryChip(category: post.category),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 14),
             VotePill(votes: post.votes, voted: post.hasVoted, onTap: onVote),
           ],
         ),
@@ -295,7 +299,31 @@ class FeedbackPostCard extends StatelessWidget {
   }
 }
 
-/// Compact card used inside the kanban board columns.
+/// The speech bubble and the reply count (15/700, dim).
+class _CommentCount extends StatelessWidget {
+  const _CommentCount({required this.count, this.size = 15});
+
+  final int count;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Ic('chat_bubble_outline', size: size + 3, color: colors.textDim),
+        const SizedBox(width: 4),
+        Text(
+          '$count',
+          style: AppText.sans(size: size, weight: FontWeight.w700, color: colors.textDim),
+        ),
+      ],
+    );
+  }
+}
+
+/// Compact card used inside the kanban board columns (200 wide).
 class BoardPostCard extends StatelessWidget {
   const BoardPostCard({
     super.key,
@@ -316,10 +344,10 @@ class BoardPostCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: colors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.cellSmall),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: colors.cardShadow,
         ),
-        padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+        padding: const EdgeInsets.fromLTRB(13, 11, 12, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -327,12 +355,7 @@ class BoardPostCard extends StatelessWidget {
               post.title,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: AppText.sans(
-                size: 11.5,
-                weight: FontWeight.w700,
-                height: 1.3,
-                color: colors.text,
-              ),
+              style: AppText.sans(size: 15, weight: FontWeight.w800, height: 1.3, color: colors.text),
             ),
             const SizedBox(height: 8),
             Row(
@@ -345,29 +368,12 @@ class BoardPostCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (post.commentCount > 0) ...[
-                  AppIcon(
-                    Icons.chat_bubble_outline,
-                    size: 10.5,
-                    color: colors.textDim,
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    '${post.commentCount}',
-                    style: AppText.sans(
-                      size: 9.5,
-                      weight: FontWeight.w700,
-                      color: colors.textDim,
-                    ),
-                  ),
-                  const SizedBox(width: 7),
+                  _CommentCount(count: post.commentCount, size: 13),
+                  const SizedBox(width: 8),
                 ],
                 Text(
                   '#${post.number}',
-                  style: AppText.sans(
-                    size: 9.5,
-                    weight: FontWeight.w700,
-                    color: colors.textDim,
-                  ),
+                  style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim),
                 ),
               ],
             ),

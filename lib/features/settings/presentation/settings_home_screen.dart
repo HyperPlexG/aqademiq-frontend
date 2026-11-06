@@ -21,9 +21,11 @@ import '../../../data/repositories/tags_repository.dart';
 import '../../../services/haptics/haptic_governor.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/icons/app_icon.dart';
+import '../../../shared/widgets/ic.dart';
+import '../../../shared/widgets/settings_row.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../freeze/providers/freeze_controller.dart';
-import '../../../shared/widgets/settings_row.dart';
+import '../../ice_breakers/ice_breakers_providers.dart';
 import '../../report/report_copy.dart';
 import '../../report/report_optout.dart';
 import '../providers/haptic_settings_provider.dart';
@@ -34,9 +36,10 @@ import 'sheets/appearance_sheet.dart';
 import 'sheets/delete_account_dialog.dart';
 import 'sheets/rate_sheet.dart';
 import 'widgets/settings_scaffold.dart';
+import 'widgets/study_tag_mark.dart';
 
 /// FRAMES `settings-home` / `settings-account` (same page, scrolled) — the
-/// settings hub.
+/// settings hub (v11 HomeBody).
 class SettingsHomeScreen extends ConsumerWidget {
   const SettingsHomeScreen({super.key});
 
@@ -92,36 +95,52 @@ class SettingsHomeScreen extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
     final profile = ref.watch(profileControllerProvider);
     final isGuest = ref.watch(isGuestProvider);
+    final breakers = ref.watch(iceBreakersProvider);
+    final subline = [profile.university, profile.program].where((s) => s != null && s.isNotEmpty).join(' · ');
 
     return SettingsScaffold(
       title: 'Settings',
       big: true,
       gear: true,
       children: [
-        GestureDetector(
-          onTap: () => unawaited(context.push(Routes.settingsProfile)),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-            decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(18), boxShadow: colors.cardShadow),
-            child: Row(
-              children: [
-                _Avatar(size: 46, emojiSize: 22, colors: colors, avatarIndex: profile.avatarIndex),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(profile.name, style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text)),
-                      const SizedBox(height: 1),
-                      Text(
-                        [profile.university, profile.program].where((s) => s != null && s.isNotEmpty).join(' · '),
-                        style: AppText.sans(size: 11.5, color: colors.textMed),
-                      ),
-                    ],
+        // The profile card → Profile edit (HomeBody).
+        Semantics(
+          button: true,
+          child: GestureDetector(
+            onTap: () => unawaited(context.push(Routes.settingsProfile)),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+              decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(18), boxShadow: colors.cardShadow),
+              child: Row(
+                children: [
+                  _Avatar(size: 46, emojiSize: 28, colors: colors, avatarIndex: profile.avatarIndex),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          profile.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
+                        ),
+                        if (subline.isNotEmpty) ...[
+                          const SizedBox(height: 1),
+                          Text(
+                            subline,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-                AppIcon(Icons.chevron_right, size: 20, color: colors.textDim),
-              ],
+                  const SizedBox(width: 13),
+                  AppIcon(Icons.chevron_right, size: 20, color: colors.textDim),
+                ],
+              ),
             ),
           ),
         ),
@@ -143,14 +162,14 @@ class SettingsHomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 20),
           child: Text(
             'Ada uses your tags to read your workload and shape your plan.',
-            style: AppText.sans(size: 10.5, height: 1.5, color: colors.textMed),
+            style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
           ),
         ),
         const GroupLabel('Preferences'),
         SetGroup(
           children: [
             SettingsRow(label: 'Notifications', icon: Icons.notifications_none, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsNotif))),
-            SettingsRow(label: 'Appearance', icon: Icons.wb_sunny, value: _modeLabel(mode), showChevron: true, onTap: () => unawaited(showAppearanceSheet(context))),
+            SettingsRow(label: 'Appearance', icon: Icons.brightness_auto, value: _modeLabel(mode), showChevron: true, onTap: () => unawaited(showAppearanceSheet(context))),
             SettingsRow(
               label: 'Haptics',
               icon: Icons.vibration,
@@ -207,7 +226,7 @@ class SettingsHomeScreen extends ConsumerWidget {
         else
           SetGroup(
             children: [
-              SettingsRow(label: 'Email settings', icon: Icons.chat_bubble_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
+              SettingsRow(label: 'Email settings', icon: Icons.mail_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsEmail))),
               SettingsRow(label: 'Download my data', icon: Icons.download_outlined, showChevron: true, onTap: () => unawaited(_downloadMyData(context, ref))),
               SettingsRow(
                 label: 'Sign out',
@@ -240,7 +259,13 @@ class SettingsHomeScreen extends ConsumerWidget {
         const GroupLabel('About'),
         SetGroup(
           children: [
-            SettingsRow(label: 'Ice Breakers', icon: Icons.play_circle_outline, showChevron: true, onTap: () => unawaited(context.push(Routes.iceBreakers))),
+            SettingsRow(
+              label: 'Ice Breakers',
+              icon: Icons.play_circle_outline,
+              value: '${breakers.watchedCount} of ${breakers.total}',
+              showChevron: true,
+              onTap: () => unawaited(context.push(Routes.iceBreakers)),
+            ),
             SettingsRow(label: 'Feedback & suggestions', icon: Icons.forum_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsFeedback))),
             SettingsRow(label: 'Rate Aqademiq', icon: Icons.star_outline, showChevron: true, onTap: () => unawaited(showRateSheet(context))),
             SettingsRow(label: 'Privacy Policy', icon: Icons.description, showChevron: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/privacy-policy')))),
@@ -269,8 +294,9 @@ class _Avatar extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(center: const Alignment(-0.24, -0.34), colors: [colors.accentSoft, colors.accent]),
+        boxShadow: [BoxShadow(color: colors.accent.alpha8(0x44), blurRadius: 14, offset: const Offset(0, 4))],
       ),
-      child: Text(emoji, style: TextStyle(fontSize: emojiSize)),
+      child: Text(emoji, style: TextStyle(fontSize: emojiSize, height: 1)),
     );
   }
 }
@@ -292,7 +318,8 @@ class _TagsCard extends ConsumerWidget {
         children: [
           for (final t in tags)
             Container(
-              padding: const EdgeInsets.fromLTRB(10, 5, 9, 5),
+              height: 36,
+              padding: const EdgeInsets.fromLTRB(9, 0, 4, 0),
               decoration: BoxDecoration(
                 color: colors.surface,
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -301,33 +328,44 @@ class _TagsCard extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(width: 7, height: 7, decoration: BoxDecoration(color: hexColor(t.color), shape: BoxShape.circle)),
+                  StudyTagMark(label: t.label, color: hexColor(t.color)),
                   const SizedBox(width: 6),
-                  Text(t.label, style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text)),
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => unawaited(ref.read(tagsProvider.notifier).remove(t.id)),
-                    behavior: HitTestBehavior.opaque,
-                    child: AppIcon(Icons.close, size: 13, color: colors.textDim),
+                  Text(t.label, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                  Semantics(
+                    button: true,
+                    label: 'Remove ${t.label}',
+                    child: GestureDetector(
+                      onTap: () => unawaited(ref.read(tagsProvider.notifier).remove(t.id)),
+                      behavior: HitTestBehavior.opaque,
+                      // The ✕ sits in a wider hit area than it draws; the
+                      // chip's own right padding (10) is made up here.
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Ic('close', size: 16, color: colors.textDim),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          GestureDetector(
-            onTap: onAdd,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(9, 5, 11, 5),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(color: colors.accent.alpha8(0x88), width: 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(Icons.add, size: 14, color: colors.accent),
-                  const SizedBox(width: 3),
-                  Text('New tag', style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.accent)),
-                ],
+          Semantics(
+            button: true,
+            child: GestureDetector(
+              onTap: onAdd,
+              child: CustomPaint(
+                painter: _DashedPillPainter(colors.accent.alpha8(0x88)),
+                child: Container(
+                  height: 36,
+                  padding: const EdgeInsets.fromLTRB(10, 0, 12, 0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Ic('add', size: 18, color: colors.accent),
+                      const SizedBox(width: 3),
+                      Text('New tag', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.accent)),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -335,6 +373,38 @@ class _TagsCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The "+ New tag" pill's 1.5 dashed outline (CSS `dashed`).
+class _DashedPillPainter extends CustomPainter {
+  const _DashedPillPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(0.75),
+      Radius.circular(size.height / 2),
+    );
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color;
+    const dash = 4.5;
+    const gap = 3.0;
+    for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
+      var d = 0.0;
+      while (d < metric.length) {
+        final end = d + dash < metric.length ? d + dash : metric.length;
+        canvas.drawPath(metric.extractPath(d, end), stroke);
+        d += dash + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedPillPainter old) => old.color != color;
 }
 
 /// A copy of everything this account holds, as a JSON file handed to the share

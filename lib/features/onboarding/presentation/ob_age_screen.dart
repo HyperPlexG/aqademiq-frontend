@@ -58,18 +58,18 @@ class _ObAgeScreenState extends ConsumerState<ObAgeScreen> {
         children: [
           Text(
             'How old\nare you?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 4),
           Text(
             'Ada tunes pacing and check-ins to your age',
-            style: AppText.sans(size: 12, color: colors.textMed),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
           ),
-          const SizedBox(height: 40),
-          // Large centered numeric field (prototype ob-age).
+          const SizedBox(height: 22),
+          // v11 ob-age: a 110-wide well, 2px accent border, 34/800 digits.
           Center(
             child: SizedBox(
-              width: 150,
+              width: 110,
               child: TextField(
                 controller: _controller,
                 autofocus: true,
@@ -93,24 +93,24 @@ class _ObAgeScreenState extends ConsumerState<ObAgeScreen> {
                   filled: true,
                   fillColor: colors.bg,
                   contentPadding:
-                      const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                      const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    borderSide: BorderSide(color: colors.accent, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppRadius.rowInput),
+                    borderSide: BorderSide(color: colors.accent, width: 2),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    borderSide: BorderSide(color: colors.accent, width: 1.5),
+                    borderRadius: BorderRadius.circular(AppRadius.rowInput),
+                    borderSide: BorderSide(color: colors.accent, width: 2),
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           Text(
             'Only used to tailor your experience',
             textAlign: TextAlign.center,
-            style: AppText.sans(size: 11, color: colors.textDim),
+            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textDim),
           ),
         ],
       ),

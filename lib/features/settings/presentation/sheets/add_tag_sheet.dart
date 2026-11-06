@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../widgets/study_tag_mark.dart';
 
 /// The created tag returned by [showAddTagSheet] (name + chosen swatch).
 typedef TagDraft = ({String label, Color color});
 
-/// FRAMES `settings-addtag` — the "New study tag" sheet on the canonical
+/// FRAMES `settings-addtag` — the "New study tag" sheet on the floating,
 /// keyboard-aware shell. Returns the [TagDraft] on "Add tag", or null on
 /// dismiss. Preset to name "Tutorial" with the pink (`#e85476`) swatch.
 Future<TagDraft?> showAddTagSheet(BuildContext context) {
@@ -62,35 +62,31 @@ class _AddTagBodyState extends State<_AddTagBody> {
     Navigator.of(context).pop((label: label, color: _selected));
   }
 
+  Widget _label(String text, {double bottom = 7}) => Padding(
+        padding: EdgeInsets.fromLTRB(2, 0, 2, bottom),
+        child: Text(
+          text,
+          style: AppText.sans(size: 17, weight: FontWeight.w700, color: context.colors.textMed),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
+    final name = _controller.text.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Center(
           child: _PreviewChip(
-            name: _controller.text.isEmpty ? 'Tag' : _controller.text,
+            name: name.isEmpty ? 'Tag' : name,
             color: _selected,
           ),
         ),
         const SizedBox(height: 18),
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 7),
-          child: Text(
-            'Name',
-            style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textMed),
-          ),
-        ),
+        _label('Name'),
         AppTextField(controller: _controller),
         const SizedBox(height: 18),
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 11),
-          child: Text(
-            'Colour',
-            style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textMed),
-          ),
-        ),
+        _label('Colour', bottom: 11),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
           child: Row(
@@ -106,14 +102,14 @@ class _AddTagBodyState extends State<_AddTagBody> {
           ),
         ),
         const SizedBox(height: 22),
-        PrimaryButton(label: 'Add tag', onPressed: _submit),
+        PrimaryButton(label: 'Add tag', enabled: name.isNotEmpty, onPressed: _submit),
       ],
     );
   }
 }
 
-/// Centered live preview of the tag being created (`surface` chip, hairline
-/// border, dot + name).
+/// Centred live preview of the tag being created: a 36 white chip with the
+/// hairline and card shadow, its mark and a 17/700 name.
 class _PreviewChip extends StatelessWidget {
   const _PreviewChip({required this.name, required this.color});
   final String name;
@@ -123,25 +119,26 @@ class _PreviewChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        borderRadius: BorderRadius.circular(100),
         border: Border.all(color: colors.border),
         boxShadow: colors.cardShadow,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 9,
-            height: 9,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          StudyTagMark(label: name, color: color, dot: 9),
           const SizedBox(width: 7),
-          Text(
-            name,
-            style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.text),
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+            ),
           ),
         ],
       ),
@@ -149,7 +146,7 @@ class _PreviewChip extends StatelessWidget {
   }
 }
 
-/// One 28px colour circle in the palette row. Selected adds a white gap + a
+/// One 32 colour circle in the palette row. Selected adds a white gap + a
 /// colour ring (two box-shadows) and a white check.
 class _Swatch extends StatelessWidget {
   const _Swatch({
@@ -163,25 +160,30 @@ class _Swatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 28,
-        height: 28,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: selected
-              ? [
-                  const BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 2),
-                  BoxShadow(color: color, spreadRadius: 4),
-                ]
-              : null,
+    final surface = context.colors.surface;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            // Painted in order, so the outer colour ring goes first and the
+            // white gap over it (CSS lists them the other way round).
+            boxShadow: selected
+                ? [
+                    BoxShadow(color: color, spreadRadius: 4),
+                    BoxShadow(color: surface, spreadRadius: 2),
+                  ]
+                : null,
+          ),
+          child: selected ? const Ic('check', size: 20, color: Color(0xFFFFFFFF)) : null,
         ),
-        child: selected
-            ? const AppIcon(Icons.check, size: 16, color: Color(0xFFFFFFFF))
-            : null,
       ),
     );
   }

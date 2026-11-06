@@ -10,7 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/launch_external.dart';
-import '../../../shared/icons/app_icon.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
@@ -80,29 +80,29 @@ class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
         children: [
           Text(
             'Do we have\nyour consent?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
-            'To work at its best, Aqademiq collects the info you share — study '
+            'To work at its best, Aqademiq collects the info you share: study '
             'details, mood check-ins and focus patterns.',
-            style: AppText.sans(size: 12, height: 1.5, color: colors.textMed),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.6, color: colors.textMed),
           ),
-          const SizedBox(height: 26),
+          const SizedBox(height: 16),
           _ConsentCard(
             title: 'Yes, I consent',
             subtitle: 'Aqademiq can collect and use my info',
             selected: _consent == true,
             onTap: () => setState(() => _consent = true),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           _ConsentCard(
             title: "No, I don't consent",
             subtitle: "You won't be able to use Aqademiq",
             selected: _consent == false,
             onTap: () => setState(() => _consent = false),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           if (_consent == false) _DeclinedWarning(colors: colors),
           if (_consent == true) _TermsLine(
             colors: colors,
@@ -120,8 +120,8 @@ class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
   }
 }
 
-/// A single-select consent option (radio-style): purple border + soft fill +
-/// filled check when selected; plain grey card + empty ring otherwise.
+/// A single-select consent option (radio-style): a 2px accent border + soft
+/// fill + filled check when selected; a plain well + empty ring otherwise.
 class _ConsentCard extends StatelessWidget {
   const _ConsentCard({
     required this.title,
@@ -138,44 +138,48 @@ class _ConsentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.card),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-        decoration: BoxDecoration(
-          color: selected ? colors.accentSoft : colors.hilite,
-          borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(
-            width: 1.5,
-            color: selected ? colors.accent : Colors.transparent,
-          ),
-        ),
-        child: Row(
-          children: [
-            _RadioDot(selected: selected),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppText.sans(
-                      size: 15,
-                      weight: FontWeight.w800,
-                      color: colors.text,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppText.sans(size: 12, color: colors.textMed),
-                  ),
-                ],
-              ),
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: selected ? colors.accentSoft : colors.bg,
+            borderRadius: BorderRadius.circular(AppRadius.rowInput),
+            border: Border.all(
+              width: 2,
+              color: selected ? colors.accent : Colors.transparent,
             ),
-          ],
+          ),
+          child: Row(
+            children: [
+              _RadioDot(selected: selected),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppText.sans(
+                        size: 17,
+                        weight: FontWeight.w800,
+                        color: colors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textMed),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -191,18 +195,18 @@ class _RadioDot extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      width: 24,
-      height: 24,
+      width: 18,
+      height: 18,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: selected ? colors.accent : Colors.transparent,
         shape: BoxShape.circle,
         border: selected
             ? null
-            : Border.all(color: colors.textDim, width: 1.6),
+            : Border.all(color: colors.textDim, width: 2),
       ),
       child: selected
-          ? const AppIcon(Icons.check, size: 15, color: Colors.white)
+          ? const Ic('check', size: 15, color: Colors.white)
           : null,
     );
   }
@@ -219,13 +223,16 @@ class _DeclinedWarning extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppIcon(Icons.info_outline, size: 17, color: colors.warn),
-        const SizedBox(width: 8),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Ic('info', size: 19, color: colors.warn),
+        ),
+        const SizedBox(width: 7),
         Expanded(
           child: Text(
             'We need your consent to continue setting up Aqademiq. You can '
             'change your mind anytime in Settings.',
-            style: AppText.sans(size: 12, height: 1.5, color: colors.textMed),
+            style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.6, color: colors.textMed),
           ),
         ),
       ],
@@ -247,26 +254,26 @@ class _TermsLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = AppText.sans(size: 12, height: 1.5, color: colors.textMed);
+    final base = AppText.sans(size: 15, weight: FontWeight.w500, height: 1.7, color: colors.textMed);
     final link = AppText.sans(
-      size: 12,
-      height: 1.5,
+      size: 15,
+      height: 1.7,
       weight: FontWeight.w700,
       color: colors.accent,
-    );
+    ).copyWith(decoration: TextDecoration.underline, decorationColor: colors.accent);
     return Text.rich(
       TextSpan(
         style: base,
         children: [
           const TextSpan(text: 'By continuing you agree to our '),
           TextSpan(
-            text: 'www.aqademiq.com/privacy-policy',
+            text: 'aqademiq.com/privacy-policy',
             style: link,
             recognizer: privacyTap,
           ),
           const TextSpan(text: ' and '),
           TextSpan(
-            text: 'www.aqademiq.com/terms-of-use',
+            text: 'aqademiq.com/terms-of-use',
             style: link,
             recognizer: termsTap,
           ),

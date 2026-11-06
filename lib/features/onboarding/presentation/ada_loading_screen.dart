@@ -8,8 +8,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/onboarding_repository.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 
@@ -128,12 +128,15 @@ class _Building extends StatelessWidget {
         Text(
           'Building your first plan...',
           textAlign: TextAlign.center,
-          style: AppText.sans(size: 12, color: colors.textMed),
+          style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
         ),
         const SizedBox(height: 30),
-        SizedBox(
-          width: 200,
+        // v11: a left-aligned list, centred as a block, as wide as its
+        // longest line.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (final (done, label) in checklist) ...[
@@ -174,7 +177,7 @@ class _CompletionError extends StatelessWidget {
         Text(
           message,
           textAlign: TextAlign.center,
-          style: AppText.sans(size: 13, height: 1.5, color: colors.textMed),
+          style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
         ),
         const SizedBox(height: 26),
         PrimaryButton(label: 'Try again', onPressed: onRetry),
@@ -196,6 +199,7 @@ class _ChecklistRow extends StatelessWidget {
     final colors = context.colors;
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 22,
@@ -209,7 +213,7 @@ class _ChecklistRow extends StatelessWidget {
                 : Border.all(color: colors.textDim, width: 1.5),
           ),
           child: done
-              ? const AppIcon(Icons.check, size: 10, color: Colors.white)
+              ? const Ic('check', size: 15, color: Colors.white)
               : SizedBox(
                   width: 10,
                   height: 10,
@@ -220,11 +224,11 @@ class _ChecklistRow extends StatelessWidget {
                 ),
         ),
         const SizedBox(width: 10),
-        Expanded(
+        Flexible(
           child: Text(
             label,
             style: AppText.sans(
-              size: 12,
+              size: 17,
               weight: done ? FontWeight.w400 : FontWeight.w700,
               color: done ? colors.textDim : colors.text,
             ).copyWith(

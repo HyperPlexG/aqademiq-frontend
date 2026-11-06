@@ -52,20 +52,21 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
         children: [
           Text(
             'What should we\ncall you?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 4),
           Text(
             'First name is fine',
-            style: AppText.sans(size: 12, color: colors.textMed),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
           ),
           const SizedBox(height: 20),
-          // Filled name field (prototype `ob1`): large text, accent focus border.
+          // Filled name field (v11 `ob1`): 20/700, a 2px accent border.
           TextField(
             controller: _controller,
             autofocus: true,
             cursorColor: colors.accent,
-            style: AppText.sans(size: 18, weight: FontWeight.w700, color: colors.text),
+            textCapitalization: TextCapitalization.words,
+            style: AppText.sans(size: 20, weight: FontWeight.w700, color: colors.text),
             onChanged: ref.read(onboardingProvider.notifier).setName,
             decoration: InputDecoration(
               isDense: true,
@@ -75,22 +76,22 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.rowInput),
-                borderSide: BorderSide(color: colors.accent, width: 1.5),
+                borderSide: BorderSide(color: colors.accent, width: 2),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.rowInput),
-                borderSide: BorderSide(color: colors.accent, width: 1.5),
+                borderSide: BorderSide(color: colors.accent, width: 2),
               ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Ada uses this in sessions and check-ins',
-            style: AppText.sans(size: 11, color: colors.textDim),
+            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textDim),
           ),
           const SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: colors.accentSoft,
               borderRadius: BorderRadius.circular(AppRadius.card),
@@ -102,9 +103,9 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    "Hi, I'm Ada — your focus companion. I'll learn how you "
+                    "Hi, I'm Ada, your focus companion. I'll learn how you "
                     'work and help you build your week accordingly.',
-                    style: AppText.sans(size: 11, height: 1.6, color: colors.text),
+                    style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.6, color: colors.text),
                   ),
                 ),
               ],

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import 'widgets/onboarding_scaffold.dart';
 
@@ -19,50 +19,49 @@ class ObBlockedScreen extends StatelessWidget {
 
     return OnboardingScaffold(
       activeStep: 0,
-      body: Padding(
-        padding: const EdgeInsets.only(top: 40),
-        child: Column(
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: colors.accentSoft,
-                shape: BoxShape.circle,
-              ),
-              child: AppIcon(Icons.hourglass_empty_rounded,
-                  size: 44, color: colors.accent),
+      centerBody: true,
+      body: Column(
+        children: [
+          Container(
+            width: 76,
+            height: 76,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.accentSoft,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 28),
-            Text(
-              "We're not ready\nfor you — yet",
-              textAlign: TextAlign.center,
-              style:
-                  AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Aqademiq is currently only available to students aged 18 and '
-              "over. For legal and safety reasons we can't set up an account "
-              'for you just yet.',
-              textAlign: TextAlign.center,
-              style: AppText.sans(size: 13, height: 1.6, color: colors.textMed),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "We're actively working on a safe, age-appropriate experience "
-              "for under-18s — hang tight, we'd love to have you soon.",
-              textAlign: TextAlign.center,
-              style: AppText.sans(size: 13, height: 1.6, color: colors.textMed),
-            ),
-          ],
-        ),
+            child: Ic('duration', size: 38, color: colors.accent),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "We're not ready\nfor you just yet",
+            textAlign: TextAlign.center,
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Aqademiq is currently only available to students aged 18 and '
+            "over. For legal and safety reasons we can't set up an account "
+            'for you just yet.',
+            textAlign: TextAlign.center,
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.65, color: colors.textMed),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            "We're actively working on a safe, age-appropriate experience "
+            "for under-18s. Hang tight, we'd love to have you soon. 💜",
+            textAlign: TextAlign.center,
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.65, color: colors.textMed),
+          ),
+        ],
       ),
-      footer: PrimaryButton(
-        label: 'Go back',
-        icon: Icons.arrow_back,
-        onPressed: () => context.pop(),
+      footer: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: PrimaryButton(
+          label: 'Go back',
+          icon: Icons.arrow_back,
+          onPressed: () => context.pop(),
+        ),
       ),
     );
   }

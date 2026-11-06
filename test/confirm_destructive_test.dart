@@ -49,6 +49,7 @@ void main() {
   });
 
   testWidgets('closing the dialog answers no', (tester) async {
-    expect(await run(tester, () => tester.tap(find.text('✕'))), isFalse);
+    // The v11 alert has no ✕: tapping the dimmed screen around it closes it.
+    expect(await run(tester, () => tester.tapAt(const Offset(8, 8))), isFalse);
   });
 }

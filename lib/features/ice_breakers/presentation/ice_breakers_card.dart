@@ -7,12 +7,21 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/ic.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
 
-/// The Ice Breakers shelf, as it appears on the profile.
+/// The first session's tier tones (v11 `IB_TIERS.S` = `CUBE_TONES[4]`): the
+/// vivid end of Ada's ramp, the same in light and dark, like the ice.
+abstract final class IceBreakerTone {
+  static const Color border = Color(0xFF5A44F1);
+  static const Color body = Color(0xFFCBBCFD);
+  static const Color ink = Color(0xFF31237C);
+}
+
+/// The Ice Breakers shelf, as it appears on the profile (v11 `ib-profile-card`
+/// and, for a guest, `ib-guest` — at full contrast, never locked).
 ///
 /// A shelf, not a notification: no autoplay, no badge, no red dot. It sits
 /// directly above the share hero and is permanent — never dismissible — because
@@ -31,8 +40,7 @@ class IceBreakersCard extends ConsumerWidget {
     final state = ref.watch(iceBreakersProvider);
 
     return AppCard(
-      // No padding override: the app's standard card padding, which is what
-      // every other card on this screen sits at.
+      padding: const EdgeInsets.fromLTRB(15, 13, 15, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -41,54 +49,53 @@ class IceBreakersCard extends ConsumerWidget {
               Container(
                 width: 7,
                 height: 7,
-                decoration: BoxDecoration(
-                  color: colors.accent,
-                  shape: BoxShape.circle,
-                ),
+                decoration: const BoxDecoration(color: IceBreakerTone.border, shape: BoxShape.circle),
               ),
               const SizedBox(width: 8),
-              Text(
-                'Ice Breakers',
-                style: AppText.sans(
-                  size: 14,
-                  weight: FontWeight.w800,
-                  color: colors.text,
+              Expanded(
+                child: Text(
+                  'Ice Breakers',
+                  style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => unawaited(context.push(Routes.iceBreakers)),
-                child: Row(
-                  children: [
-                    Text(
-                      'See all',
-                      style: AppText.sans(
-                        size: 11.5,
-                        weight: FontWeight.w700,
-                        color: colors.accent,
-                      ),
+              Semantics(
+                button: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => unawaited(context.push(Routes.iceBreakers)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'See all',
+                          style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.accent),
+                        ),
+                        const SizedBox(width: 1),
+                        Ic('chevron_right', size: 15, color: colors.accent),
+                      ],
                     ),
-                    AppIcon(Icons.chevron_right, size: 13, color: colors.accent),
-                  ],
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 9),
           for (final breaker in state.shelf) ...[
             IceBreakerRow(breaker: breaker),
-            if (breaker != state.shelf.last)
-              Divider(height: 1, thickness: 1, color: colors.border),
+            if (breaker != state.shelf.last) const IceBreakerRowDivider(),
           ],
           if (state.shelf.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 11),
               child: Text(
                 "That's all of them, for now.",
-                style: AppText.sans(size: 11.5, color: colors.textMed),
+                style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
               ),
             ),
+          const SizedBox(height: 9),
+          Divider(height: 1, thickness: 1, color: colors.border),
           const SizedBox(height: 10),
           IceBreakersProgress(state: state),
         ],
@@ -97,15 +104,28 @@ class IceBreakersCard extends ConsumerWidget {
   }
 }
 
-/// One row: play affordance, title, `01 · Plan`, and the runtime.
+/// The hairline between rows, starting past the play disc (v11 `IBRow`).
+class IceBreakerRowDivider extends StatelessWidget {
+  const IceBreakerRowDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: 32),
+        child: Divider(height: 1, thickness: 1, color: context.colors.border),
+      );
+}
+
+/// One row (v11 `IBRow`): play disc, title, `01 · Plan`, and the runtime.
+/// [tight] is the section page's denser rhythm.
 ///
 /// The runtime is on every row on purpose — "22s" does more to earn a tap than
 /// any thumbnail could, and it is the honest answer to the only question a
 /// student has about a tutorial when they are avoiding work.
 class IceBreakerRow extends ConsumerWidget {
-  const IceBreakerRow({required this.breaker, super.key});
+  const IceBreakerRow({required this.breaker, this.tight = false, super.key});
 
   final IceBreaker breaker;
+  final bool tight;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -114,66 +134,80 @@ class IceBreakerRow extends ConsumerWidget {
       iceBreakersProvider.select((s) => s.watchedIds.contains(breaker.id)),
     );
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 9),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: colors.accent.withValues(alpha: watched ? 0.12 : 0.28),
-                shape: BoxShape.circle,
+    return Semantics(
+      button: true,
+      label: '${breaker.title}, ${breaker.runtime}${watched ? ', watched' : ''}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 52),
+          padding: EdgeInsets.symmetric(vertical: tight ? 7 : 9),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: watched ? colors.hilite : IceBreakerTone.body,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Ic(
+                  watched ? 'check' : 'play_arrow',
+                  size: 16,
+                  color: watched ? colors.textMed : IceBreakerTone.ink,
+                ),
               ),
-              alignment: Alignment.center,
-              child: AppIcon(
-                watched ? Icons.check : Icons.play_arrow,
-                size: watched ? 14 : 16,
-                color: colors.accent,
-              ),
-            ),
-            const SizedBox(width: 11),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    breaker.title,
-                    style: AppText.sans(
-                      size: 12.5,
-                      weight: FontWeight.w800,
-                      height: 1.2,
-                      color: colors.text,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      breaker.title,
+                      style: AppText.sans(
+                        size: 15,
+                        weight: FontWeight.w800,
+                        height: 1.25,
+                        color: watched ? colors.textMed : colors.text,
+                      ).copyWith(
+                        decoration: watched ? TextDecoration.lineThrough : null,
+                        decorationColor: colors.textMed,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${breaker.number} · ${breaker.where}',
-                    style: AppText.sans(size: 10.5, color: colors.textDim),
-                  ),
-                ],
+                    const SizedBox(height: 2),
+                    Text(
+                      '${breaker.number} · ${breaker.where}',
+                      style: AppText.sans(
+                        size: 12,
+                        weight: FontWeight.w700,
+                        letterSpacing: AppText.em(0.04, 12),
+                        color: colors.textDim,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              breaker.runtime,
-              style: AppText.sans(
-                size: 11.5,
-                weight: FontWeight.w800,
-                color: colors.textMed,
+              const SizedBox(width: 10),
+              Text(
+                breaker.runtime,
+                style: AppText.sans(
+                  size: 13,
+                  weight: FontWeight.w800,
+                  color: watched ? colors.textDim : colors.textMed,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// The track, the count and the percentage.
+/// The track, the count and the percentage (v11 `IBProgress`).
 ///
 /// Counted against all six rather than against anything unlocked, so the
 /// number is never a moving goalpost.
@@ -189,10 +223,11 @@ class IceBreakersProgress extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          height: 6,
+          height: 5,
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: colors.bg,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
@@ -200,7 +235,7 @@ class IceBreakersProgress extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 color: colors.accent,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ),
@@ -210,16 +245,12 @@ class IceBreakersProgress extends StatelessWidget {
           children: [
             Text(
               '${state.watchedCount} of ${state.total} watched',
-              style: AppText.sans(size: 10.5, color: colors.textMed),
+              style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textMed),
             ),
             const Spacer(),
             Text(
               '${state.percent}%',
-              style: AppText.sans(
-                size: 11,
-                weight: FontWeight.w800,
-                color: colors.accent,
-              ),
+              style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.accent),
             ),
           ],
         ),

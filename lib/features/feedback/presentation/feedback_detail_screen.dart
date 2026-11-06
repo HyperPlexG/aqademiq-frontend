@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/feedback_post.dart';
 import '../../../shared/icons/app_icon.dart';
+import '../../../shared/widgets/circle_back_button.dart';
+import '../../../shared/widgets/ic.dart';
+import '../../../shared/widgets/primary_button.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
 import 'widgets/feedback_bits.dart';
 
 /// A single suggestion: full text, vote control, and the comment thread with
-/// a composer pinned to the bottom.
+/// a composer pinned to the bottom. No frame of its own in v11; it speaks the
+/// board's language (22 title, 17 / 15 text, 44 controls).
 class FeedbackDetailScreen extends ConsumerStatefulWidget {
   const FeedbackDetailScreen({super.key, required this.id});
 
@@ -96,17 +99,17 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Row(
                 children: [
-                  const _BackCircle(),
+                  const CircleBackButton(),
                   const SizedBox(width: 12),
-                  Text(
-                    post == null ? 'Suggestion' : 'Suggestion #${post.number}',
-                    style: AppText.sans(
-                      size: 20,
-                      weight: FontWeight.w800,
-                      color: colors.text,
+                  Expanded(
+                    child: Text(
+                      post == null ? 'Suggestion' : 'Suggestion #${post.number}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
                     ),
                   ),
                 ],
@@ -115,34 +118,25 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
             Expanded(
               child: postsAsync.when(
                 loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: colors.accent,
-                    strokeWidth: 2.5,
-                  ),
+                  child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
                 ),
                 error: (_, _) => Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppIcon(
-                        Icons.cloud_off_rounded,
-                        size: 40,
-                        color: colors.textDim,
-                      ),
+                      AppIcon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
                       const SizedBox(height: 12),
                       Text(
                         "Couldn't load this suggestion",
-                        style: AppText.sans(
-                          size: 14,
-                          weight: FontWeight.w800,
-                          color: colors.text,
-                        ),
+                        style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
                       ),
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: () =>
-                            ref.invalidate(feedbackPostsProvider),
-                        child: const Text('Try again'),
+                        onPressed: () => ref.invalidate(feedbackPostsProvider),
+                        child: Text(
+                          'Try again',
+                          style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent),
+                        ),
                       ),
                     ],
                   ),
@@ -151,7 +145,7 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
                     ? Center(
                         child: Text(
                           'This suggestion is gone.',
-                          style: AppText.sans(size: 13, color: colors.textMed),
+                          style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
                         ),
                       )
                     : _PostBody(post: post),
@@ -173,104 +167,81 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
   /// the comment composer otherwise (INTEGRATION.md §4 step 4).
   Widget _buildComposer(AppColors colors, {required bool isGuest}) {
     if (isGuest) {
-      return GestureDetector(
-        onTap: () =>
+      return PrimaryButton(
+        label: 'Create an account to comment',
+        onPressed: () =>
             unawaited(showCreateAccountPrompt(context, ref, reason: 'comment')),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 13),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.ink,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-          child: Text(
-            'Create an account to comment',
-            style: AppText.sans(
-              size: 13,
-              weight: FontWeight.w800,
-              color: Colors.white,
-            ),
-          ),
-        ),
       );
     }
     if (_locked) {
       return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        height: 50,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: colors.hilite,
-          borderRadius: BorderRadius.circular(AppRadius.rowInput),
+          borderRadius: BorderRadius.circular(100),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppIcon(Icons.lock_outline, size: 14, color: colors.textMed),
+            Ic('lock', size: 18, color: colors.textMed),
             const SizedBox(width: 6),
             Text(
               'This thread is locked',
-              style: AppText.sans(
-                size: 12,
-                weight: FontWeight.w700,
-                color: colors.textMed,
-              ),
+              style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed),
             ),
           ],
         ),
       );
     }
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Expanded(
           child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.centerLeft,
             decoration: BoxDecoration(
               color: colors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.rowInput),
+              borderRadius: BorderRadius.circular(22),
               boxShadow: colors.cardShadow,
             ),
-            padding: const EdgeInsets.fromLTRB(15, 4, 12, 4),
+            padding: const EdgeInsets.fromLTRB(16, 0, 14, 0),
             child: TextField(
               controller: _comment,
               minLines: 1,
               maxLines: 4,
-              style: AppText.sans(size: 13, color: colors.text),
+              style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
               cursorColor: colors.accent,
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
                 hintText: 'Add a comment…',
-                hintStyle: AppText.sans(size: 13, color: colors.textDim),
+                hintStyle: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textDim),
+                contentPadding: const EdgeInsets.symmetric(vertical: 11),
               ),
             ),
           ),
         ),
         const SizedBox(width: 10),
-        GestureDetector(
-          onTap: () => unawaited(_send()),
-          child: Container(
-            width: 34,
-            height: 34,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.ink,
-              shape: BoxShape.circle,
+        Semantics(
+          button: true,
+          label: 'Post comment',
+          child: GestureDetector(
+            onTap: () => unawaited(_send()),
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: colors.ink, shape: BoxShape.circle),
+              child: _sending
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Ic('arrow_upward', size: 20, color: Colors.white),
             ),
-            child: _sending
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const AppIcon(
-                    Icons.arrow_upward,
-                    size: 18,
-                    color: Colors.white,
-                  ),
           ),
         ),
       ],
@@ -293,42 +264,35 @@ class _PostBody extends ConsumerWidget {
       children: [
         Row(
           children: [
-            StatusBadge(status: post.status, tinted: true),
-            const SizedBox(width: 7),
-            CategoryChip(category: post.category),
-            const Spacer(),
+            Expanded(
+              child: Row(
+                children: [
+                  Flexible(child: StatusBadge(status: post.status, tinted: true)),
+                  const SizedBox(width: 8),
+                  CategoryChip(category: post.category),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
             Text(
               feedbackAgo(post.createdAt),
-              style: AppText.sans(
-                size: 10,
-                color: colors.textDim,
-              ),
+              style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         Text(
           post.title,
-          style: AppText.sans(
-            size: 19,
-            weight: FontWeight.w800,
-            height: 1.3,
-            color: colors.text,
-          ),
+          style: AppText.sans(size: 22, weight: FontWeight.w800, height: 1.3, color: colors.text),
         ),
         if (post.body.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
             post.body,
-            style: AppText.sans(
-              size: 12.5,
-              height: 1.6,
-              weight: FontWeight.w500,
-              color: colors.textMed,
-            ),
+            style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.55, color: colors.textMed),
           ),
         ],
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Row(
           children: [
             VotePill(
@@ -351,44 +315,41 @@ class _PostBody extends ConsumerWidget {
               },
             ),
             const SizedBox(width: 10),
-            Text(
-              post.votes == 1 ? '1 vote' : '${post.votes} votes',
-              style: AppText.sans(
-                size: 11.5,
-                weight: FontWeight.w700,
-                color: colors.textMed,
+            Expanded(
+              child: Text(
+                post.votes == 1 ? '1 vote' : '${post.votes} votes',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed),
               ),
             ),
-            const Spacer(),
+            const SizedBox(width: 10),
             const _FollowPill(),
           ],
         ),
         if (post.author.isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Text(
             'by ${post.author}',
-            style: AppText.sans(size: 10.5, color: colors.textDim),
+            style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
           ),
         ],
-        const SizedBox(height: 18),
+        const SizedBox(height: 22),
         Text(
           'COMMENTS (${post.commentCount})',
           style: AppText.sans(
-            size: 9,
+            size: 12,
             weight: FontWeight.w800,
-            letterSpacing: AppText.em(0.12, 9),
+            letterSpacing: AppText.em(0.1, 12),
             color: colors.textDim,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 9),
         commentsAsync.when(
           loading: () => Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
-              child: CircularProgressIndicator(
-                color: colors.accent,
-                strokeWidth: 2.5,
-              ),
+              child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
             ),
           ),
           error: (_, _) => Padding(
@@ -397,11 +358,14 @@ class _PostBody extends ConsumerWidget {
               children: [
                 Text(
                   'Could not load comments',
-                  style: AppText.sans(size: 12, color: colors.textMed),
+                  style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
                 ),
                 TextButton(
                   onPressed: () => ref.invalidate(feedbackCommentsProvider),
-                  child: const Text('Try again'),
+                  child: Text(
+                    'Try again',
+                    style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent),
+                  ),
                 ),
               ],
             ),
@@ -409,11 +373,7 @@ class _PostBody extends ConsumerWidget {
           data: (comments) => comments.isEmpty
               ? Text(
                   'No comments yet — start the discussion.',
-                  style: AppText.sans(
-                    size: 11.5,
-                    height: 1.5,
-                    color: colors.textMed,
-                  ),
+                  style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
                 )
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -460,25 +420,26 @@ class _FollowPill extends ConsumerWidget {
           }
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          height: 36,
+          padding: const EdgeInsets.fromLTRB(12, 0, 14, 0),
           decoration: BoxDecoration(
-            color: following ? colors.accent.withValues(alpha: 0.12) : colors.bg,
+            color: following ? colors.accentSoft : colors.surface,
             borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: following ? colors.accent : colors.border),
+            border: Border.all(color: following ? colors.accent : colors.border, width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AppIcon(
-                following ? Icons.notifications_active : Icons.notifications_none,
-                size: 14,
+              Ic(
+                following ? 'notifications:fill' : 'notifications',
+                size: 18,
                 color: following ? colors.accent : colors.textMed,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               Text(
                 following ? 'Following' : 'Follow',
                 style: AppText.sans(
-                  size: 11,
+                  size: 15,
                   weight: FontWeight.w700,
                   color: following ? colors.accent : colors.textMed,
                 ),
@@ -502,88 +463,60 @@ class _CommentCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.card),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: colors.cardShadow,
       ),
-      padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+      padding: const EdgeInsets.fromLTRB(15, 12, 15, 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Flexible(
-                child: Text(
-                  comment.author,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.sans(
-                    size: 11.5,
-                    weight: FontWeight.w800,
-                    color: colors.text,
-                  ),
+              Expanded(
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        comment.author,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
+                      ),
+                    ),
+                    if (comment.isTeam) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: colors.accentSoft,
+                          borderRadius: BorderRadius.circular(100),
+                        ),
+                        child: Text(
+                          'TEAM',
+                          style: AppText.sans(
+                            size: 11,
+                            weight: FontWeight.w800,
+                            letterSpacing: AppText.em(0.08, 11),
+                            color: colors.accent,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              if (comment.isTeam) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: colors.accent.alpha8(0x1C),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Text(
-                    'TEAM',
-                    style: AppText.sans(
-                      size: 8,
-                      weight: FontWeight.w800,
-                      letterSpacing: AppText.em(0.1, 8),
-                      color: colors.accent,
-                    ),
-                  ),
-                ),
-              ],
-              const Spacer(),
+              const SizedBox(width: 8),
               Text(
                 feedbackAgo(comment.createdAt),
-                style: AppText.sans(size: 9.5, color: colors.textDim),
+                style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
               ),
             ],
           ),
           const SizedBox(height: 5),
           Text(
             comment.body,
-            style: AppText.sans(
-              size: 11.5,
-              height: 1.5,
-              weight: FontWeight.w500,
-              color: colors.text,
-            ),
+            style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.45, color: colors.text),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// 38px circular back button (same recipe as the settings scaffold's).
-class _BackCircle extends StatelessWidget {
-  const _BackCircle();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return GestureDetector(
-      onTap: () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.surface,
-          shape: BoxShape.circle,
-          boxShadow: colors.cardShadow,
-        ),
-        child: AppIcon(Icons.chevron_left, size: 21, color: colors.text),
       ),
     );
   }

@@ -9,12 +9,12 @@ import '../../../core/env/env.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_text_field.dart';
-import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
+import 'widgets/password_eye.dart';
 import 'widgets/sso_buttons.dart';
 
 /// FRAMES `auth` — Sign in (email + password, with SSO).
@@ -156,12 +156,15 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
               // that wedged here left no way out at all.
               Align(
                 alignment: Alignment.centerLeft,
-                child: CircleBackButton(onTap: () => context.pop()),
+                child: FzHeadButton(icon: 'back', fill: FzFill.well, onTap: () => context.pop()),
               ),
-              const SizedBox(height: 10),
-              Text('Welcome.', style: AppText.sans(size: 30, weight: FontWeight.w800, color: colors.text)),
+              const SizedBox(height: 16),
+              Text('Welcome.', style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2, color: colors.text)),
               const SizedBox(height: 4),
-              Text('Sign in to continue', style: AppText.sans(size: 12, color: colors.textMed)),
+              Text(
+                'Sign in to continue',
+                style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
+              ),
               const SizedBox(height: 22),
               if (_appleAvailable) ...[
                 SsoButton(
@@ -169,7 +172,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                   label: 'Sign in with Apple',
                   onTap: busy ? null : _appleSignIn,
                 ),
-                const SizedBox(height: 10),
+                SizedBox(height: _googleAvailable ? 10 : 18),
               ],
               if (_googleAvailable) ...[
                 SsoButton(
@@ -188,10 +191,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
               AppTextField(
                 controller: _password,
                 obscureText: _obscure,
-                suffix: IconButton(
-                  icon: AppIcon(_obscure ? Icons.visibility_off : Icons.visibility, size: 17, color: colors.textMed),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
+                suffix: PasswordEye(obscured: _obscure, onTap: () => setState(() => _obscure = !_obscure)),
               ),
               const SizedBox(height: 8),
               Align(
@@ -199,28 +199,35 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: busy ? null : () => unawaited(_forgotPassword()),
-                  child: Text(
-                    'Forgot password?',
-                    style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.accent),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      'Forgot password?',
+                      style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.accent),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               PrimaryButton(label: busy ? 'Signing in…' : 'Sign in →', onPressed: busy ? null : _signIn),
               const SizedBox(height: 14),
               Center(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => context.push(Routes.signup),
-                  child: Text.rich(
-                    TextSpan(
-                      text: 'New here? ',
-                      style: AppText.sans(size: 11.5, color: colors.textMed),
-                      children: [
-                        TextSpan(
-                          text: 'Create an account',
-                          style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text),
-                        ),
-                      ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'New here? ',
+                        style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
+                        children: [
+                          TextSpan(
+                            text: 'Create an account',
+                            style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -244,7 +251,7 @@ class _OrDivider extends StatelessWidget {
         Expanded(child: Container(height: 1, color: colors.border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text('or email', style: AppText.sans(size: 11, color: colors.textDim)),
+          child: Text('or email', style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textDim)),
         ),
         Expanded(child: Container(height: 1, color: colors.border)),
       ],

@@ -1,40 +1,38 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
-import '../icons/app_icon.dart';
+import 'ic.dart';
 
-/// The "GUEST" badge pill shown in headers while in guest mode (prototype
-/// guest-home / guest-subjects).
+/// The "Guest" pill in the header cluster while in guest mode (v11 guest-home /
+/// guest-subjects: a page-fill `BarPill`, 44 high, the guest glyph in warn).
 class GuestBadge extends StatelessWidget {
   const GuestBadge({super.key});
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        boxShadow: colors.cardShadow,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AppIcon(Icons.person_outline, size: 11, color: colors.warn),
-          const SizedBox(width: 4),
-          Text(
-            'GUEST',
-            style: AppText.sans(
-              size: 9.5,
-              weight: FontWeight.w800,
-              letterSpacing: AppText.em(0.05, 9.5),
-              color: colors.textMed,
+    return Semantics(
+      label: 'Guest mode',
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.fromLTRB(15, 0, 18, 0),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: colors.cardShadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Ic('guest', size: 19, color: colors.warn),
+            const SizedBox(width: 6),
+            Text(
+              'Guest',
+              style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../core/env/env.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../ada/presentation/widgets/think_mark.dart';
 import '../../onboarding/onboarding_gate.dart';
 
 /// FRAMES `splash` — brand splash. Restores a persisted session on launch:
@@ -21,13 +22,8 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen>
-    with SingleTickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   Timer? _timer;
-  late final AnimationController _dots = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1050),
-  )..repeat();
 
   @override
   void initState() {
@@ -50,7 +46,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void dispose() {
     _timer?.cancel();
-    _dots.dispose();
     super.dispose();
   }
 
@@ -74,40 +69,24 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 const SizedBox(height: 6),
                 Text(
                   'Your focus sanctuary.',
-                  style: AppText.sans(size: 12, letterSpacing: AppText.em(0.07, 12), color: colors.textDim),
+                  style: AppText.sans(
+                    size: 15,
+                    weight: FontWeight.w500,
+                    letterSpacing: AppText.em(0.07, 15),
+                    color: colors.textDim,
+                  ),
                 ),
               ],
             ),
           ),
-          Positioned(
-            bottom: 30,
+          // v11 SPLASH: the state-mark loader, 34 above the bottom edge.
+          const Positioned(
+            bottom: 34,
             left: 0,
             right: 0,
-            child: AnimatedBuilder(
-              animation: _dots,
-              builder: (context, _) {
-                // Cycle the accent highlight across the three dots as a loading
-                // indicator (0 → 1 → 2 → repeat).
-                final active = (_dots.value * 3).floor() % 3;
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    for (var i = 0; i < 3; i++)
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        width: 6,
-                        height: 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: i == active
-                              ? colors.accent
-                              : colors.textDim.withValues(alpha: 0.4),
-                        ),
-                      ),
-                  ],
-                );
-              },
+            child: Semantics(
+              label: 'Loading',
+              child: Center(child: ThinkMark(size: 26)),
             ),
           ),
         ],

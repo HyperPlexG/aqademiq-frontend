@@ -23,19 +23,19 @@ class GuestStatsPrompt extends StatelessWidget {
     return Scaffold(
       backgroundColor: colors.bg,
       body: const SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Stack(
-            children: [
-              // Layer A — blurred stats preview (sharp title on top).
-              _StatsPreview(),
-              // Layer B — bottom sheet CTA.
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: _SetupSheet(),
-              ),
-            ],
-          ),
+        child: Stack(
+          children: [
+            // Layer A — blurred stats preview (sharp title on top).
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: _StatsPreview(),
+            ),
+            // Layer B — the floating setup sheet.
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: _SetupSheet(),
+            ),
+          ],
         ),
       ),
     );
@@ -56,13 +56,13 @@ class _StatsPreview extends StatelessWidget {
         // Title sits OUTSIDE the blur wrapper — sharp/full.
         Text(
           'Your stats',
-          style: AppText.sans(size: 28, weight: FontWeight.w800, color: colors.text),
+          style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2, color: colors.text),
         ),
         const SizedBox(height: 14),
         Expanded(
           child: SingleChildScrollView(
             // Room for the setup sheet that floats over the bottom.
-            padding: const EdgeInsets.only(bottom: 220),
+            padding: const EdgeInsets.only(bottom: 260),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -76,9 +76,9 @@ class _StatsPreview extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              Expanded(child: _StatCard(label: 'DAY STREAK')),
+                              Expanded(child: _StatCard(label: 'DAYS ON BOARD')),
                               SizedBox(width: 8),
-                              Expanded(child: _StatCard(label: 'FOCUS HRS')),
+                              Expanded(child: _StatCard(label: 'SESSIONS')),
                             ],
                           ),
                           SizedBox(height: 10),
@@ -109,7 +109,7 @@ class _StatsPreview extends StatelessWidget {
   }
 }
 
-/// A single placeholder stat card: big `—` value over a tiny caps label.
+/// A single placeholder stat card: a big `–` over a 12/800 caps label.
 class _StatCard extends StatelessWidget {
   const _StatCard({required this.label});
 
@@ -124,16 +124,17 @@ class _StatCard extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            '—',
-            style: AppText.numeral(size: 28, color: colors.text),
+            '–',
+            style: AppText.numeral(size: 34, color: colors.text),
           ),
           const SizedBox(height: 4),
           Text(
             label,
+            textAlign: TextAlign.center,
             style: AppText.sans(
-              size: 9,
+              size: 12,
               weight: FontWeight.w800,
-              letterSpacing: AppText.em(0.1, 9),
+              letterSpacing: AppText.em(0.1, 12),
               color: colors.textDim,
             ),
           ),
@@ -159,7 +160,7 @@ class _WeeklyFocusCard extends StatelessWidget {
         children: [
           Text(
             'Weekly focus',
-            style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.text),
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
           ),
           const SizedBox(height: 8),
           SizedBox(
@@ -205,7 +206,7 @@ class _MoodTrendsCard extends StatelessWidget {
           alignment: Alignment.topLeft,
           child: Text(
             'Mood trends',
-            style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.text),
+            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
           ),
         ),
       ),
@@ -221,59 +222,68 @@ class _SetupSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-        boxShadow: [
-          BoxShadow(color: Color(0x24000000), blurRadius: 40, offset: Offset(0, -8)),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Grabber.
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E0E0),
-                borderRadius: BorderRadius.circular(2),
+    // v11: floats 8 clear of the sides and bottom, corners concentric with
+    // the display (55 − 8 = 47).
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(47),
+          boxShadow: const [
+            BoxShadow(color: Color(0x24000000), blurRadius: 40, offset: Offset(0, -8)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Grabber.
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0E0E0),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Track your progress',
-            style: AppText.sans(size: 16, weight: FontWeight.w800, color: colors.text),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Create a free account and Ada will track your streaks, focus hours '
-            '& mood trends — then tune your plan to match.',
-            style: AppText.sans(size: 11.5, height: 1.55, color: colors.textMed),
-          ),
-          const SizedBox(height: 14),
-          // GST-3: as on the Ada prompt — an account first, then set-up.
-          PrimaryButton(
-            label: 'Create free account →',
-            onPressed: () => unawaited(context.push(Routes.signup)),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: GestureDetector(
-              onTap: () => context.pop(),
-              child: Text(
-                'Not now',
-                style: AppText.sans(size: 11.5, color: colors.textMed),
+            const SizedBox(height: 14),
+            Text(
+              'Track your progress',
+              style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'Create a free account and Ada will track your streaks, focus hours '
+              '& mood trends, then tune your plan to match.',
+              style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.55, color: colors.textMed),
+            ),
+            const SizedBox(height: 14),
+            // GST-3: as on the Ada prompt — an account first, then set-up.
+            PrimaryButton(
+              label: 'Create free account →',
+              onPressed: () => unawaited(context.push(Routes.signup)),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => context.pop(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Text(
+                    'Not now',
+                    style: AppText.sans(size: 15, color: colors.textMed),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

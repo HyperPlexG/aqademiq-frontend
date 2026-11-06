@@ -17,6 +17,7 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../auth/presentation/widgets/otp_field.dart';
 import '../providers/onboarding_controller.dart';
+import 'ob_source_screen.dart' show ObLink;
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 0 (prototype `ob-referral`): optional referral code entry.
@@ -120,7 +121,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
         children: [
           Text(
             'Got a referral\ncode?',
-            style: AppText.sans(size: 26, weight: FontWeight.w800, height: 1.2),
+            style: AppText.sans(size: 34, weight: FontWeight.w800, height: 1.2),
           ),
           const SizedBox(height: 20),
           const FieldLabel('Referral code'),
@@ -132,6 +133,11 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
             length: 8,
             keyboardType: TextInputType.text,
             textCapitalization: TextCapitalization.characters,
+            // v11 ob-referral: 4 + 4, tighter and smaller than the 6-digit code.
+            gap: 5,
+            groupAfter: 4,
+            cellRadius: 11,
+            fontSize: 20,
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
               const _UpperCaseTextFormatter(),
@@ -145,12 +151,12 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
             const SizedBox(height: 10),
             Text(
               _error!,
-              style: AppText.sans(size: 12, color: colors.danger),
+              style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.danger),
             ),
           ],
           const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: colors.accentSoft,
               borderRadius: BorderRadius.circular(AppRadius.card),
@@ -165,7 +171,8 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
                     'A friend invited you? Pop in their code and you both '
                     'earn Aqademiq Pro perks.',
                     style: AppText.sans(
-                      size: 11,
+                      size: 15,
+                      weight: FontWeight.w500,
                       height: 1.6,
                       color: colors.text,
                     ),
@@ -184,19 +191,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
             enabled: !_validating,
             onPressed: _validating ? null : () => unawaited(_continueWithCode()),
           ),
-          const SizedBox(height: 12),
-          Center(
-            child: GestureDetector(
-              onTap: _validating ? null : _skip,
-              child: Text(
-                "I don't have one",
-                style: AppText.sans(
-                  size: 11.5,
-                  color: colors.textMed,
-                ),
-              ),
-            ),
-          ),
+          ObLink(label: "I don't have one", onTap: _validating ? null : _skip),
         ],
       ),
     );
