@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The rail while the session is held: the same bar, its fill at half
+     strength, as every frozen rail in v11 draws it. A second drawable rather
+     than a runtime tint, because RemoteViews cannot set a progress tint
+     before Android 12. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp" />
+            <solid android:color="@color/ambient_rail_track" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape android:shape="rectangle">
+                <corners android:radius="3dp" />
+                <solid android:color="@color/ambient_ice_held" />
+            </shape>
+        </clip>
+    </item>
+</layer-list>

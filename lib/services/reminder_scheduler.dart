@@ -9,6 +9,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../core/env/env.dart';
 import '../core/router/app_router.dart';
+import '../core/utils/date_format.dart';
 import '../data/auth/auth_repository.dart';
 import '../data/models/task.dart';
 import '../data/models/user_settings.dart';
@@ -165,7 +166,12 @@ List<PlannedReminder> planTaskReminders({
     if (task.done || start == null) continue;
     final duration = Duration(minutes: task.durationMin ?? 0);
 
-    void add(ReminderChannel channel, DateTime at, String title) {
+    void add(
+      ReminderChannel channel,
+      DateTime at,
+      String title, {
+      String? body,
+    }) {
       if (!at.isAfter(now) || at.isAfter(until)) return;
       planned.add(
         PlannedReminder(
@@ -173,17 +179,20 @@ List<PlannedReminder> planTaskReminders({
           channel: channel,
           at: at,
           title: title,
-          body: task.title,
+          body: body ?? task.title,
           payload: _payload(channel, taskId: task.id, date: task.date),
         ),
       );
     }
 
     if (channels.beforeTask) {
+      // Ada's own line (notif-ios): "Your 2:00 PM block starts in 10 minutes"
+      // — the lead stays the backend's ten, not the design's five.
       add(
         ReminderChannel.beforeTask,
         start.subtract(reminderLead),
-        'Starting in ${reminderLead.inMinutes} minutes',
+        'Ada',
+        body: beforeTaskBody(task.title, start),
       );
     }
     if (channels.taskStart) {
@@ -202,6 +211,17 @@ List<PlannedReminder> planTaskReminders({
   return planned.length <= limit
       ? planned
       : planned.sublist(0, limit);
+}
+
+/// The "before task" reminder's line, in Ada's voice (notif-ios). Names the
+/// task too, because the tap opens the plan rather than a session: the words
+/// must not promise more than the tap does.
+@visibleForTesting
+String beforeTaskBody(String taskTitle, DateTime start) {
+  final lead = reminderLead.inMinutes;
+  final title = taskTitle.trim();
+  final opening = 'Your ${AppDate.time12h(start)} block starts in $lead minutes';
+  return title.isEmpty ? '$opening.' : '$opening: $title';
 }
 
 /// Derive the repeating morning / evening / weekly check-ins from [prefs].

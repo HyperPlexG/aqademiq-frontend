@@ -2,14 +2,21 @@
 <resources>
     <!-- AppColors.surface, dark. -->
     <color name="splash_background">#FF1B1B1B</color>
-    <!-- The session card on a dark shade: the spec's own palette (§6). -->
-    <color name="ambient_title">#FFFFFFFF</color>
-    <color name="ambient_subtitle">#FF8B8798</color>
-    <color name="ambient_frost">#FF9FD6EF</color>
-    <color name="ambient_rail_track">#1AFFFFFF</color>
-    <color name="ambient_rail_start">#FFBFE6F5</color>
-    <color name="ambient_rail_end">#FF9FD6EF</color>
-    <color name="ambient_divider">#1AFFFFFF</color>
+    <!-- The session card on a dark shade (v11 notif-android, dark). -->
+    <color name="ambient_title">#FFE6E0E9</color>
+    <color name="ambient_subtitle">#FFCAC4D0</color>
+    <color name="ambient_ice">#FFCBBCFD</color>
+    <color name="ambient_ice_held">#80CBBCFD</color>
+    <color name="ambient_rail_track">#1FFFFFFF</color>
+    <color name="ambient_divider">#14FFFFFF</color>
+    <!-- The home-screen widgets by night (v11 wg-home, dark). -->
+    <color name="widget_background">#FF1C1C1E</color>
+    <color name="widget_ink">#FFFFFFFF</color>
+    <color name="widget_label">#FFA1A1A8</color>
+    <color name="widget_accent">#FF6B5CF0</color>
+    <color name="widget_well">#1AFFFFFF</color>
+    <color name="widget_dim">#FF505050</color>
+    <color name="widget_day_empty">#FFD8D4CC</color>
     <!-- The frost shield, the same as by day on purpose: §4 draws one
          palette, and the shield is the design's own surface (like the
          widgets), not system chrome that follows the theme. Twins so that a

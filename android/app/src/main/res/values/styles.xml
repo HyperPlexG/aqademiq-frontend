@@ -15,16 +15,15 @@
     <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
         <item name="android:windowBackground">?android:colorBackground</item>
     </style>
-    <!-- The small caps label every widget opens with ("NEXT", "THIS WEEK",
-         "FOCUS"): 8.5pt bold monospace, tracked out, as on iOS. -->
+    <!-- The label every widget opens with ("Next", "This week", "Focus"):
+         13 bold in the card's secondary ink, as v11 draws it on iOS. -->
     <style name="WidgetLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:includeFontPadding">false</item>
-        <item name="android:fontFamily">monospace</item>
+        <item name="android:maxLines">1</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textSize">8.5sp</item>
-        <item name="android:letterSpacing">0.13</item>
+        <item name="android:textSize">13sp</item>
         <item name="android:textColor">@color/widget_label</item>
     </style>
 
@@ -33,7 +32,7 @@
     <style name="WidgetSurface">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">match_parent</item>
-        <item name="android:padding">14dp</item>
+        <item name="android:padding">16dp</item>
         <item name="android:background">@drawable/widget_background</item>
     </style>
 

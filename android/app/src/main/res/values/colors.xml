@@ -6,27 +6,28 @@
          light). The system splash window uses the same one so the handover to
          Flutter is a repaint of the same colour rather than a visible cut. -->
     <color name="splash_background">#FFFFFFFF</color>
-    <!-- The session card (notification_focus*.xml), on a light shade. The spec
-         draws the card dark; these are the same roles carried onto a light
-         one — frost a shade deeper so it still reads as a colour. -->
-    <color name="ambient_title">#FF1B1B1F</color>
-    <color name="ambient_subtitle">#FF6E6A7C</color>
-    <color name="ambient_frost">#FF2C7FA8</color>
-    <color name="ambient_rail_track">#1F000000</color>
-    <color name="ambient_rail_start">#FF8FD0EE</color>
-    <color name="ambient_rail_end">#FF5BB5E0</color>
-    <color name="ambient_divider">#1F000000</color>
-    <!-- The home-screen widgets (spec §5). Not themed: the spec draws every
-         widget on near-black, and these are the iOS widgets' own values. -->
-    <color name="widget_background">#FF16151C</color>
-    <color name="widget_label">#FF6F6C7D</color>
-    <color name="widget_meta">#FF8B8798</color>
+    <!-- The session card (notification_focus*.xml), on a light shade: v11's
+         notif-android roles. Ice is pinned, never the accent: the design's
+         aq-ice here, aq-ice-on-dark in the night twin. ambient_ice also colours the
+         session cube (ambient_cube_NN, generated). Held, the rail's fill
+         drops to half (ambient_ice_held). -->
+    <color name="ambient_title">#FF1D1B20</color>
+    <color name="ambient_subtitle">#FF49454F</color>
+    <color name="ambient_ice">#FF6B5CF0</color>
+    <color name="ambient_ice_held">#806B5CF0</color>
+    <color name="ambient_rail_track">#14000000</color>
+    <color name="ambient_divider">#14000000</color>
+    <!-- The home-screen widgets (v11 wg-home). They follow the theme now:
+         a white card by day, #1C1C1E by night (values-night). -->
+    <color name="widget_background">#FFFFFFFF</color>
+    <color name="widget_ink">#FF111111</color>
+    <color name="widget_label">#FF6E6E73</color>
     <color name="widget_accent">#FF6B5CF0</color>
-    <color name="widget_frost">#FF9FD6EF</color>
-    <!-- This week's letters, as §5's mock draws them: lighter under a day the
-         student showed up, dimmer under one they did not. -->
-    <color name="widget_letter_shown">#FFA8A8A8</color>
-    <color name="widget_letter_missed">#FF696969</color>
+    <color name="widget_well">#FFECE9FB</color>
+    <!-- This week: the letters (DIM; today wears the accent), and the dashed
+         outline of a day with no check-in, the same in both themes. -->
+    <color name="widget_dim">#FFA7A7A7</color>
+    <color name="widget_day_empty">#FFD8D4CC</color>
     <!-- The frost shield (freeze/ShieldActivity, APP_FREEZE.md §4): the
          design's own ground, ink and pills. The secondary pill is
          rgba(255,255,255,.88). -->

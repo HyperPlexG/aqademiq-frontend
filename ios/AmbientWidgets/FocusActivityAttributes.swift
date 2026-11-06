@@ -39,9 +39,35 @@ struct FocusActivityAttributes: ActivityAttributes {
         /// lock-screen tap without sounding broken.
         var prismMode: String?
 
+        /// The session ran to its end (la-lock-done). Set once, in the content
+        /// the activity is ended with, so the lock screen keeps a "Session
+        /// done" card for a few minutes; an ended activity is never drawn in
+        /// the Island, which stays for a running session only. Optional, and
+        /// last, so older payloads decode and existing initialisers compile.
+        var done: Bool? = nil
+
+        var isDone: Bool { done == true }
+
+        /// What the done card reads: the time spent, `"25:00"`.
+        var focusedText: String {
+            let focused = max(0, durationSec - remainingSec)
+            return String(format: "%d:%02d", focused / 60, focused % 60)
+        }
+
         var spent: Double {
             guard durationSec > 0 else { return 0 }
             return min(max(Double(durationSec - remainingSec) / Double(durationSec), 0), 1)
+        }
+
+        /// Time left, `0...1`: what the session cube is trimmed to.
+        ///
+        /// Read when the surface is drawn — at a push, never per second — so
+        /// a running session measures from `endsAt`, and a held one from the
+        /// time pinned when it froze.
+        var left: Double {
+            guard durationSec > 0, !isDone else { return isDone ? 0 : 1 }
+            let seconds = frozen ? Double(remainingSec) : endsAt.timeIntervalSinceNow
+            return min(max(seconds / Double(durationSec), 0), 1)
         }
     }
 

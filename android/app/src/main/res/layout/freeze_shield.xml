@@ -3,6 +3,11 @@
   The frost shield (ShieldActivity, APP_FREEZE.md §4): Ada frozen, the stage's
   title and line in the middle, the way out at the bottom where a thumb is.
 
+  * One vertical block in a ScrollView, so nothing can overlap: on a tall
+    portrait screen the two weighted spacers put the words a little above the
+    middle and the buttons at the bottom; in landscape (or at a large font
+    size) the spacers shrink to nothing, the buttons sit 32dp below the
+    words, and the whole thing scrolls.
   * The ground is the window's background, not this layout's, so it runs
     under the status and navigation bars; fitsSystemWindows keeps the words
     and the buttons out from under them (Android 15 draws edge to edge).
@@ -11,20 +16,30 @@
     gone for Never open; a Deep freeze shows shield_deep in its place.
   * Every word is set from code — the service has already chosen them.
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
+    android:fillViewport="true"
+    android:fitsSystemWindows="true"
+    android:overScrollMode="ifContentScrolls">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginBottom="96dp"
         android:gravity="center_horizontal"
         android:orientation="vertical"
-        android:paddingStart="32dp"
-        android:paddingEnd="32dp">
+        android:paddingStart="24dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="28dp">
+
+        <!-- Above the words. With the spacer below them it shares out a tall
+             screen's spare height 3 : 2, which puts the words a little above
+             the middle and the buttons at the bottom, as before. -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="3" />
 
         <ImageView
             android:id="@+id/shield_ada"
@@ -38,7 +53,9 @@
             android:id="@+id/shield_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:layout_marginTop="20dp"
+            android:layout_marginEnd="8dp"
             android:accessibilityHeading="true"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
@@ -50,27 +67,27 @@
             android:id="@+id/shield_line"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:layout_marginTop="10dp"
+            android:layout_marginEnd="8dp"
             android:gravity="center"
             android:includeFontPadding="false"
             android:textColor="@color/freeze_line"
             android:textSize="17sp" />
-    </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="24dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="28dp">
+        <!-- Between the words and the buttons. Nothing when the screen is
+             short; shield_back's 32dp top margin is the gap that always
+             stays. -->
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2" />
 
         <Button
             android:id="@+id/shield_back"
             android:layout_width="match_parent"
             android:layout_height="56dp"
+            android:layout_marginTop="32dp"
             android:background="@drawable/freeze_pill_primary"
             android:fontFamily="sans-serif-medium"
             android:gravity="center"
@@ -113,11 +130,12 @@
         <TextView
             android:id="@+id/shield_deep"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:gravity="center"
+            android:minHeight="56dp"
             android:textColor="@color/freeze_line"
             android:textSize="15sp"
             android:visibility="gone" />
     </LinearLayout>
-</FrameLayout>
+</ScrollView>

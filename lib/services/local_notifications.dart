@@ -1,6 +1,8 @@
+import 'dart:io' show Directory, File;
 import 'dart:ui' show Color;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -42,6 +44,25 @@ const reminderDetails = NotificationDetails(
     interruptionLevel: InterruptionLevel.timeSensitive,
   ),
 );
+
+/// The one "Session done" notification. Shown, never scheduled, so the
+/// reminder scheduler's reconcile (which cancels unwanted *pending* ids) never
+/// touches it; below the task range (1000+), above the check-ins (1–3).
+const sessionDoneNotificationId = 900;
+
+/// Ada's session_done pose, rasterised by `tool/generate_ambient_glyphs.js`:
+/// the thumbnail the iOS notification attaches (notif-ios).
+const _sessionDoneArt = 'assets/images/notif_session_done.png';
+
+/// "25:00 on LL(1) parsing notes." — what the session was, in the design's
+/// own words. Pure, so the copy is testable.
+@visibleForTesting
+String sessionDoneBody(Duration focused, {String? taskTitle}) {
+  final seconds = focused.inSeconds < 0 ? 0 : focused.inSeconds;
+  final clock = '${seconds ~/ 60}:${(seconds % 60).toString().padLeft(2, '0')}';
+  final task = taskTitle?.trim() ?? '';
+  return task.isEmpty ? '$clock of focus.' : '$clock on $task.';
+}
 
 /// Process-wide owner of the `flutter_local_notifications` plugin.
 ///
@@ -151,6 +172,63 @@ class LocalNotifications {
     } on Object catch (e) {
       debugPrint('LocalNotifications: permission request failed — $e');
       return false;
+    }
+  }
+
+  /// "Session done" (notif-ios): a session ran to its end while the app was
+  /// not on screen. iOS only — Android's session card simply stands down.
+  ///
+  /// Passive, so it lands in the list without lighting the screen or making a
+  /// sound: the lock screen already holds the Live Activity's done card, and a
+  /// focus session's last act should not be an interruption. Ada's
+  /// session_done pose rides along as the attachment thumbnail. No payload, so
+  /// a tap just opens the app.
+  Future<void> showSessionDone({
+    required Duration focused,
+    String? taskTitle,
+  }) async {
+    if (!_ready || defaultTargetPlatform != TargetPlatform.iOS) return;
+    try {
+      final art = await _attachmentCopy(_sessionDoneArt, 'session_done');
+      await plugin.show(
+        sessionDoneNotificationId,
+        'Session done',
+        sessionDoneBody(focused, taskTitle: taskTitle),
+        NotificationDetails(
+          iOS: DarwinNotificationDetails(
+            interruptionLevel: InterruptionLevel.passive,
+            threadIdentifier: 'focus',
+            attachments: [
+              if (art != null)
+                DarwinNotificationAttachment(art, identifier: 'session_done'),
+            ],
+          ),
+        ),
+      );
+    } on Object catch (e) {
+      debugPrint('LocalNotifications: session done not shown — $e');
+    }
+  }
+
+  /// A fresh file copy of a bundled image, for a notification attachment.
+  ///
+  /// Fresh every time because iOS *moves* an attachment's file into its own
+  /// store when the notification is added; the bundle itself is read-only and
+  /// cannot be attached in place. Null if anything fails — the notification
+  /// still goes, without its picture.
+  Future<String?> _attachmentCopy(String asset, String name) async {
+    try {
+      final bytes = await rootBundle.load(asset);
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      final file = File('${Directory.systemTemp.path}/aq_${name}_$stamp.png');
+      await file.writeAsBytes(
+        bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+        flush: true,
+      );
+      return file.path;
+    } on Object catch (e) {
+      debugPrint('LocalNotifications: no attachment for $name — $e');
+      return null;
     }
   }
 

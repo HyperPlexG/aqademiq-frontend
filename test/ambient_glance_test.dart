@@ -26,6 +26,13 @@ Task _task(
 MoodLog _log(DateTime date) =>
     MoodLog(id: '$date', date: date, phase: MoodPhase.morning, mood: 3);
 
+MoodLog _mood(
+  DateTime date,
+  int mood, {
+  MoodPhase phase = MoodPhase.morning,
+}) =>
+    MoodLog(id: '$date-${phase.name}', date: date, phase: phase, mood: mood);
+
 void main() {
   group('next', () {
     test('is the earliest thing still ahead today', () {
@@ -111,6 +118,81 @@ void main() {
     });
   });
 
+  group('this week, by mood', () {
+    test('carries the mood logged each day, Monday first', () {
+      final monday = DateTime(2026, 8, 10);
+      final logs = [
+        _mood(monday, 3),
+        _mood(monday.add(const Duration(days: 1)), 2),
+      ];
+
+      // wg-home's own week: Monday Good, Tuesday OK, nothing yet today.
+      expect(
+        weekMoodsFrom(logs, now: _day),
+        [3, 2, null, null, null, null, null],
+      );
+    });
+
+    test('a day with nothing logged is null — an outline, never a puddle', () {
+      final week = weekMoodsFrom(const [], now: _day);
+      expect(week.length, 7);
+      expect(week, everyElement(isNull));
+    });
+
+    test('a day with two check-ins shows the later one', () {
+      final tuesday = DateTime(2026, 8, 11);
+      expect(
+        weekMoodsFrom(
+          [
+            _mood(tuesday, 1, phase: MoodPhase.evening),
+            _mood(tuesday, 4),
+          ],
+          now: _day,
+        )[1],
+        1,
+      );
+      expect(
+        weekMoodsFrom(
+          [
+            _mood(DateTime(2026, 8, 11, 8), 4),
+            _mood(DateTime(2026, 8, 11, 21), 0),
+          ],
+          now: _day,
+        )[1],
+        0,
+      );
+    });
+
+    test('agrees with the days marked as shown up for', () {
+      final monday = DateTime(2026, 8, 10);
+      final logs = [
+        _mood(monday, 4),
+        _mood(monday.add(const Duration(days: 3)), 0),
+      ];
+      final days = weekDaysFrom(logs, now: _day);
+      final moods = weekMoodsFrom(logs, now: _day);
+      for (var i = 0; i < 7; i++) {
+        expect(moods[i] != null, days[i], reason: 'day $i');
+      }
+    });
+
+    test('keeps a mood on the scale, whatever was stored', () {
+      final monday = DateTime(2026, 8, 10);
+      final logs = [
+        _mood(monday, 9),
+        _mood(monday.add(const Duration(days: 1)), -2),
+      ];
+      expect(weekMoodsFrom(logs, now: _day).take(2).toList(), [4, 0]);
+    });
+
+    test('ignores logs from other weeks', () {
+      expect(
+        weekMoodsFrom([_mood(DateTime(2026, 8, 3), 3)], now: _day),
+        everyElement(isNull),
+      );
+    });
+  });
+
   group('the published payload', () {
     test('carries the next task with its subject and tint', () {
       final state = glanceState(
@@ -129,6 +211,7 @@ void main() {
       expect(state.nextTaskTime, isNotNull);
       expect(state.todayFocusMin, 42);
       expect(state.weekDays.length, 7);
+      expect(state.weekMoods, [3, null, null, null, null, null, null]);
     });
 
     test('an empty day says nothing rather than something wrong', () {

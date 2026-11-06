@@ -133,7 +133,16 @@ class AmbientBridge {
   ///
   /// The Island is taken for a running session and nothing else, so this is not
   /// housekeeping — leaving it up would make Aqademiq a squatter.
-  Future<void> endSession() => _invoke('endSession', null);
+  ///
+  /// [focusedSec] is given only for a session that ran to its end. iOS then
+  /// ends the Live Activity with one final "Session done" content that the
+  /// lock screen keeps for a few minutes (la-lock-done); the system never
+  /// draws an ended activity in the Island. Without it, everything goes at
+  /// once, as before. Android ignores it.
+  Future<void> endSession({int? focusedSec}) => _invoke(
+        'endSession',
+        focusedSec == null ? null : <String, Object?>{'focusedSec': focusedSec},
+      );
 
   Future<void> _invoke(String method, Object? arguments) async {
     if (!_supported) return;

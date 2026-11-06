@@ -212,8 +212,11 @@ object AmbientBridge {
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    /** ISO-8601 UTC, as written by [AmbientSession.toMap] on the Dart side. */
-    private fun parseInstant(iso: String?): Long {
+    /**
+     * ISO-8601 UTC, as written by [AmbientSession.toMap] on the Dart side.
+     * Internal so the Focus widget can trim the session cube to the time left.
+     */
+    internal fun parseInstant(iso: String?): Long {
         if (iso.isNullOrBlank()) return 0L
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

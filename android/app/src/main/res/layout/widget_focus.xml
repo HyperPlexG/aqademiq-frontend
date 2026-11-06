@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Focus (spec §5): Start 5. Five minutes, not twenty-five — the lowest possible
-  barrier between an idle thumb and a started session. The one operable thing
-  on any widget (§8, rule 04): it does not act on data, it starts a session.
+  Focus (v11 wg-home): Ada, and Start 5 min. Five minutes, not twenty-five:
+  the lowest possible barrier between an idle thumb and a started session. The
+  one operable thing on any widget: it does not act on data, it starts a
+  session.
 
   While a session runs it says so instead of offering a second one, and Ada
-  shows her melt stage, or frost when held. Defaults are the gallery's
-  picture: Ada whole, the button ready.
+  gives way to the session cube at the time left (frozen: "Frozen" in ice).
+  Defaults are the gallery's picture: Ada, the button ready.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
@@ -18,48 +19,60 @@
     <TextView
         style="@style/WidgetLabel"
         android:layout_width="match_parent"
-        android:text="FOCUS" />
+        android:paddingStart="2dp"
+        android:text="Focus" />
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
+    <!-- 54dp, centred in whatever the cell leaves: the view takes the space
+         and the drawable is fitted into it, so a short launcher cell shrinks
+         Ada rather than clipping the button off the bottom. -->
     <ImageView
         android:id="@+id/focus_ada"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
-        android:contentDescription="@null"
-        android:src="@drawable/ada_stage_0" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
+        android:layout_width="54dp"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="@null"
+        android:src="@drawable/aq_brand_ada" />
 
     <TextView
         android:id="@+id/focus_button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="44dp"
         android:gravity="center"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:maxLines="1"
         android:background="@drawable/widget_button"
         android:textStyle="bold"
-        android:textSize="13sp"
+        android:textSize="15sp"
         android:textColor="#FFFFFFFF"
-        android:text="Start 5" />
+        android:text="Start 5 min" />
 
+    <!-- Two status views rather than one recoloured at runtime, so each keeps
+         its colour resource and follows the theme without a redraw. -->
     <TextView
         android:id="@+id/focus_status"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="44dp"
         android:gravity="center"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:maxLines="1"
+        android:background="@drawable/widget_status"
         android:textStyle="bold"
-        android:textSize="12.5sp"
-        android:textColor="@color/widget_meta"
+        android:textSize="15sp"
+        android:textColor="@color/widget_label"
         android:text="In session"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/focus_status_frozen"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:gravity="center"
+        android:maxLines="1"
+        android:background="@drawable/widget_status"
+        android:textStyle="bold"
+        android:textSize="15sp"
+        android:textColor="@color/ambient_ice"
+        android:text="Frozen"
         android:visibility="gone" />
 </LinearLayout>

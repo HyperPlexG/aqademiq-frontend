@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/router/app_router.dart';
 import '../../core/router/pending_launch_route.dart';
+import '../../data/models/enums.dart';
 import '../../data/models/tag.dart';
 import '../../data/models/task.dart';
 import '../../data/repositories/focus_repository.dart';
@@ -13,6 +15,7 @@ import '../../data/repositories/tags_repository.dart';
 import '../../features/focus/providers/linked_task_provider.dart';
 import '../../features/focus/providers/prism_audio_provider.dart';
 import '../../features/plan/providers/plan_providers.dart';
+import '../local_notifications.dart';
 import 'ambient_bridge.dart';
 import 'ambient_glance.dart';
 import 'ambient_state.dart';
@@ -111,9 +114,12 @@ class AmbientService {
 
     if (next == null) {
       // Nothing is running. Stand down — the Island is not ours to hold.
-      if (_published != null) {
+      final last = _published;
+      if (last != null) {
         _published = null;
-        unawaited(_bridge.endSession());
+        final focusedSec = _ranToItsEnd();
+        unawaited(_bridge.endSession(focusedSec: focusedSec));
+        if (focusedSec != null) _tellSessionDone(focusedSec, last.taskTitle);
       }
       return;
     }
@@ -128,6 +134,36 @@ class AmbientService {
       _published = next;
       unawaited(_bridge.updateSession(next));
     }
+  }
+
+  /// The seconds spent, if the session that just stopped ran to its end.
+  ///
+  /// Only then does the lock screen keep a "Session done" card (la-lock-done):
+  /// a session ended early was ended on purpose, usually from the app or the
+  /// lock screen itself, and simply goes. One call either way — the done card
+  /// is the final content of the activity, not another push.
+  int? _ranToItsEnd() {
+    final session = _ref.read(focusControllerProvider);
+    if (session.status != FocusStatus.completed || session.endedEarly) {
+      return null;
+    }
+    return session.elapsedSec;
+  }
+
+  /// "Session done" in the notification list (notif-ios), when the session ran
+  /// to its end with the app off screen. On screen, the end screen says it;
+  /// on Android, the card standing down says it. Passive, never an alert.
+  void _tellSessionDone(int focusedSec, String? taskTitle) {
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
+    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+      return;
+    }
+    unawaited(
+      LocalNotifications.instance.showSessionDone(
+        focused: Duration(seconds: focusedSec),
+        taskTitle: taskTitle,
+      ),
+    );
   }
 
   /// The ambient view of the running session, or null when there is none.

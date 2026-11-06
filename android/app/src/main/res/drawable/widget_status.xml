@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Focus widget mid-session: "In session" / "Frozen" in the button's
+     place, in a well rather than ice, because it is a status, not a press. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/widget_well" />
+    <corners android:radius="22dp" />
+</shape>

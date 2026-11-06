@@ -149,6 +149,7 @@ class AmbientState {
     this.nextTaskSubject,
     this.nextTaskTint,
     this.weekDays = const [],
+    this.weekMoods = const [],
     this.todayFocusMin = 0,
   });
 
@@ -162,6 +163,10 @@ class AmbientState {
         nextTaskTint: map['nextTaskTint'] as String?,
         weekDays:
             (map['weekDays'] as List?)?.map((e) => e == true).toList() ?? const [],
+        weekMoods: (map['weekMoods'] as List?)
+                ?.map((e) => e is int && e >= 0 && e <= 4 ? e : null)
+                .toList() ??
+            const [],
         todayFocusMin: map['todayFocusMin'] as int? ?? 0,
       );
 
@@ -183,6 +188,18 @@ class AmbientState {
   /// never a puddle, because absence is not depletion.
   final List<bool> weekDays;
 
+  /// The mood logged each of those days, `0` Rough … `4` Great, Monday first;
+  /// null for a day with no check-in.
+  ///
+  /// The This week widget draws Ada at that mood, as the app's own week row
+  /// does. A day with no check-in is still an empty outline, never a puddle:
+  /// the melt here is the student's own word for their day, not a penalty.
+  ///
+  /// It crosses the boundary as `-1` for a day with no check-in, never as
+  /// null: iOS mirrors this payload to the watch as a property list, which
+  /// has no null, and one null would fail the whole push.
+  final List<int?> weekMoods;
+
   /// Minutes focused today, for the lock-screen ring.
   final int todayFocusMin;
 
@@ -193,6 +210,7 @@ class AmbientState {
         if (nextTaskSubject != null) 'nextTaskSubject': nextTaskSubject,
         if (nextTaskTint != null) 'nextTaskTint': nextTaskTint,
         'weekDays': weekDays,
+        'weekMoods': [for (final mood in weekMoods) mood ?? -1],
         'todayFocusMin': todayFocusMin,
       };
 }

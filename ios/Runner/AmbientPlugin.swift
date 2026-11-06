@@ -14,7 +14,10 @@ import ActivityKit
 ///    widgets can read when the app is not running;
 ///  * keep the Live Activity in step with the session — started when one
 ///    begins, ended the moment it stops, because the Island is taken for a
-///    running session and nothing else;
+///    running session and nothing else. A session that ran to its end is
+///    ended with a final "Session done" content (la-lock-done) that the lock
+///    screen keeps for a few minutes; an ended activity is never drawn in the
+///    Island, so that rule still holds;
 ///  * carry presses back. A Freeze from the lock screen runs in the extension
 ///    and parks itself in the shared container, so the app drains that on every
 ///    foreground and reconciles.
@@ -85,7 +88,10 @@ final class AmbientPlugin: NSObject {
 
         case "endSession":
             store(session: nil)
-            endActivity()
+            // Present only when the session ran to its end: the seconds spent,
+            // for the done card. Ended early, or anything else, ends at once.
+            let focusedSec = (call.arguments as? [String: Any])?["focusedSec"] as? Int
+            endActivity(focusedSec: focusedSec)
             reloadWidgets()
             result(nil)
 
@@ -262,17 +268,60 @@ final class AmbientPlugin: NSObject {
         #endif
     }
 
-    private func endActivity() {
+    /// How long the lock screen keeps the "Session done" card. Long enough to
+    /// be seen on the next glance at a phone left on the desk, short enough
+    /// that it is a moment rather than a fixture. Ambient: ending never alerts.
+    private static let doneLinger: TimeInterval = 5 * 60
+
+    /// Stand the activity down.
+    ///
+    /// With `focusedSec` (a session that ran to its end), each activity still
+    /// live is ended — one update, not a push per second — with its final
+    /// content marked done, and left on the lock screen for `doneLinger`. The
+    /// system takes an ended activity out of the Island at once, so the Island
+    /// is still for a running session and nothing else. Without it, or for an
+    /// activity the extension already ended (End on the lock screen), it goes
+    /// immediately. A new session starting replaces a lingering card at once,
+    /// through `startActivity`.
+    private func endActivity(focusedSec: Int? = nil) {
         #if canImport(ActivityKit)
         guard #available(iOS 16.1, *) else { return }
         currentActivityID = nil
         for activity in Activity<FocusActivityAttributes>.activities {
-            Task { await activity.end(dismissalPolicy: .immediate) }
+            guard let focusedSec, activity.activityState == .active else {
+                Task { await activity.end(dismissalPolicy: .immediate) }
+                continue
+            }
+            let linger = ActivityUIDismissalPolicy.after(Date().addingTimeInterval(Self.doneLinger))
+            if #available(iOS 16.2, *) {
+                let doneContent = Self.doneState(activity.content.state, focusedSec: focusedSec)
+                Task {
+                    await activity.end(ActivityContent(state: doneContent, staleDate: nil),
+                                       dismissalPolicy: linger)
+                }
+            } else {
+                let doneContent = Self.doneState(activity.contentState, focusedSec: focusedSec)
+                Task { await activity.end(using: doneContent, dismissalPolicy: linger) }
+            }
         }
         #endif
     }
 
     #if canImport(ActivityKit)
+    /// The final content of a session that ran to its end: done, not held,
+    /// and the time spent as what the card reads ("25:00 focused").
+    @available(iOS 16.1, *)
+    private static func doneState(
+        _ current: FocusActivityAttributes.ContentState,
+        focusedSec: Int
+    ) -> FocusActivityAttributes.ContentState {
+        var state = current
+        state.done = true
+        state.frozen = false
+        state.remainingSec = max(0, state.durationSec - max(0, focusedSec))
+        return state
+    }
+
     @available(iOS 16.1, *)
     private func contentState(_ args: [String: Any]) -> FocusActivityAttributes.ContentState? {
         guard

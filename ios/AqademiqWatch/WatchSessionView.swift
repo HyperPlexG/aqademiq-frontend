@@ -2,9 +2,11 @@ import SwiftUI
 
 /// The one screen.
 ///
-/// §7 draws it as Ada, the clock, and two round buttons — freeze and end. That
-/// is the whole surface, and the restraint is the point: a watch face is read
-/// in about a second, and anything competing with the countdown loses.
+/// v11 (la-quick) draws it as the session cube, the clock, and two round
+/// buttons — freeze and end — on black. That is the whole surface, and the
+/// restraint is the point: a watch face is read in about a second, and anything
+/// competing with the countdown loses. The mock is a thumbnail, so its sizes
+/// are carried over at a watch's scale (about 1.25x) rather than literally.
 struct WatchSessionView: View {
     @ObservedObject var link: WatchLink
 
@@ -17,37 +19,28 @@ struct WatchSessionView: View {
             }
         }
         .containerBackground(for: .navigation) {
-            // Near-black, as every mock in the spec is: purple ice needs
-            // somewhere dark to read.
-            Color(red: 0.055, green: 0.051, blue: 0.078)
+            // Always black, as the Island and StandBy are: ice needs somewhere
+            // dark to read.
+            Color.black
         }
     }
 
     // MARK: - Running
 
     private func running(_ session: WatchSession) -> some View {
-        VStack(spacing: 6) {
-            AdaView(stage: session.meltStage, frozen: session.frozen)
-                .frame(width: 46, height: 46)
+        VStack(spacing: 7) {
+            SessionCube(left: session.left, color: AqColor.iceOnDark)
+                .frame(width: 42, height: 42)
 
             TimeReadout(session: session)
 
-            if let title = session.taskTitle {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .padding(.horizontal, 4)
-            }
-
-            HStack(spacing: 14) {
-                // Freeze is the characteristic press, so it wears the colour
-                // and sits on the left where a right-handed thumb lands first.
+            HStack(spacing: 10) {
+                // Freeze is the characteristic press, so it wears the ice and
+                // sits on the left where a right-handed thumb lands first.
                 RoundControl(
-                    system: session.frozen ? "play.fill" : "snowflake",
-                    ink: .frostLit,
-                    fill: Color.frostLit.opacity(0.18),
+                    glyph: session.frozen ? .play : .freeze,
+                    ink: AqColor.iceOnDark,
+                    fill: AqColor.iceOnDark.opacity(0.18),
                     busy: link.pending == (session.frozen ? "resume" : "freeze")
                 ) {
                     link.send(session.frozen ? "resume" : "freeze")
@@ -55,15 +48,15 @@ struct WatchSessionView: View {
 
                 // End is a square, not a cross: stopping, not cancelling.
                 RoundControl(
-                    system: "stop.fill",
-                    ink: .white.opacity(0.75),
-                    fill: Color.white.opacity(0.10),
+                    glyph: .end,
+                    ink: Color(aqRGB: 0xC9C6D0),
+                    fill: Color.white.opacity(0.12),
                     busy: link.pending == "end"
                 ) {
                     link.send("end")
                 }
             }
-            .padding(.top, 2)
+            .padding(.top, 3)
         }
         .padding(.vertical, 4)
     }
@@ -74,7 +67,7 @@ struct WatchSessionView: View {
     /// screen keeps. No streak, no "you haven't studied", no red.
     private var idle: some View {
         VStack(spacing: 10) {
-            AdaView(stage: 0, showsFace: true)
+            AqArtView(art: .brandAda)
                 .frame(width: 44, height: 44)
                 .opacity(0.65)
             Text("No session")
@@ -94,22 +87,24 @@ struct WatchSessionView: View {
 /// The same distinction as every other surface: running, the system ticks an
 /// end date for free and this app never wakes to update it; frozen, a live
 /// timer would count down a session that is not running, so it becomes static
-/// frost-blue text.
+/// text in ice.
 private struct TimeReadout: View {
     let session: WatchSession
 
     var body: some View {
         Group {
             if session.frozen {
-                Text(staticRemaining).foregroundStyle(Color.frostLit)
+                Text(staticRemaining).foregroundStyle(AqColor.iceOnDark)
             } else {
-                Text(timerInterval: Date.now...session.endsAt,
+                // Never a reversed range once the end has passed.
+                Text(timerInterval: Date.now...max(session.endsAt, Date.now),
                      pauseTime: nil,
                      countsDown: true)
                     .foregroundStyle(.white)
             }
         }
-        .font(.system(size: 30, weight: .bold).monospacedDigit())
+        .font(.system(size: 30, weight: .heavy).monospacedDigit())
+        .multilineTextAlignment(.center)
         .lineLimit(1)
         .minimumScaleFactor(0.6)
     }
@@ -122,7 +117,7 @@ private struct TimeReadout: View {
 
 /// A round control, sized for a thumb rather than for the glyph inside it.
 private struct RoundControl: View {
-    let system: String
+    let glyph: AqGlyph
     let ink: Color
     let fill: Color
     let busy: Bool
@@ -135,18 +130,14 @@ private struct RoundControl: View {
                 if busy {
                     ProgressView().controlSize(.mini).tint(ink)
                 } else {
-                    Image(systemName: system)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(ink)
+                    AqGlyphView(glyph: glyph, color: ink)
+                        .frame(width: 20, height: 20)
                 }
             }
-            .frame(width: 42, height: 42)
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .disabled(busy)
     }
-}
-
-extension Color {
-    static let frostLit = AdaPalette.frostLit
 }

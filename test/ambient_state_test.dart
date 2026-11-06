@@ -154,6 +154,7 @@ void main() {
         nextTaskSubject: 'Linear Algebra',
         nextTaskTint: '#6b5cf0',
         weekDays: const [true, true, false, true, true, false, false],
+        weekMoods: const [3, 2, null, 4, 0, null, null],
         todayFocusMin: 42,
       );
 
@@ -163,7 +164,27 @@ void main() {
       expect(revived.nextTaskTitle, 'Ch. 4 problem set');
       expect(revived.nextTaskTime, '14:00');
       expect(revived.weekDays, original.weekDays);
+      expect(revived.weekMoods, original.weekMoods);
       expect(revived.todayFocusMin, 42);
+    });
+
+    // iOS mirrors this payload to the watch with updateApplicationContext,
+    // which takes property lists only — one null in it fails the whole push,
+    // and the wrist stops hearing about the session.
+    test('a day with no check-in crosses as -1, never as null', () {
+      final map = const AmbientState(
+        weekMoods: [3, null, null, null, null, null, 1],
+      ).toMap();
+
+      expect(map['weekMoods'], [3, -1, -1, -1, -1, -1, 1]);
+      expect(map.values, isNot(contains(isNull)));
+    });
+
+    test('a mood off the scale reads as no check-in', () {
+      final revived = AmbientState.fromMap(const {
+        'weekMoods': [4, -1, 7, 'x', 0],
+      });
+      expect(revived.weekMoods, [4, null, null, null, 0]);
     });
 
     test('an empty payload is readable, not a crash', () {
@@ -171,6 +192,7 @@ void main() {
       final empty = AmbientState.fromMap(const {});
       expect(empty.session, isNull);
       expect(empty.weekDays, isEmpty);
+      expect(empty.weekMoods, isEmpty);
       expect(empty.todayFocusMin, 0);
     });
 

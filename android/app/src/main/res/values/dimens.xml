@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Widget corners before Android 12, where the launcher does not say. -->
-    <dimen name="widget_radius">20dp</dimen>
+    <!-- Widget corners before Android 12, where the launcher does not say:
+         the design's 24 (v11 wg-home). -->
+    <dimen name="widget_radius">24dp</dimen>
 </resources>

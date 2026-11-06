@@ -53,6 +53,37 @@ List<bool> weekDaysFrom(List<MoodLog> logs, {DateTime? now}) {
   ];
 }
 
+/// The mood logged each day this week, Monday first: `0` Rough … `4` Great,
+/// or null for a day with no check-in.
+///
+/// Read from the same logs as [weekDaysFrom], so the two always agree on which
+/// days were shown up for. A day with two check-ins shows the later one — the
+/// day as it ended.
+List<int?> weekMoodsFrom(List<MoodLog> logs, {DateTime? now}) {
+  final monday = AppDate.mondayOf(now ?? DateTime.now());
+  final latest = <String, MoodLog>{};
+  for (final log in logs) {
+    final key = _key(log.date);
+    final seen = latest[key];
+    if (seen == null || _isLater(log, seen)) latest[key] = log;
+  }
+  return [
+    for (var i = 0; i < 7; i++)
+      _moodOf(latest[_key(monday.add(Duration(days: i)))]),
+  ];
+}
+
+bool _isLater(MoodLog a, MoodLog b) {
+  final byTime = a.date.compareTo(b.date);
+  return byTime != 0 ? byTime > 0 : a.phase.index > b.phase.index;
+}
+
+int? _moodOf(MoodLog? log) {
+  if (log == null) return null;
+  final mood = log.mood;
+  return mood < 0 ? 0 : (mood > 4 ? 4 : mood);
+}
+
 String _key(DateTime d) => '${d.year}-${d.month}-${d.day}';
 
 /// Build the glanceable payload the widgets read.
@@ -77,6 +108,7 @@ AmbientState glanceState({
     nextTaskSubject: tag?.label,
     nextTaskTint: tag?.color,
     weekDays: weekDaysFrom(weekLogs, now: now),
+    weekMoods: weekMoodsFrom(weekLogs, now: now),
     todayFocusMin: todayFocusMin,
   );
 }

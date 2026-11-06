@@ -23,6 +23,14 @@ struct WatchSession: Equatable {
         return min(max(1 - Double(remainingSec) / Double(durationSec), 0), 1)
     }
 
+    /// Time left, `0...1`: what the session cube is trimmed to. Read when the
+    /// screen is drawn — on a push, never per second.
+    var left: Double {
+        guard durationSec > 0 else { return 1 }
+        let seconds = frozen ? Double(remainingSec) : endsAt.timeIntervalSinceNow
+        return min(max(seconds / Double(durationSec), 0), 1)
+    }
+
     init?(_ raw: [String: Any]) {
         guard
             let iso = raw["endsAt"] as? String,

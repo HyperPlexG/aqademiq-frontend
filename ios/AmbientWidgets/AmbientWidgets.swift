@@ -1,5 +1,8 @@
 import SwiftUI
 import WidgetKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// One read of the shared container, shared by all three widgets.
 ///
@@ -11,12 +14,12 @@ struct AmbientEntry: TimelineEntry {
 }
 
 struct AmbientProvider: TimelineProvider {
-    /// The spec's own sample, drawn rather than redacted.
+    /// The design's own sample, drawn rather than redacted.
     ///
-    /// An empty state here is what the system turns into grey bars, and §5 is
-    /// explicit that the gallery is a first impression: most apps let the OS
-    /// show a grey placeholder there, and the pick should be obvious before
-    /// anything is installed.
+    /// An empty state here is what the system turns into grey bars, and the
+    /// gallery is a first impression: most apps let the OS show a grey
+    /// placeholder there, and the pick should be obvious before anything is
+    /// installed.
     func placeholder(in context: Context) -> AmbientEntry {
         AmbientEntry(date: Date(), state: .gallerySample)
     }
@@ -60,44 +63,53 @@ struct NextTaskWidget: Widget {
     }
 }
 
+/// wg-home's Next: the label, the task large, and the time and class under a
+/// dot in the class's own colour.
 struct NextTaskView: View {
     let state: AmbientState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label_("Next")
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetLabel("Next")
             if let title = state.nextTaskTitle {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 17, weight: .heavy))
+                    .foregroundStyle(Color.widgetInk)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                HStack(spacing: 5) {
-                    // The subject's own colour, so a glance says which class
-                    // this is before the words are read.
-                    Circle()
-                        .fill(Color(hex: state.nextTaskTint) ?? AdaPalette.accent)
-                        .frame(width: 5, height: 5)
-                    // Time only, as §5 draws it — "• 14:00". The subject is
-                    // already said by the dot's colour, and spelling it out too
-                    // truncated to "14:00 · Line…" at small size, which is
-                    // worse than either half on its own.
-                    Text(state.nextTaskTime ?? state.nextTaskSubject ?? "")
-                        .font(.system(size: 10.5).monospaced())
-                        .foregroundStyle(Color.widgetMeta)
-                        .lineLimit(1)
+                    .padding(.top, 6)
+                Spacer(minLength: 4)
+                if let meta = meta {
+                    HStack(spacing: 6) {
+                        // The subject's own colour, so a glance says which
+                        // class this is before the words are read.
+                        Circle()
+                            .fill(Color(hex: state.nextTaskTint) ?? AqColor.ice)
+                            .frame(width: 8, height: 8)
+                        Text(meta)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.widgetSub)
+                            .lineLimit(1)
+                    }
                 }
             } else {
                 // Nothing scheduled is not a failure, and never says so.
                 Text("Nothing scheduled")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.widgetMeta)
+                    .font(.system(size: 17, weight: .heavy))
+                    .foregroundStyle(Color.widgetSub)
+                    .padding(.top, 6)
+                Spacer(minLength: 0)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(URL(string: "aqademiq://plan"))
+    }
+
+    /// "2:00 PM · CN 302".
+    private var meta: String? {
+        let parts = [state.nextTaskTime, state.nextTaskSubject]
+            .compactMap { $0?.isEmpty == false ? $0 : nil }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
 
@@ -105,10 +117,12 @@ struct NextTaskView: View {
 
 /// Seven marks, and no judgement.
 ///
-/// A day the student showed up wears Ada's face; a day they did not is an empty
-/// outline — never a puddle, because absence is not depletion. No count, no
-/// percentage, no red, and nothing that reads as a decaying streak: the widget
-/// is the surface with the least consent, so it never guilts.
+/// A day the student checked in wears Ada at the mood they logged, as the
+/// app's own week row draws her; a day they did not is an empty dashed outline
+/// — never a puddle, because absence is not depletion. Today, still open, is
+/// the outline in the accent with a "+". No count, no percentage, no red, and
+/// nothing that reads as a decaying streak: the widget is the surface with the
+/// least consent, so it never guilts.
 struct WeekWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "AqademiqWeek", provider: AmbientProvider()) { entry in
@@ -117,9 +131,7 @@ struct WeekWidget: Widget {
         }
         .configurationDisplayName("This week")
         .description("The days you showed up. No streak, no scolding.")
-        // Medium, because seven cells cannot fit a small widget: at 22pt with
-        // 5pt gutters the row wants 184pt against roughly 140pt of usable
-        // width, so at small it either clipped or squeezed to nothing. §5
+        // Medium, because seven cells cannot fit a small widget; the design
         // draws this one wide for exactly that reason.
         .supportedFamilies([.systemMedium])
     }
@@ -136,53 +148,52 @@ struct WeekView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label_("This week")
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetLabel("This week")
             Spacer(minLength: 0)
-            // Evenly divided rather than fixed-width: a medium widget is a
-            // different number of points on every device, and seven columns
-            // that each take their share stay centred on all of them.
+            // Spread edge to edge (space-between), as the row is in the app.
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { index in
-                    let shown = index < state.weekDays.count && state.weekDays[index]
-                    VStack(spacing: 7) {
-                        ZStack {
-                            if shown {
-                                // A day you showed up wears Ada's face.
-                                AdaView(stage: 0, showsFace: true)
-                            } else {
-                                // A day you did not is an empty outline, never a
-                                // puddle: absence is not depletion.
-                                //
-                                // Ada's own stage-0 silhouette, stroked — §1's
-                                // "Outline · nothing happened" is literally her,
-                                // empty. A generic rounded square filled the whole
-                                // cell while her body only fills the middle 38 of
-                                // 60 units, so the empty days drew visibly larger
-                                // than the days you showed up.
-                                AdaShape(melt: 0)
-                                    .stroke(Color.white.opacity(0.22), lineWidth: 1.4)
-                            }
-                        }
-                        .frame(width: 28, height: 28)
+                    VStack(spacing: 3) {
+                        day(index)
+                            .frame(width: 34, height: 34)
                         Text(Self.letters[index])
-                            .font(.system(size: 10,
-                                          weight: index == todayIndex ? .bold : .medium)
-                                .monospaced())
-                            .foregroundStyle(index == todayIndex
-                                             ? AdaPalette.accent : Color.widgetMeta)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(index == todayIndex ? AqColor.ice : Color.widgetDim)
                     }
-                    .frame(maxWidth: .infinity)
+                    if index < 6 {
+                        Spacer(minLength: 0)
+                    }
                 }
             }
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .widgetURL(URL(string: "aqademiq://stats"))
     }
+
+    @ViewBuilder
+    private func day(_ index: Int) -> some View {
+        if let mood = state.mood(at: index) {
+            AqArtView(art: AqArt.moods[mood])
+                .frame(width: 30, height: 30)
+        } else {
+            let today = index == todayIndex
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(today ? AqColor.ice : Color.widgetDayEmpty,
+                                  style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
+                if today {
+                    Text("+")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(AqColor.ice)
+                }
+            }
+            .frame(width: 27, height: 27)
+        }
+    }
 }
 
-// MARK: - Start 5
+// MARK: - Focus
 
 /// The one operable thing on any widget.
 ///
@@ -201,72 +212,104 @@ struct FocusWidget: Widget {
     }
 }
 
+/// wg-home's Focus: Ada, and "Start 5 min". While a session runs it shows the
+/// session's cube and says so, rather than offering to start a second one.
 struct FocusWidgetView: View {
     let state: AmbientState
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 0) {
             HStack {
-                Label_("Focus")
-                Spacer()
+                WidgetLabel("Focus")
+                    .padding(.leading, 2)
+                Spacer(minLength: 0)
             }
             Spacer(minLength: 0)
-            AdaView(stage: state.session?.meltStage ?? 0,
-                    frozen: state.session?.frozen ?? false)
-                .frame(height: 52)
+            Group {
+                if let session = state.session {
+                    SessionCube(left: session.left, color: Color.widgetIce)
+                } else {
+                    AqArtView(art: .brandAda)
+                }
+            }
+            .frame(width: 54, height: 54)
             Spacer(minLength: 0)
             if let session = state.session {
-                // A session is already running: show it rather than offering to
-                // start a second one.
-                Text(session.frozen ? "Frozen" : "In session")
-                    .font(.system(size: 12.5, weight: .bold))
-                    .foregroundStyle(session.frozen ? AdaPalette.frostLit : Color.widgetMeta)
-                    .frame(maxWidth: .infinity)
+                pill(session.frozen ? "Frozen" : "In session",
+                     ink: session.frozen ? Color.widgetIce : Color.widgetSub,
+                     fill: Color.widgetWell)
             } else if #available(iOS 17.0, *) {
-                Button(intent: StartFiveIntent()) {
-                    Text("Start 5")
-                        .font(.system(size: 13, weight: .bold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                }
-                .buttonStyle(.plain)
-                .background(AdaPalette.accent, in: RoundedRectangle(cornerRadius: 11))
-                .foregroundStyle(.white)
+                Button(intent: StartFiveIntent()) { startPill }
+                    .buttonStyle(.plain)
             } else {
-                Text("Start 5")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(AdaPalette.accent, in: RoundedRectangle(cornerRadius: 11))
-                    .foregroundStyle(.white)
+                startPill
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .widgetURL(URL(string: "aqademiq://focus/start5"))
     }
+
+    private var startPill: some View {
+        pill("Start 5 min", ink: .white, fill: AqColor.ice)
+    }
+
+    private func pill(_ text: String, ink: Color, fill: Color) -> some View {
+        Text(text)
+            .font(.system(size: 15, weight: .heavy))
+            .foregroundStyle(ink)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .background(Capsule().fill(fill))
+            .contentShape(Capsule())
+    }
 }
 
 // MARK: - Shared bits
 
-struct Label_: View {
+/// The label every widget opens with: "Next", "This week", "Focus".
+struct WidgetLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
 
     var body: some View {
-        Text(text.uppercased())
-            .font(.system(size: 8.5, weight: .bold).monospaced())
-            .tracking(1.1)
-            .foregroundStyle(Color.widgetLabel)
+        Text(text)
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(Color.widgetSub)
+            .lineLimit(1)
     }
 }
 
 extension Color {
-    /// The design's widget surfaces. These are dark by intent, not by theme:
-    /// every mock in the spec sits on near-black, because that is where a
-    /// melting purple cube reads.
-    static let widgetBG = Color(red: 0.086, green: 0.082, blue: 0.110)   // #16151c
-    static let widgetLabel = Color(red: 0.435, green: 0.424, blue: 0.490) // #6f6c7d
-    static let widgetMeta = Color(red: 0.545, green: 0.529, blue: 0.596)  // #8b8798
+    /// The widget card follows the theme in v11 (wg-home): white by day,
+    /// #1C1C1E by night.
+    static let widgetCard = Color.aqDynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
+    static let widgetInk = Color.aqDynamic(light: 0x111111, dark: 0xFFFFFF)
+    static let widgetSub = Color.aqDynamic(light: 0x6E6E73, dark: 0xA1A1A8)
+    /// The week's letters (DIM).
+    static let widgetDim = Color.aqDynamic(light: 0xA7A7A7, dark: 0x505050)
+    /// Ice on the card: --aq-ice by day, --aq-ice-on-dark by night.
+    static let widgetIce = Color.aqDynamic(light: 0x6B5CF0, dark: 0xCBBCFD)
+    /// The well a status sits in.
+    static let widgetWell = Color.aqDynamic(light: 0xECE9FB, dark: 0xFFFFFF, darkAlpha: 0.10)
+    /// A day with no check-in: the dashed outline, the same in both themes.
+    static let widgetDayEmpty = Color(aqRGB: 0xD8D4CC)
+
+    /// A light / dark pair, resolved by the system as the widget is drawn.
+    static func aqDynamic(light: UInt32, dark: UInt32, darkAlpha: CGFloat = 1) -> Color {
+        func ui(_ rgb: UInt32, _ alpha: CGFloat) -> UIColor {
+            UIColor(
+                red: CGFloat((rgb >> 16) & 0xFF) / 255,
+                green: CGFloat((rgb >> 8) & 0xFF) / 255,
+                blue: CGFloat(rgb & 0xFF) / 255,
+                alpha: alpha
+            )
+        }
+        return Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark ? ui(dark, darkAlpha) : ui(light, 1)
+        })
+    }
 
     /// Parse `#RRGGBB` as written by the app into the shared state.
     init?(hex: String?) {
@@ -282,14 +325,17 @@ extension Color {
 }
 
 extension View {
-    /// iOS 17 requires widgets to declare their background explicitly; earlier
-    /// versions draw it themselves and reject the modifier.
+    /// The home-screen card. iOS 17 requires widgets to declare their
+    /// background explicitly, and applies the system's content margins itself
+    /// — padding added on top of those doubled the inset and left the v11
+    /// content no room. Earlier versions draw the background themselves and
+    /// reject the modifier, so they get the design's 16 by hand.
     @ViewBuilder
     func containerBackgroundIfAvailable() -> some View {
         if #available(iOS 17.0, *) {
-            self.padding(14).containerBackground(for: .widget) { Color.widgetBG }
+            self.containerBackground(for: .widget) { Color.widgetCard }
         } else {
-            self.padding(14).background(Color.widgetBG)
+            self.padding(16).background(Color.widgetCard)
         }
     }
 }

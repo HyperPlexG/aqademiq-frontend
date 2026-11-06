@@ -67,6 +67,14 @@ struct AmbientSessionState {
         return min(max(done / Double(durationSec), 0), 1)
     }
 
+    /// Time left, `0...1`: what the session cube is trimmed to. Read when the
+    /// widget is drawn, so a running session measures from `endsAt`.
+    var left: Double {
+        guard durationSec > 0 else { return 1 }
+        let seconds = frozen ? Double(remainingSec) : endsAt.timeIntervalSinceNow
+        return min(max(seconds / Double(durationSec), 0), 1)
+    }
+
     init?(json: [String: Any]) {
         guard
             let iso = json["endsAt"] as? String,
@@ -100,20 +108,41 @@ struct AmbientState {
     /// depletion.
     var weekDays: [Bool] = []
 
+    /// The mood logged each day, `0` Rough … `4` Great, Monday first; nil for
+    /// a day with no check-in. The This week row draws Ada at that mood.
+    ///
+    /// Written as `-1` for a day with no check-in, never null: the same payload
+    /// goes to the watch as a property list, which has no null.
+    var weekMoods: [Int?] = []
+
     var todayFocusMin: Int = 0
 
     init() {}
 
-    /// What the widget gallery shows — the same task and week the design PDF
-    /// draws (§5), so the three widgets are recognisable before they exist on
-    /// anyone's home screen. Never written to the App Group; the gallery only.
+    /// The mood to draw for a day, or nil for an empty outline.
+    ///
+    /// A payload from before `weekMoods` existed still says which days were
+    /// shown up for; those wear Ada at her best rather than going blank.
+    func mood(at index: Int) -> Int? {
+        if !weekMoods.isEmpty {
+            guard index < weekMoods.count, let mood = weekMoods[index] else { return nil }
+            return min(max(mood, 0), 4)
+        }
+        return index < weekDays.count && weekDays[index] ? 4 : nil
+    }
+
+    /// What the widget gallery shows — the same task and week the v11 design
+    /// draws (wg-home), so the three widgets are recognisable before they exist
+    /// on anyone's home screen. Never written to the App Group; the gallery
+    /// only.
     static var gallerySample: AmbientState {
         var state = AmbientState()
-        state.nextTaskTitle = "Ch. 4 problem set"
-        state.nextTaskTime = "14:00"
-        state.nextTaskSubject = "Linear Algebra"
-        state.nextTaskTint = "#6B5CF0"
-        state.weekDays = [true, true, false, true, false, false, false]
+        state.nextTaskTitle = "Networks revision"
+        state.nextTaskTime = "2:00 PM"
+        state.nextTaskSubject = "CN 302"
+        state.nextTaskTint = "#1F6FAE"
+        state.weekDays = [true, true, false, false, false, false, false]
+        state.weekMoods = [3, 2, nil, nil, nil, nil, nil]
         return state
     }
 
@@ -126,6 +155,11 @@ struct AmbientState {
         nextTaskSubject = json["nextTaskSubject"] as? String
         nextTaskTint = json["nextTaskTint"] as? String
         weekDays = (json["weekDays"] as? [Any])?.map { ($0 as? Bool) ?? false } ?? []
+        // -1 (or anything else out of range) is a day with no check-in.
+        weekMoods = (json["weekMoods"] as? [Any])?.map { raw -> Int? in
+            guard let mood = raw as? Int, (0...4).contains(mood) else { return nil }
+            return mood
+        } ?? []
         todayFocusMin = json["todayFocusMin"] as? Int ?? 0
     }
 }

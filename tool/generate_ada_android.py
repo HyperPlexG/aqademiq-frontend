@@ -6,6 +6,16 @@ What comes out of it: the coloured Ada for the session card and the widgets
 ic_stat_frost_N), the Quick Settings tile icon (ic_qs_ada), and her empty
 outlines for the This week widget (ada_outline, ada_outline_today).
 
+v11 (the icon pack) adds the session card's small icon: aq_brand_ada_mono
+(ic_stat_ada) while it runs and the pack's freeze glyph (ic_stat_freeze) while
+it is held, and the tile icon becomes aq_brand_ada_mono too. Those are not
+redrawn here either: their geometry is read from lib/shared/icons/
+aq_glyphs.g.dart, which tool/generate_aq_icons.js emits from
+prototypes/v11/aq-icons.js (normalised and verified), so there is one
+normaliser and nothing here re-derives the pack. Run that first if the pack
+changes. The pack's other native drawables (the session cube, aq_brand_ada,
+Ada's moods) come out of tool/generate_ambient_glyphs.js.
+
 She exists three times over — a Flutter CustomPainter, a SwiftUI Shape, and
 these — and three hand-drawn mascots drift within two releases. So the Android
 copies are not drawn: they are emitted from the same interpolation the painter
@@ -18,7 +28,9 @@ Run after changing any of those:
 
     python3 tool/generate_ada_android.py
 """
+import math
 import os
+import re
 
 OUT = os.path.join(os.path.dirname(__file__), '..', 'android', 'app', 'src', 'main', 'res', 'drawable')
 
@@ -188,69 +200,235 @@ def mask(m: float, frozen: bool) -> str:
 '''
 
 
-def tile_icon() -> str:
-    """Ada for the Quick Settings tile (spec §7).
+# The pack (v11): glyph geometry read from the Dart the pack generator emits.
+GLYPHS_DART = os.path.join(os.path.dirname(__file__), '..', 'lib', 'shared', 'icons', 'aq_glyphs.g.dart')
+PACK_STROKE = 1.75  # the pack's weight at 24
 
-    A tile icon is tinted to one colour like a status-bar icon, but it is drawn
-    large enough to keep a face — so here she is the whole cube, with the
-    closed eyes, the smile and the gloss cut out of it rather than drawn on.
+
+def pack_glyph(name: str) -> list:
+    """One glyph's layers, as tool/generate_aq_icons.js wrote them to Dart.
+
+    Each layer is a dict: id, ops (absolute move/line/cubic/close in the 24 x 24
+    grid), role, and the knock stroke width where the pack gives one. Reading
+    the generated, verified data means the arcs and quadratics in
+    prototypes/v11/aq-icons.js are converted once, by one tool.
     """
-    g = 1.7  # half her outline, folded into the fill so the silhouette matches
-    tL, tR, tY, bY, r = 11 - g, 49 + g, 8 - g, 50 + g, 9 + g
-    cube = (
-        f"M{tL + r:.2f},{tY:.2f} L{tR - r:.2f},{tY:.2f} "
-        f"Q{tR:.2f},{tY:.2f} {tR:.2f},{tY + r:.2f} L{tR:.2f},{bY - r:.2f} "
-        f"Q{tR:.2f},{bY:.2f} {tR - r:.2f},{bY:.2f} L{tL + r:.2f},{bY:.2f} "
-        f"Q{tL:.2f},{bY:.2f} {tL:.2f},{bY - r:.2f} L{tL:.2f},{tY + r:.2f} "
-        f"Q{tL:.2f},{tY:.2f} {tL + r:.2f},{tY:.2f} Z"
+    with open(GLYPHS_DART, encoding='utf-8') as fh:
+        src = fh.read()
+    const = '_g' + ''.join(part[:1].upper() + part[1:] for part in name.split('_'))
+    start = src.find('const AqGlyph ' + const + ' = AqGlyph(')
+    if start < 0:
+        raise SystemExit('aq_glyphs.g.dart: no glyph ' + name)
+    block = src[start:src.find('\n);', start)]
+    # Only the outline layer list is read; a separate fill-variant list would
+    # be refused rather than misread.
+    if 'fillLayers:' in block:
+        raise SystemExit(name + ': fillLayers are not supported here')
+    layers = []
+    for lid, pref, extra in re.findall(r"AqLayer\('(\w+)', (_p\d+)((?:, [^)]*)?)\)", block):
+        m = re.search(r'const List<double> ' + pref + r' = <double>\[([^\]]*)\];', src)
+        if not m:
+            raise SystemExit('aq_glyphs.g.dart: no path ' + pref)
+        data = [float(v) for v in m.group(1).split(',') if v.strip()]
+        role = re.search(r'role: AqRole\.(\w+)', extra)
+        sw = re.search(r'strokeWidth: ([\d.]+)', extra)
+        layers.append({
+            'id': lid,
+            'ops': decode(data),
+            'role': role.group(1) if role else 'plain',
+            'sw': float(sw.group(1)) if sw else None,
+            'kfill': 'knockFill: true' in extra,
+        })
+    if not layers:
+        raise SystemExit(name + ': no layers found')
+    return layers
+
+
+def decode(data: list) -> list:
+    """The flat op list (0 move, 1 line, 2 cubic, 3 close) as (op, args)."""
+    ops, i = [], 0
+    while i < len(data):
+        op = int(data[i])
+        n = {0: 2, 1: 2, 2: 6, 3: 0}[op]
+        ops.append((op, data[i + 1:i + 1 + n]))
+        i += 1 + n
+    return ops
+
+
+def ops_path(ops: list) -> str:
+    out = []
+    for op, a in ops:
+        if op == 3:
+            out.append('Z')
+        else:
+            pts = ' '.join(f'{a[k]:g},{a[k + 1]:g}' for k in range(0, len(a), 2))
+            out.append({0: 'M', 1: 'L', 2: 'C'}[op] + pts)
+    return ' '.join(out)
+
+
+def cubic(p0, p1, p2, p3, u):
+    """A point on a cubic and its tangent there."""
+    v = 1 - u
+    x = v ** 3 * p0[0] + 3 * v * v * u * p1[0] + 3 * v * u * u * p2[0] + u ** 3 * p3[0]
+    y = v ** 3 * p0[1] + 3 * v * v * u * p1[1] + 3 * v * u * u * p2[1] + u ** 3 * p3[1]
+    dx = 3 * v * v * (p1[0] - p0[0]) + 6 * v * u * (p2[0] - p1[0]) + 3 * u * u * (p3[0] - p2[0])
+    dy = 3 * v * v * (p1[1] - p0[1]) + 6 * v * u * (p2[1] - p1[1]) + 3 * u * u * (p3[1] - p2[1])
+    return (x, y), (dx, dy)
+
+
+def subpaths(ops: list) -> list:
+    """Each subpath as sampled (point, tangent) pairs, and whether it closed.
+    The first point's tangent is None; band() borrows the next one's."""
+    out, cur, pts, closed = [], None, [], False
+    steps = 12
+    for op, a in ops:
+        if op == 0:
+            if pts:
+                out.append((pts, closed))
+            cur, pts, closed = (a[0], a[1]), [], False
+            pts.append(((a[0], a[1]), None))
+        elif op == 1:
+            end = (a[0], a[1])
+            pts.append((end, (end[0] - cur[0], end[1] - cur[1])))
+            cur = end
+        elif op == 2:
+            p1, p2, p3 = (a[0], a[1]), (a[2], a[3]), (a[4], a[5])
+            for k in range(1, steps + 1):
+                pts.append(cubic(cur, p1, p2, p3, k / steps))
+            cur = p3
+        else:
+            closed = True
+    if pts:
+        out.append((pts, closed))
+    return out
+
+
+def area(poly: list) -> float:
+    """Shoelace area; positive is screen-clockwise (y points down)."""
+    n = len(poly)
+    return sum(poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1] for i in range(n)) / 2
+
+
+def poly_path(poly: list) -> str:
+    return 'M' + ' L'.join(f'{x:.2f},{y:.2f}' for x, y in poly) + ' Z'
+
+
+def band(pts: list, width: float) -> list:
+    """A stroked open subpath, with round caps, as the polygon a mask can cut
+    out — a vector drawable can subtract a filled shape, never a stroke."""
+    h = width / 2
+    seq = []
+    for i, (p, t) in enumerate(pts):
+        if t is None:
+            t = pts[i + 1][1] if i + 1 < len(pts) and pts[i + 1][1] else (1, 0)
+        n = math.hypot(t[0], t[1]) or 1
+        seq.append((p, (t[0] / n, t[1] / n)))
+    left = [(p[0] - t[1] * h, p[1] + t[0] * h) for p, t in seq]
+    right = [(p[0] + t[1] * h, p[1] - t[0] * h) for p, t in seq]
+
+    def cap(p, t, a0):
+        """Half a circle round p, from the side at a0 past the tip."""
+        a = math.atan2(t[1], t[0])
+        return [(p[0] + h * math.cos(a + a0 - math.pi * k / 8), p[1] + h * math.sin(a + a0 - math.pi * k / 8))
+                for k in range(1, 8)]
+
+    (pe, te), (ps, ts) = seq[-1], seq[0]
+    return left + cap(pe, te, math.pi / 2) + right[::-1] + cap(ps, ts, -math.pi / 2)
+
+
+def mono_silhouette() -> str:
+    """aq_brand_ada_mono as one evenOdd path: the body, with her gloss, eyes
+    and mouth (the pack's knock layers) as holes.
+
+    The pack draws the body filled *and* stroked at 1.75, so the silhouette is
+    the body grown by half that weight; it is a rounded rect, grown as one.
+    Each hole is also wound against the body, so it stays a hole under the
+    non-zero rule an older phone applies in place of evenOdd.
+    """
+    layers = pack_glyph('brand_ada_mono')
+    body = [l for l in layers if l['role'] == 'body']
+    if len(body) != 1:
+        raise SystemExit('brand_ada_mono: expected one body layer')
+    ops = body[0]['ops']
+    if [op for op, _ in ops] != [0, 1, 2, 1, 2, 1, 2, 1, 2, 3]:
+        raise SystemExit('brand_ada_mono: the body is no longer a rounded rect')
+    xs = [a[k] for _, a in ops for k in range(0, len(a), 2)]
+    ys = [a[k] for _, a in ops for k in range(1, len(a), 2)]
+    g = PACK_STROKE / 2
+    x0, y0, x1, y1 = min(xs) - g, min(ys) - g, max(xs) + g, max(ys) + g
+    r = max(xs) - ops[1][1][0] + g  # the top edge stops this short of the side
+    shell = (
+        f'M{x0 + r:.2f},{y0:.2f} L{x1 - r:.2f},{y0:.2f} Q{x1:.2f},{y0:.2f} {x1:.2f},{y0 + r:.2f} '
+        f'L{x1:.2f},{y1 - r:.2f} Q{x1:.2f},{y1:.2f} {x1 - r:.2f},{y1:.2f} '
+        f'L{x0 + r:.2f},{y1:.2f} Q{x0:.2f},{y1:.2f} {x0:.2f},{y1 - r:.2f} '
+        f'L{x0:.2f},{y0 + r:.2f} Q{x0:.2f},{y0:.2f} {x0 + r:.2f},{y0:.2f} Z'
     )
-    t = 2.4  # how thick a cut has to be to survive at 24dp
+    holes = []
+    for layer in layers:
+        if layer['role'] != 'knock':
+            continue
+        for pts, _closed in subpaths(layer['ops']):
+            if layer['kfill']:
+                poly = [p for p, _ in pts]
+            else:
+                poly = band(pts, layer['sw'] or PACK_STROKE)
+            if area(poly) > 0:  # the shell is screen-clockwise
+                poly = poly[::-1]
+            holes.append(poly_path(poly))
+    return ' '.join([shell] + holes)
 
-    def band(x0: float, y0: float, cx: float, cy: float, x1: float, y1: float) -> str:
-        """A stroked quadratic, as the outline a mask can cut out.
 
-        A vector drawable cannot subtract a stroke, only a filled shape, so the
-        painter's eye and mouth strokes are walked and offset by half their
-        width to either side.
-        """
-        steps = 12
-        left, right = [], []
-        for i in range(steps + 1):
-            u = i / steps
-            x = (1 - u) ** 2 * x0 + 2 * (1 - u) * u * cx + u ** 2 * x1
-            yy = (1 - u) ** 2 * y0 + 2 * (1 - u) * u * cy + u ** 2 * y1
-            dx = 2 * (1 - u) * (cx - x0) + 2 * u * (x1 - cx)
-            dy = 2 * (1 - u) * (cy - y0) + 2 * u * (y1 - cy)
-            n = (dx * dx + dy * dy) ** 0.5
-            nx, ny = -dy / n * t / 2, dx / n * t / 2
-            left.append((x + nx, yy + ny))
-            right.append((x - nx, yy - ny))
-        pts = left + right[::-1]
-        return "M" + " L".join(f"{a:.2f},{b:.2f}" for a, b in pts) + " Z"
-
-    def eye(cx: float) -> str:
-        # The painter's closed, happy eye — a touch wider so it survives 24dp.
-        y, er = 28.2, 3.1
-        return band(cx - er, y, cx, y - er * 1.9, cx + er, y)
-
-    smile = band(30 - 4.8, 34.2, 30, 34.2 + 4.0, 30 + 4.8, 34.2)
-    gloss = "M17.90,14.00 a2.1,2.1 0 1,0 4.2,0 a2.1,2.1 0 1,0 -4.2,0 Z"
+def mono_icon(what: str) -> str:
     return f'''<?xml version="1.0" encoding="utf-8"?>
 <!-- GENERATED by tool/generate_ada_android.py — do not edit by hand.
-     Ada for the Quick Settings tile: the cube, her face cut out of it. -->
+     {what}
+     aq_brand_ada_mono, from the pack's own geometry (aq_glyphs.g.dart). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="{MASK_VIEWPORT}"
-    android:viewportHeight="{MASK_VIEWPORT}">
-    <group android:translateX="-{MASK_INSET}" android:translateY="-{MASK_INSET}">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:fillType="evenOdd"
-            android:pathData="{cube} {eye(24)} {eye(36)} {smile} {gloss}" />
-    </group>
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="{mono_silhouette()}" />
 </vector>
 '''
+
+
+def freeze_icon() -> str:
+    """The pack's freeze glyph, as the small icon of a held session.
+
+    Every frozen surface in v11 leads with this mark, and a status bar keeps
+    nothing but outline — so held has to read as the snowflake, not a tint.
+    """
+    paths = '\n'.join(
+        f'    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="{PACK_STROKE}" '
+        f'android:strokeLineCap="round" android:strokeLineJoin="round" '
+        f'android:pathData="{ops_path(layer["ops"])}" />'
+        for layer in pack_glyph('freeze')
+    )
+    return f'''<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERATED by tool/generate_ada_android.py — do not edit by hand.
+     The session card's small icon while it is frozen: the pack's freeze glyph
+     (aq_glyphs.g.dart). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+{paths}
+</vector>
+'''
+
+
+def tile_icon() -> str:
+    """Ada for the Quick Settings tile (spec §7; v11 la-quick).
+
+    A tile icon is tinted to one colour like a status-bar icon, so v11 draws it
+    as aq_brand_ada_mono — the same mark as the session card's small icon.
+    """
+    return mono_icon('Ada for the Quick Settings tile.')
 
 
 def outline(alpha: str, what: str) -> str:
@@ -289,7 +467,9 @@ def main() -> None:
     written = []
 
     def write(name: str, body: str) -> None:
-        with open(os.path.join(OUT, name), 'w') as fh:
+        # UTF-8 explicitly: the headers carry an em dash, and the platform
+        # default on Windows (cp1252) silently writes it as a different byte.
+        with open(os.path.join(OUT, name), 'w', encoding='utf-8') as fh:
             fh.write(body)
         written.append(name)
 
@@ -300,6 +480,8 @@ def main() -> None:
         write(f'ic_stat_ada_{stage}.xml', mask(m, frozen=False))
         write(f'ic_stat_frost_{stage}.xml', mask(m, frozen=True))
     write('ic_qs_ada.xml', tile_icon())
+    write('ic_stat_ada.xml', mono_icon("The session card's small icon while it runs."))
+    write('ic_stat_freeze.xml', freeze_icon())
     write('ada_outline.xml', outline('42', 'a day that did not happen, never a puddle'))
     write('ada_outline_today.xml', outline('8C', 'today, not checked in yet'))
     print(f"wrote {len(written)} drawables to res/drawable/")

@@ -1,9 +1,11 @@
 import 'package:aqademiq/core/router/app_router.dart';
 import 'package:aqademiq/core/router/pending_launch_route.dart';
+import 'package:aqademiq/data/models/enums.dart';
 import 'package:aqademiq/data/models/focus_session.dart';
 import 'package:aqademiq/data/repositories/focus_repository.dart';
 import 'package:aqademiq/services/ambient/ambient_bridge.dart';
 import 'package:aqademiq/services/ambient/ambient_service.dart';
+import 'package:aqademiq/services/local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -148,6 +150,45 @@ void main() {
     expect(channel.sessionCalls, contains('endSession'));
   });
 
+  // la-lock-done. A session that ran to its end leaves one "Session done"
+  // card on the lock screen: the call that stands the surfaces down carries
+  // the time spent, and it is the only call — the card is the activity's final
+  // content, not another push.
+  test('a session that runs to its end stands down with what it spent',
+      () async {
+    final controller = container.read(focusControllerProvider.notifier)
+      ..configure(durationMin: 25);
+    await controller.start();
+    await settle();
+    channel.calls.clear();
+    channel.payloads.clear();
+
+    // Exactly what the timer's last tick does.
+    controller.state = container
+        .read(focusControllerProvider)
+        .copyWith(elapsedSec: 1500, status: FocusStatus.completed);
+    await settle();
+
+    expect(channel.sessionCalls, ['endSession']);
+    final payload = channel.payloads[channel.calls.indexOf('endSession')];
+    expect(payload?['focusedSec'], 1500);
+  });
+
+  test('a session ended early just goes, with no done card', () async {
+    final controller = container.read(focusControllerProvider.notifier)
+      ..configure(durationMin: 25);
+    await controller.start();
+    await settle();
+    channel.calls.clear();
+    channel.payloads.clear();
+
+    await controller.complete();
+    await settle();
+
+    expect(channel.sessionCalls, contains('endSession'));
+    expect(channel.payloads[channel.calls.indexOf('endSession')], isNull);
+  });
+
   test('a second passing is not worth a push', () async {
     final controller = container.read(focusControllerProvider.notifier)
       ..configure(durationMin: 25);
@@ -203,5 +244,26 @@ void main() {
     // (next task, the week) on its own schedule and is not part of this budget.
     expect(channel.sessionCalls.length, lessThanOrEqualTo(kMeltStages + 1));
     expect(channel.sessionCalls, contains('startSession'));
+  });
+
+  // notif-ios: "Session done", in the design's own words.
+  group('the session-done notification', () {
+    test('says what was spent, and on what', () {
+      expect(
+        sessionDoneBody(
+          const Duration(minutes: 25),
+          taskTitle: 'LL(1) parsing notes',
+        ),
+        '25:00 on LL(1) parsing notes.',
+      );
+    });
+
+    test('is still true without a task', () {
+      expect(sessionDoneBody(const Duration(minutes: 5)), '5:00 of focus.');
+      expect(
+        sessionDoneBody(const Duration(seconds: 3605), taskTitle: '  '),
+        '60:05 of focus.',
+      );
+    });
   });
 }
