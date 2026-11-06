@@ -1,44 +1,47 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_mood.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/weekly_report.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/icons/aq_icon.dart';
 import '../../../../shared/mascot/ada_mascot.dart';
+import '../../../../shared/widgets/ic.dart';
+import '../../../../shared/widgets/primary_button.dart';
 import '../../report_copy.dart';
 import 'core_column.dart';
 
 /// The beats of the weekly story, one widget per page.
 ///
-/// All of these are laid out for a real phone — roughly 390pt wide and 700pt of
-/// usable height once the story's own chrome is taken off the top. The design
-/// mocks are 2× renders, so every size here is about half of what the mock
-/// measures; taken literally the numeral alone would be 250pt tall and the core
-/// would not fit on a 6.1" screen with its caption.
+/// Sized from the v11 frames (`core-*`), which are drawn at 1× on a 402pt
+/// phone, so the numbers here are the design's own: an 11pt caps label, a
+/// 28pt statement (34 for the shape of the week), 13pt captions, the 132pt
+/// numeral and a 104pt core.
 ///
 /// Each beat is one screenful and must never scroll: a page you can half-scroll
 /// inside a horizontal pager fights the swipe. [BeatFrame] enforces that by
 /// centring the content and letting it shrink rather than overflow.
-///
-/// Sizes worth not "tidying":
-///  * `_statement` at 27 is the largest text that keeps "A quiet start, then
-///    days that held." to three lines at 390pt. At 30 it takes four and the
-///    beat stops reading as one held sentence.
-///  * The numeral at 128 is the one place a big number is the whole point.
 abstract final class BeatSize {
-  static const double label = 9.5;
-  static const double statement = 27;
-  static const double body = 13.5;
-  static const double numeral = 128;
-  static const double coreWidth = 128;
-  static const double coreHeight = 330;
-  static const double cube = 44;
+  static const double label = 11;
+  static const double shape = 34;
+  static const double statement = 28;
+  static const double body = 13;
+  static const double numeral = 132;
+  static const double coreWidth = 104;
+
+  /// Seven 42pt bands and the rim, as `IceCore w={104} band={42}` draws it.
+  static const double coreHeight = 306;
+  static const double cube = 40;
+
+  /// The cracked cube that marks one thaw.
+  static const double thawCube = 30;
 }
 
-/// Common frame: safe padding, vertical centring, and a hard no-overflow rule.
+/// Common frame: the story's 22pt margins, vertical centring a little above the
+/// middle (as every `core-*` frame sits), and a hard no-overflow rule.
 class BeatFrame extends StatelessWidget {
   const BeatFrame({super.key, required this.children, this.crossAxisAlignment = CrossAxisAlignment.center});
 
@@ -55,7 +58,7 @@ class BeatFrame extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: box.maxHeight),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 26),
+            padding: const EdgeInsets.fromLTRB(22, 0, 22, 30),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: crossAxisAlignment,
@@ -68,7 +71,7 @@ class BeatFrame extends StatelessWidget {
   }
 }
 
-/// The small caps label above a statement.
+/// The small caps label above a statement (v11 `CoreCap`: 11/800, 0.14em).
 class BeatLabel extends StatelessWidget {
   const BeatLabel(this.text, {super.key});
   final String text;
@@ -80,30 +83,34 @@ class BeatLabel extends StatelessWidget {
         style: AppText.sans(
           size: BeatSize.label,
           weight: FontWeight.w800,
-          letterSpacing: AppText.em(0.16, BeatSize.label),
-          color: context.colors.textMed,
+          letterSpacing: AppText.em(0.14, BeatSize.label),
+          color: context.colors.textDim,
         ),
       );
 }
 
 /// The one big sentence a beat exists to deliver.
 class BeatStatement extends StatelessWidget {
-  const BeatStatement(this.text, {super.key, this.quoted = false});
+  const BeatStatement(this.text, {super.key, this.quoted = false, this.size = BeatSize.statement});
   final String text;
   final bool quoted;
+  final double size;
 
   @override
-  Widget build(BuildContext context) => Text(
-        quoted ? '“$text”' : text,
-        textAlign: TextAlign.center,
-        style: AppText.sans(
-          size: BeatSize.statement,
-          weight: FontWeight.w800,
-          height: 1.22,
-          letterSpacing: -0.6,
-          color: context.colors.text,
-        ),
-      );
+  Widget build(BuildContext context) {
+    final big = size >= BeatSize.shape;
+    return Text(
+      quoted ? '“$text”' : text,
+      textAlign: TextAlign.center,
+      style: AppText.sans(
+        size: size,
+        weight: FontWeight.w800,
+        height: big ? 1.28 : 1.35,
+        letterSpacing: big ? -0.6 : -0.4,
+        color: context.colors.text,
+      ),
+    );
+  }
 }
 
 class BeatBody extends StatelessWidget {
@@ -114,7 +121,26 @@ class BeatBody extends StatelessWidget {
   Widget build(BuildContext context) => Text(
         text,
         textAlign: TextAlign.center,
-        style: AppText.sans(size: BeatSize.body, height: 1.5, color: context.colors.textMed),
+        style: AppText.sans(size: BeatSize.body, weight: FontWeight.w500, height: 1.6, color: context.colors.textMed),
+      );
+}
+
+/// The core with its day labels beside it — the same drawing on beats 1 and 3.
+class _CoreWithLabels extends StatelessWidget {
+  const _CoreWithLabels({required this.days, this.emphasise});
+
+  final List<ReportDay> days;
+  final int? emphasise;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CoreDayLabels(days: days, height: BeatSize.coreHeight, emphasise: emphasise),
+          const SizedBox(width: 9),
+          CoreColumn(days: days, height: BeatSize.coreHeight, width: BeatSize.coreWidth),
+        ],
       );
 }
 
@@ -140,17 +166,13 @@ class BeatDrilling extends StatelessWidget {
 
     return BeatFrame(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CoreDayLabels(days: shown, height: BeatSize.coreHeight),
-            const SizedBox(width: 12),
-            CoreColumn(days: shown, height: BeatSize.coreHeight),
-          ],
+        _CoreWithLabels(days: shown),
+        const SizedBox(height: 22),
+        Text(
+          ReportCopy.drilling,
+          textAlign: TextAlign.center,
+          style: AppText.sans(size: 15, letterSpacing: AppText.em(0.02, 15), color: context.colors.textDim),
         ),
-        const SizedBox(height: 30),
-        const BeatBody(ReportCopy.drilling),
       ],
     );
   }
@@ -168,8 +190,8 @@ class BeatShape extends StatelessWidget {
   Widget build(BuildContext context) => BeatFrame(
         children: [
           const BeatLabel(ReportCopy.shapeLabel),
-          const SizedBox(height: 22),
-          BeatStatement(ReportCopy.shape(shape), quoted: true),
+          const SizedBox(height: 12),
+          BeatStatement(ReportCopy.shape(shape), quoted: true, size: BeatSize.shape),
         ],
       );
 }
@@ -182,8 +204,38 @@ class BeatCore extends StatelessWidget {
   const BeatCore({super.key, required this.report});
   final WeeklyReport report;
 
+  /// The thin week's smaller core: seven 34pt bands and the rim.
+  static const double _thinHeight = 250;
+
   @override
   Widget build(BuildContext context) {
+    // A thin week, told in the same register (v11 `core-thin`): the shape's
+    // sentence stays with the core, and the caption reaches for the smallest
+    // true thing about the one day rather than explaining six open bands.
+    final active = report.days.where((d) => d.hasActivity).toList();
+    if (report.shape == WeekShape.single && active.isNotEmpty) {
+      return BeatFrame(
+        children: [
+          BeatStatement(ReportCopy.shape(report.shape), quoted: true, size: 22),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CoreDayLabels(days: report.days, height: _thinHeight, emphasise: active.first.weekday),
+              const SizedBox(width: 9),
+              CoreColumn(days: report.days, height: _thinHeight, width: 92),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: BeatBody(ReportCopy.smallestTrueThing(active.first)),
+          ),
+        ],
+      );
+    }
+
     // Name the first open day rather than explaining gaps in the abstract —
     // and say nothing at all when the week has none. `isGap` excludes days that
     // have not happened: Friday is not a gap on a Thursday.
@@ -194,21 +246,12 @@ class BeatCore extends StatelessWidget {
 
     return BeatFrame(
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CoreDayLabels(
-              days: report.days,
-              height: BeatSize.coreHeight,
-              emphasise: firstGap.isEmpty ? null : firstGap.first.weekday,
-            ),
-            const SizedBox(width: 12),
-            CoreColumn(days: report.days, height: BeatSize.coreHeight),
-          ],
+        _CoreWithLabels(days: report.days, emphasise: firstGap.isEmpty ? null : firstGap.first.weekday),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: BeatBody(caption),
         ),
-        const SizedBox(height: 26),
-        BeatBody(caption),
       ],
     );
   }
@@ -233,21 +276,19 @@ class BeatMoment extends StatelessWidget {
     return BeatFrame(
       children: [
         const BeatLabel(ReportCopy.momentTitle),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         BeatStatement(ReportCopy.moment(moment)),
-        const SizedBox(height: 26),
+        const SizedBox(height: 18),
         // The receipt: the task as it actually sits in the planner. A named
         // thing is what makes the beat non-aggregate.
         Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 18, 14),
-          decoration: BoxDecoration(
-            color: colors.hilite,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-          ),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(14)),
           child: Row(
             children: [
-              Container(width: 9, height: 9, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
-              const SizedBox(width: 13),
+              Container(width: 8, height: 8, decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+              const SizedBox(width: 9),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,12 +297,12 @@ class BeatMoment extends StatelessWidget {
                       moment.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(size: 14.5, weight: FontWeight.w800, color: colors.text),
+                      style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 1),
                     Text(
                       ReportCopy.momentWhere(moment, subjectName),
-                      style: AppText.sans(size: 11.5, color: colors.textMed),
+                      style: AppText.sans(size: 12, weight: FontWeight.w500, color: colors.textMed),
                     ),
                   ],
                 ),
@@ -291,16 +332,17 @@ class BeatNumeral extends StatelessWidget {
       children: [
         Text(
           '$value',
-          style: AppText.numeral(size: BeatSize.numeral, weight: FontWeight.w500, color: colors.text),
+          style: AppText.numeral(size: BeatSize.numeral, height: 0.85, letterSpacing: -4, color: colors.text),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Text(
           ReportCopy.heroLabel,
+          textAlign: TextAlign.center,
           style: AppText.sans(
-            size: 11,
+            size: 13,
             weight: FontWeight.w800,
-            letterSpacing: AppText.em(0.2, 11),
-            color: colors.textMed,
+            letterSpacing: AppText.em(0.2, 13),
+            color: colors.textDim,
           ),
         ),
       ],
@@ -312,8 +354,8 @@ class BeatNumeral extends StatelessWidget {
 // Beat 6 — where attention went.
 // ---------------------------------------------------------------------------
 
-/// One cube per subject, melted by share: the crisper the cube, the more of the
-/// week it held.
+/// One cube per subject in its own tint, sized and melted by share: the crisper
+/// the cube, the more of the week it held.
 ///
 /// A subject that got nothing this week is drawn as an unlabelled dashed slot —
 /// visible in the distribution, never named in copy. A named list of subjects
@@ -327,6 +369,9 @@ class BeatAttention extends StatelessWidget {
   /// How many of the student's subjects saw nothing this week.
   final int untouched;
 
+  /// The cube's own box at the largest share, so every column lines up.
+  static const double _slot = 64;
+
   static AdaTone _toneFor(Color c) => AdaTone(
         c,
         Color.lerp(c, Colors.white, 0.72)!,
@@ -336,37 +381,47 @@ class BeatAttention extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    // At most four cubes: five 44pt cubes with labels do not fit 390pt, and the
-    // tail of a distribution is not what this beat is for.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // At most four cubes: the tail of a distribution is not what this beat is
+    // for, and four columns are what a 320pt phone holds with their labels.
     final shown = report.subjects.take(4).toList();
-    final top = shown.isEmpty ? 0.0 : shown.first.share;
+    final top = shown.isEmpty ? 0.0 : shown.map((s) => s.share).reduce(math.max);
+    final labelStyle = AppText.sans(
+      size: 11,
+      weight: FontWeight.w800,
+      letterSpacing: AppText.em(0.04, 11),
+      color: colors.text,
+    );
 
     return BeatFrame(
       children: [
         const BeatLabel(ReportCopy.attentionTitle),
-        const SizedBox(height: 30),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 18,
-          runSpacing: 16,
+        const SizedBox(height: 22),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             for (final s in shown)
-              SizedBox(
-                width: 74,
+              Expanded(
                 child: Column(
                   children: [
-                    AdaMascot(
-                      size: BeatSize.cube,
-                      tone: [_toneFor(s.colorHex == null ? colors.accent : hexColor(s.colorHex!))],
-                      toneIndex: 0,
-                      expr: AdaExpr.neutral,
-                      // Relative, not absolute: the busiest subject of the week
-                      // is always crisp, so a quiet week is not drawn as a row
-                      // of puddles.
-                      melt: top <= 0 ? 0 : ((1 - s.share / top) * 0.55).clamp(0.0, 0.55),
-                      bubbles: 2,
+                    SizedBox(
+                      height: _slot,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: AdaMascot(
+                          size: 30 + s.share.clamp(0.0, 1.0) * 34,
+                          tone: [_toneFor(s.colorHex == null ? colors.accent : hexColor(s.colorHex!))],
+                          toneIndex: 0,
+                          expr: AdaExpr.neutral,
+                          // Relative, not absolute: the busiest subject of the
+                          // week is always crisp, and the melt is capped, so a
+                          // quiet week is not drawn as a row of puddles.
+                          melt: top <= 0 ? 0 : ((1 - s.share / top) * 0.55).clamp(0.0, 0.55),
+                          bubbles: 1,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 9),
                     Text(
                       // Null when the subject was deleted after the work
                       // happened: it keeps its cube and loses its name.
@@ -374,28 +429,35 @@ class BeatAttention extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.text),
+                      style: labelStyle,
                     ),
                   ],
                 ),
               ),
             for (var i = 0; i < untouched.clamp(0, 2); i++)
-              SizedBox(
-                width: 74,
+              Expanded(
                 child: Column(
                   children: [
-                    CustomPaint(
-                      painter: _DashedSlotPainter(color: colors.textDim),
-                      child: const SizedBox.square(dimension: BeatSize.cube),
+                    SizedBox(
+                      height: _slot,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: CustomPaint(
+                          painter: _DashedSlotPainter(color: dark ? colors.textDim : const Color(0xFFD6D2CA)),
+                          child: const SizedBox.square(dimension: 34),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    const SizedBox(height: 13),
+                    const SizedBox(height: 9),
+                    // Holds the label line so the open slot sits on the same
+                    // baseline as its neighbours, and says nothing.
+                    Text('–', style: labelStyle.copyWith(color: Colors.transparent)),
                   ],
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
         BeatBody(ReportCopy.attentionCaption(shown.isEmpty ? null : shown.first.name)),
       ],
     );
@@ -410,12 +472,12 @@ class _DashedSlotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
+      ..strokeWidth = 1.5
       ..color = color;
     final path = Path()
       ..addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(2, 4, size.width - 4, size.height - 8),
-        const Radius.circular(12),
+        Rect.fromLTWH(0.75, 0.75, size.width - 1.5, size.height - 1.5),
+        const Radius.circular(10),
       ));
     const dash = 5.0;
     const space = 4.0;
@@ -433,7 +495,143 @@ class _DashedSlotPainter extends CustomPainter {
 }
 
 // ---------------------------------------------------------------------------
-// Beat 7 — what the week gave back.
+// Beat 7 — when you thawed.
+// ---------------------------------------------------------------------------
+
+/// App freeze's thaws on the days they happened, one cracked cube per thaw,
+/// stacked bottom-up — so the count is drawn, not written, and the report keeps
+/// its one numeral. A day with none carries a small dot, not an empty box.
+///
+/// Thawing is how App freeze is meant to work, so nothing here grades it: the
+/// sentence is the same for one thaw or ten. The screen only builds this beat
+/// when App freeze is set up and the week holds at least one thaw (see
+/// `report_thaws.dart`); otherwise it is absent.
+class BeatThawed extends StatelessWidget {
+  const BeatThawed({super.key, required this.days, required this.thaws});
+
+  final List<ReportDay> days;
+
+  /// Thaws per entry of [days], in the same order.
+  final List<int> thaws;
+
+  static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  /// The tallest a stack may grow before it is drawn smaller. Two cubes fit the
+  /// design's 70; a day with many thaws still stays on the page.
+  static const double _maxStack = 166;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ice = dark ? AqIcon.iceOnDarkColor : AqIcon.iceColor;
+    final most = thaws.isEmpty ? 0 : thaws.reduce(math.max);
+    final stack = (most * (BeatSize.thawCube + 4) - 4).clamp(70.0, _maxStack);
+
+    return BeatFrame(
+      children: [
+        const BeatLabel(ReportCopy.thawedTitle),
+        const SizedBox(height: 12),
+        const BeatStatement(ReportCopy.thawed),
+        const SizedBox(height: 24),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(8, 18, 8, 14),
+          decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(18)),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (var i = 0; i < days.length; i++)
+                Expanded(
+                  child: _ThawDay(
+                    letter: _letters[(days[i].weekday - 1).clamp(0, 6)],
+                    semantics: ReportCopy.thawedDay(weekdayName(days[i].weekday), i < thaws.length ? thaws[i] : 0),
+                    count: i < thaws.length ? thaws[i] : 0,
+                    stack: stack,
+                    ice: ice,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        const BeatBody(ReportCopy.thawedCaption),
+      ],
+    );
+  }
+}
+
+class _ThawDay extends StatelessWidget {
+  const _ThawDay({
+    required this.letter,
+    required this.semantics,
+    required this.count,
+    required this.stack,
+    required this.ice,
+  });
+
+  final String letter;
+  final String semantics;
+  final int count;
+  final double stack;
+  final Color ice;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Semantics(
+      label: semantics,
+      excludeSemantics: true,
+      child: Column(
+        children: [
+          SizedBox(
+            height: stack,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: count == 0
+                  ? Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(color: colors.border, shape: BoxShape.circle),
+                    )
+                  // Full size whenever the stack fits; a day with more thaws
+                  // than the stack holds is drawn smaller, never cut off.
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.bottomCenter,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        // Stacked bottom-up, like ice settling.
+                        verticalDirection: VerticalDirection.up,
+                        children: [
+                          for (var i = 0; i < count; i++) ...[
+                            if (i > 0) const SizedBox(height: 4),
+                            Ic('cube_cracked', size: BeatSize.thawCube, color: ice),
+                          ],
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            letter,
+            style: AppText.sans(
+              size: 11,
+              weight: FontWeight.w800,
+              letterSpacing: AppText.em(0.08, 11),
+              color: count > 0 ? colors.text : colors.textDim,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Beat 8 — what the week gave back.
 // ---------------------------------------------------------------------------
 
 /// The recovery read, and the only beat that can read a hard week as recovery
@@ -454,12 +652,13 @@ class BeatRecovery extends StatelessWidget {
     return BeatFrame(
       children: [
         const BeatLabel(ReportCopy.recoveryTitle),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
         BeatStatement(ReportCopy.recovery(recovery)),
-        const SizedBox(height: 30),
+        const SizedBox(height: 20),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
-          decoration: BoxDecoration(color: colors.hilite, borderRadius: BorderRadius.circular(AppRadius.card)),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(16)),
           // Scaled down rather than wrapped: the going-in/coming-out pair only
           // means anything read left-to-right on one line, and the labels are
           // long enough to overflow a 320pt phone (and any phone at a large
@@ -467,10 +666,11 @@ class BeatRecovery extends StatelessWidget {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _Face(label: ReportCopy.goingIn, toneIndex: beforeIdx, expr: AdaExpr.meh, melt: 0.45),
                 const SizedBox(width: 20),
-                AppIcon(Icons.arrow_forward, size: 18, color: colors.textMed),
+                Ic('forward', size: 20, color: colors.textDim),
                 const SizedBox(width: 20),
                 _Face(label: ReportCopy.comingOut, toneIndex: afterIdx, expr: AdaExpr.smile, melt: 0),
               ],
@@ -493,15 +693,15 @@ class _Face extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
         children: [
-          AdaMascot(size: 50, toneIndex: toneIndex, expr: expr, melt: melt, bubbles: 2),
-          const SizedBox(height: 10),
+          AdaMascot(size: BeatSize.cube, toneIndex: toneIndex, expr: expr, melt: melt, bubbles: 2),
+          const SizedBox(height: 7),
           Text(
             label,
             style: AppText.sans(
-              size: 9.5,
+              size: 11,
               weight: FontWeight.w800,
-              letterSpacing: AppText.em(0.14, 9.5),
-              color: context.colors.textMed,
+              letterSpacing: AppText.em(0.1, 11),
+              color: context.colors.textDim,
             ),
           ),
         ],
@@ -509,8 +709,8 @@ class _Face extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// The quieter facts. Not one of the eight beats — a single page for the things
-// §4 of the design lists as cards, so the work that measured them is not
+// The quieter facts. Not one of the design's beats — a single page for the
+// things §4 of the design lists as cards, so the work that measured them is not
 // invisible, without giving any of them a beat of its own.
 // ---------------------------------------------------------------------------
 
@@ -531,13 +731,13 @@ class BeatTexture extends StatelessWidget {
           Container(
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 15),
-            decoration: BoxDecoration(color: colors.hilite, borderRadius: BorderRadius.circular(AppRadius.card)),
+            decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(16)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 BeatLabel(label),
                 const SizedBox(height: 7),
-                Text(line, style: AppText.sans(size: 13.5, height: 1.35, color: colors.text)),
+                Text(line, style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.45, color: colors.text)),
               ],
             ),
           ),
@@ -548,7 +748,7 @@ class BeatTexture extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Beat 8 — one small thing. The landing.
+// Beat 9 — one small thing. The landing.
 // ---------------------------------------------------------------------------
 
 /// Sized so that refusing it would feel absurd, and refusable in one tap.
@@ -572,69 +772,61 @@ class BeatLanding extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final quiet = AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed);
     return BeatFrame(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // CoreAda: Ada reads. Never grades, never prescribes.
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AdaMascot(size: 34, expr: AdaExpr.smile, sparkles: true),
-            const SizedBox(width: 14),
+            const AdaMascot(size: 28, expr: AdaExpr.smile, bubbles: 2),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 isEmptyWeek ? ReportCopy.closingEmpty : ReportCopy.closing,
-                style: AppText.sans(size: 15, height: 1.45, color: colors.text),
+                style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.6, color: colors.text),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
         Container(
-          padding: const EdgeInsets.fromLTRB(14, 13, 16, 13),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: colors.accentSoft,
-            borderRadius: BorderRadius.circular(AppRadius.card),
-            border: Border.all(color: colors.accent.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.accent.withValues(alpha: 0.33), width: 1.5),
           ),
           child: Row(
             children: [
               Container(
-                width: 34,
-                height: 34,
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(10)),
-                child: AppIcon(Icons.nightlight_round, size: 17, color: colors.accent),
+                child: Ic('wind_down', size: 20, color: colors.accent),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 11),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(ReportCopy.suggestionTitle, style: AppText.sans(size: 14.5, weight: FontWeight.w800, color: colors.text)),
-                    const SizedBox(height: 2),
-                    Text(ReportCopy.suggestionSub, style: AppText.sans(size: 11.5, color: colors.textMed)),
+                    Text(ReportCopy.suggestionTitle, style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text)),
+                    const SizedBox(height: 1),
+                    Text(ReportCopy.suggestionSub, style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textMed)),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 20),
-        SizedBox(
-          height: 52,
-          child: FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: colors.ink,
-              foregroundColor: colors.bg,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill)),
-            ),
-            onPressed: onKeep,
-            child: Text(ReportCopy.keepIt, style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.bg)),
-          ),
-        ),
+        const SizedBox(height: 10),
+        PrimaryButton(label: ReportCopy.keepIt, onPressed: onKeep),
         const SizedBox(height: 14),
         Wrap(
           alignment: WrapAlignment.center,
-          spacing: 22,
+          spacing: 16,
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
@@ -642,13 +834,13 @@ class BeatLanding extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                 child: Row(
-                  // Nested in a Row, so it must size to its children rather
+                  // Nested in a Wrap, so it must size to its children rather
                   // than to the unbounded width it is offered.
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    AppIcon(Icons.ios_share, size: 15, color: colors.text),
-                    const SizedBox(width: 7),
-                    Text(ReportCopy.shareLabel, style: AppText.sans(size: 13.5, weight: FontWeight.w700, color: colors.text)),
+                    Ic('share', size: 19, color: colors.textMed),
+                    const SizedBox(width: 5),
+                    Text(ReportCopy.shareLabel, style: quiet),
                   ],
                 ),
               ),
@@ -658,7 +850,7 @@ class BeatLanding extends StatelessWidget {
               onTap: onDismiss,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                child: Text(ReportCopy.notThisTime, style: AppText.sans(size: 13.5, weight: FontWeight.w700, color: colors.textMed)),
+                child: Text(ReportCopy.notThisTime, style: quiet),
               ),
             ),
           ],
@@ -686,28 +878,31 @@ class SupportBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-      padding: const EdgeInsets.fromLTRB(16, 13, 8, 13),
-      decoration: BoxDecoration(color: colors.hilite, borderRadius: BorderRadius.circular(AppRadius.card)),
+      margin: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+      padding: const EdgeInsets.fromLTRB(12, 4, 2, 4),
+      decoration: BoxDecoration(color: colors.bg, borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: [
           Expanded(
-            child: Text.rich(
-              TextSpan(
-                text: '${ReportCopy.supportBanner} ',
-                style: AppText.sans(size: 12.5, height: 1.4, color: colors.text),
-                children: [
-                  TextSpan(
-                    text: ReportCopy.supportAction,
-                    style: AppText.sans(size: 12.5, weight: FontWeight.w800, color: colors.text),
-                  ),
-                ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Text.rich(
+                TextSpan(
+                  text: '${ReportCopy.supportBanner} ',
+                  style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.55, color: colors.textMed),
+                  children: [
+                    TextSpan(
+                      text: ReportCopy.supportAction,
+                      style: AppText.sans(size: 13, weight: FontWeight.w800, height: 1.55, color: colors.text),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           IconButton(
             onPressed: onDismiss,
-            icon: AppIcon(Icons.close, size: 16, color: colors.textMed),
+            icon: Ic('close', size: 21, color: colors.textDim),
             visualDensity: VisualDensity.compact,
           ),
         ],

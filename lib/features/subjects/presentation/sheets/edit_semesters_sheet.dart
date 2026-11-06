@@ -6,11 +6,11 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/app_dialog.dart';
-import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../widgets/subject_bits.dart';
 import 'add_semester_sheet.dart';
 
 /// The pink delete glyph color (`#e85476`) used for the trailing remove icon.
@@ -153,8 +153,8 @@ class _RenameBodyState extends State<_RenameBody> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const FieldLabel('Name'),
-        AppTextField(
+        const SubjLabel('Name'),
+        SubjInput(
           controller: _controller,
           autofocus: true,
           textInputAction: TextInputAction.done,
@@ -196,10 +196,10 @@ class _SemesterRow extends StatelessWidget {
         color: colors.bg,
         borderRadius: BorderRadius.circular(AppRadius.rowInput),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
       child: Row(
         children: [
-          AppIcon(Icons.drag_indicator, size: 18, color: colors.textDim),
+          Ic('drag', size: 18, color: colors.textDim),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -210,8 +210,10 @@ class _SemesterRow extends StatelessWidget {
                     Flexible(
                       child: Text(
                         semester.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: AppText.sans(
-                          size: 13.5,
+                          size: 17,
                           weight: FontWeight.w800,
                           color: colors.text,
                         ),
@@ -226,25 +228,42 @@ class _SemesterRow extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text(
                   '$count ${count == 1 ? 'subject' : 'subjects'}',
-                  style: AppText.sans(size: 10.5, color: colors.textDim),
+                  style: AppText.sans(size: 13, color: colors.textDim),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 11),
-          GestureDetector(
-            onTap: onRename,
-            behavior: HitTestBehavior.opaque,
-            child: AppIcon(Icons.edit, size: 17, color: colors.textMed),
+          Semantics(
+            button: true,
+            label: 'Rename ${semester.name}',
+            excludeSemantics: true,
+            child: GestureDetector(
+              onTap: onRename,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Ic('edit', size: 21, color: colors.textMed),
+              ),
+            ),
           ),
-          const SizedBox(width: 11),
-          GestureDetector(
-            onTap: canDelete ? onDelete : null,
-            behavior: HitTestBehavior.opaque,
-            child: AppIcon(
-              Icons.delete_outline,
-              size: 17,
-              color: canDelete ? _deleteColor : colors.textDim,
+          const SizedBox(width: 6),
+          Semantics(
+            button: true,
+            enabled: canDelete,
+            label: 'Delete ${semester.name}',
+            excludeSemantics: true,
+            child: GestureDetector(
+              onTap: canDelete ? onDelete : null,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Ic(
+                  'delete',
+                  size: 21,
+                  color: canDelete ? _deleteColor : colors.textDim,
+                ),
+              ),
             ),
           ),
         ],
@@ -269,7 +288,7 @@ class _CurrentPill extends StatelessWidget {
       child: Text(
         'Current',
         style: AppText.sans(
-          size: 9.5,
+          size: 12,
           weight: FontWeight.w800,
           color: colors.accent,
         ),
@@ -298,17 +317,17 @@ class _AddSemesterButton extends StatelessWidget {
         ),
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 11),
+          constraints: const BoxConstraints(minHeight: 52),
           alignment: Alignment.center,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AppIcon(Icons.add, size: 17, color: colors.accent),
+              Ic('add', size: 21, color: colors.accent),
               const SizedBox(width: 7),
               Text(
                 'Add semester',
                 style: AppText.sans(
-                  size: 12.5,
+                  size: 17,
                   weight: FontWeight.w800,
                   color: colors.accent,
                 ),

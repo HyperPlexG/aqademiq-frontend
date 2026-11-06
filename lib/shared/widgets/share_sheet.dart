@@ -3,23 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text.dart';
 import '../../core/utils/referral_link.dart';
 import '../../data/repositories/referral_repository.dart';
 import '../../features/settings/providers/profile_controller.dart';
-import '../icons/app_icon.dart';
+import 'ic.dart';
 
 /// Presents the referral / share sheet ([_ShareSheet]) over the dimmed real
 /// screen. Reused by both the Subjects section (`subj-share`) and the section 06
-/// referral flow. Returns when dismissed.
+/// referral flow (`referral`). Returns when dismissed.
+///
+/// v11 floats it: 8 clear of the sides and bottom, corners concentric with the
+/// display (55 − 8 = 47), over a 0.28 scrim.
 Future<void> showShareSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: const Color(0x4C140F1C),
+    barrierColor: const Color(0x47140F1C),
     builder: (_) => const _ShareSheet(),
   );
 }
@@ -30,16 +32,17 @@ class _ShareSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppRadius.sheetTop)),
-        boxShadow: colors.sheetShadow,
-      ),
-      padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
-      child: SafeArea(
-        top: false,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.9),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: BorderRadius.circular(47),
+          boxShadow: colors.sheetShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 40),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -65,27 +68,30 @@ class _ShareSheet extends StatelessWidget {
                 'Help us grow!',
                 textAlign: TextAlign.center,
                 style: AppText.sans(
-                  size: 19,
+                  size: 22,
                   weight: FontWeight.w800,
                   height: 1.2,
                   color: colors.text,
                 ),
               ),
               const SizedBox(height: 6),
-              Text(
-                'Share your code with friends and help us reach more '
-                'students. It means the world to us.',
-                textAlign: TextAlign.center,
-                style: AppText.sans(size: 13, height: 1.5, color: colors.textMed),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  'Share your code with friends and help us reach more '
+                  'students. It means the world to us 💜.',
+                  textAlign: TextAlign.center,
+                  style: AppText.sans(size: 13, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
+                ),
               ),
               const SizedBox(height: 14),
               Text(
                 'YOUR REFERRAL CODE',
                 textAlign: TextAlign.center,
                 style: AppText.sans(
-                  size: 9,
+                  size: 12,
                   weight: FontWeight.w800,
-                  letterSpacing: AppText.em(0.12, 9),
+                  letterSpacing: AppText.em(0.12, 12),
                   color: colors.textDim,
                 ),
               ),
@@ -113,7 +119,6 @@ class _InviteHeroCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 13),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
-      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
@@ -124,7 +129,16 @@ class _InviteHeroCard extends ConsumerWidget {
             const Color(0xFFB39DF5),
             const Color(0xFFE9C8D8),
           ],
+          stops: const [0, 0.52, 1],
         ),
+        boxShadow: [
+          BoxShadow(color: colors.accent.withValues(alpha: 0.23), blurRadius: 24, offset: const Offset(0, 8)),
+        ],
+      ),
+      // The hairline of light around the card's edge.
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0x66FFFFFF)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -138,7 +152,7 @@ class _InviteHeroCard extends ConsumerWidget {
           Text(
             'Aqademiq',
             style: AppText.sans(
-              size: 22,
+              size: 28,
               weight: FontWeight.w800,
               letterSpacing: -0.5,
               color: const Color(0xFFFFFFFF),
@@ -147,8 +161,9 @@ class _InviteHeroCard extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             name.isEmpty ? 'Invite a friend' : 'Invite by $name',
+            textAlign: TextAlign.center,
             style: AppText.sans(
-              size: 11,
+              size: 15,
               weight: FontWeight.w700,
               color: const Color(0xFFFFFFFF).withValues(alpha: 0.92),
             ),
@@ -170,18 +185,19 @@ class _CodeBoxes extends ConsumerWidget {
     final chars = code.isEmpty ? List.filled(5, '·') : code.split('');
     // Scaled down to fit rather than laid out at a fixed size.
     //
-    // The cells are 38pt with 7pt between them, so eight characters want 353pt
-    // against the 357pt this sheet actually has on a 393pt phone — and lose
-    // outright on a 375pt one, which is where the last character was landing
-    // off the right edge. The count was already dynamic; the width was not.
-    // scaleDown only ever shrinks, so shorter codes still render full size.
+    // The cells are 34pt with 5pt between them, and an eight-character code
+    // is shown as 4 + 4 with a wider gap at the join (v11 `REFERRAL`). That
+    // is 314pt: inside the sheet on a 375pt phone, not on a 320pt one, and the
+    // count is dynamic — so scaleDown guards the width. It only ever shrinks,
+    // so shorter codes still render full size.
+    final grouped = chars.length == 8;
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (var i = 0; i < chars.length; i++) ...[
-            if (i > 0) const SizedBox(width: 7),
+            if (i > 0) SizedBox(width: grouped && i == 4 ? 12 : 5),
             _CodeCell(char: chars[i]),
           ],
         ],
@@ -208,7 +224,7 @@ class _ReferralCount extends ConsumerWidget {
     return Text(
       text,
       textAlign: TextAlign.center,
-      style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.textMed),
+      style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textMed),
     );
   }
 }
@@ -222,17 +238,17 @@ class _CodeCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      width: 38,
+      width: 34,
       height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: colors.bg,
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: colors.border),
       ),
       child: Text(
         char,
-        style: AppText.mono(size: 22, weight: FontWeight.w800, color: colors.text),
+        style: AppText.mono(size: 24, weight: FontWeight.w800, color: colors.text),
       ),
     );
   }
@@ -277,22 +293,28 @@ class _ShareInviteButton extends ConsumerWidget {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(100),
           gradient: LinearGradient(
+            begin: const Alignment(-1, -0.6),
+            end: const Alignment(1, 0.6),
             colors: [colors.accent, const Color(0xFF9F8BEF)],
           ),
+          boxShadow: [
+            BoxShadow(color: colors.accent.withValues(alpha: 0.25), blurRadius: 20, offset: const Offset(0, 6)),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const AppIcon(Icons.ios_share, size: 18, color: Color(0xFFFFFFFF)),
+            const Ic('share', size: 18, color: Color(0xFFFFFFFF)),
             const SizedBox(width: 9),
             Text(
               'Share Invite',
               style: AppText.sans(
-                size: 14,
+                size: 17,
                 weight: FontWeight.w700,
                 color: const Color(0xFFFFFFFF),
               ),

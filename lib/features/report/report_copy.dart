@@ -145,7 +145,27 @@ abstract final class ReportCopy {
       ? 'The crisper the cube, the more of your attention it held.'
       : '$topName took the most of your week. The crisper the cube, the more of your attention it held.';
 
-  // ---- beat 7 — what the week gave back ----------------------------------
+  // ---- beat 7 — when you thawed ------------------------------------------
+
+  static const String thawedTitle = 'WHEN YOU THAWED';
+
+  /// Thawing is how App freeze is meant to work, so the sentence never grades
+  /// it — the same line for one thaw or ten. The count itself is drawn, one
+  /// cracked cube per thaw, so the report keeps its one numeral.
+  static const String thawed = 'The ice held, and you opened it when you needed to.';
+
+  static const String thawedCaption =
+      'Each cracked cube is one thaw, on the day it happened. Every one waited a breath first.';
+
+  /// What a screen reader hears for one day of the drawing — the drawing's
+  /// count, said plainly, and nothing said about a day without one.
+  static String thawedDay(String dayName, int thaws) => switch (thaws) {
+        <= 0 => dayName,
+        1 => '$dayName, one thaw',
+        _ => '$dayName, $thaws thaws',
+      };
+
+  // ---- beat 8 — what the week gave back ----------------------------------
 
   static const String recoveryTitle = 'WHAT THE WEEK GAVE BACK';
 
@@ -189,10 +209,10 @@ abstract final class ReportCopy {
     return '${plural.join(', ')} and $last carry your work.';
   }
 
-  // ---- beat 8 — the landing ----------------------------------------------
+  // ---- beat 9 — the landing ----------------------------------------------
 
   static const String closing =
-      'One small thing for next week — or just tomorrow’s check-in, if that’s the size that fits.';
+      'One small thing for next week, or just tomorrow’s check-in, if that’s the size that fits.';
 
   /// The empty-week landing. Same register, nothing asked for.
   static const String closingEmpty =
@@ -209,9 +229,33 @@ abstract final class ReportCopy {
 
   /// "Just your shape" rather than "your shape only" — see [kReportBannedWords].
   static const String sharePrivacy =
-      'Just your shape. Nothing about how you felt is in this image.';
-  static const String shareAction = 'Share';
+      'Just your shape. Nothing about how you felt is in this picture.';
+  static const String shareAction = 'Share to your story';
+
+  /// The same picture through the system share sheet, with a line of text
+  /// beside it — and on iOS, Save Image.
+  static const String shareMore = 'More';
+
+  /// The text that travels with the picture, or alone when the picture could
+  /// not be drawn. A count of days and nothing about how the week felt.
+  static String shareText(int days) =>
+      days == 1 ? '1 day on the board. — $shareBrand' : '$days days on the board. — $shareBrand';
+
   static const String shareBrand = 'Aqademiq';
+
+  /// The story card's own lines, beside the one count.
+  static const String storyCount = 'days on\nthe board.';
+  static const String storyFooter = 'Seven days, drilled.';
+  static const String storyHandle = '@tryaqademiq';
+
+  // ---- a screenshot, caught (core-screenshot) ----------------------------
+
+  static const String screenshotTitle = 'Screenshotting?';
+  static const String screenshotLead = 'Tag us ';
+  static const String screenshotTail = ' on your story. We repost the good ones.';
+  static const String copyTag = 'Copy tag';
+  static const String tagCopied = 'Copied';
+  static const String useStoryCard = 'Use story card';
 
   // ---- the off switch, and what the report never does --------------------
 
@@ -226,7 +270,7 @@ abstract final class ReportCopy {
   static const String neverBackBrowse = 'Open on a past week';
   static const String neverBackBrowseSub = 'The current week, never an older one.';
   static const String neverShowWriting = 'Show what you wrote';
-  static const String neverShowWritingSub = 'Never shown, never exported.';
+  static const String neverShowWritingSub = 'Never shown or exported.';
 
   // ---- a bad season, not a bad week --------------------------------------
 
@@ -239,6 +283,18 @@ abstract final class ReportCopy {
   static const String supportAction = 'View';
 
   // ---- shared helpers ----------------------------------------------------
+
+  static const List<String> _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  /// The week as dates, never as a count: `Jun 22 – 28`, or `Jun 29 – Jul 5`
+  /// across a month.
+  static String weekRange(DateTime start, DateTime end) {
+    final from = '${_months[start.month - 1]} ${start.day}';
+    final to = start.month == end.month ? '${end.day}' : '${_months[end.month - 1]} ${end.day}';
+    return '$from – $to';
+  }
 
   static const String loadFailed =
       'Your week is here, the report just could not reach it.';

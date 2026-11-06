@@ -6,10 +6,10 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
-import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
-import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
+import '../widgets/subject_bits.dart';
 
 /// subj-add-sem — "Add semester" bottom sheet (routed through [showAppBottomSheet]
 /// so it lifts above the keyboard, fixing SUBJ-1).
@@ -171,10 +171,10 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const FieldLabel('Name'),
-        AppTextField(controller: _nameController),
+        const SubjLabel('Name'),
+        SubjInput(controller: _nameController),
         const SizedBox(height: 12),
-        const FieldLabel('Term'),
+        const SubjLabel('Term'),
         _TermSelector(
           terms: _terms,
           selectedIndex: _termIdx,
@@ -249,8 +249,9 @@ class _TermSelector extends StatelessWidget {
                 ),
                 child: Text(
                   terms[i],
+                  maxLines: 1,
                   style: AppText.sans(
-                    size: 12.5,
+                    size: 17,
                     weight: FontWeight.w800,
                     color: i == selectedIndex ? colors.accent : colors.textMed,
                   ),
@@ -265,8 +266,8 @@ class _TermSelector extends StatelessWidget {
 }
 
 /// A labelled read-only date box (one column of the Starts/Ends row): a
-/// [FieldLabel] over a `bg`-filled box (radius 12, 11×14 padding) showing the
-/// date at 12.5/w700.
+/// [SubjLabel] over a `bg`-filled box (radius 12, 11×14 padding) showing the
+/// date at 17/w700.
 class _DateColumn extends StatelessWidget {
   const _DateColumn({
     required this.label,
@@ -284,7 +285,7 @@ class _DateColumn extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FieldLabel(label),
+        SubjLabel(label),
         GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
@@ -299,14 +300,17 @@ class _DateColumn extends StatelessWidget {
                 Expanded(
                   child: Text(
                     value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppText.sans(
-                      size: 12.5,
+                      size: 17,
                       weight: FontWeight.w700,
                       color: colors.text,
                     ),
                   ),
                 ),
-                AppIcon(Icons.calendar_today, size: 13, color: colors.textMed),
+                const SizedBox(width: 6),
+                Ic('calendar_today', size: 16, color: colors.textDim),
               ],
             ),
           ),

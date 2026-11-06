@@ -5,7 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
 
 /// Result of the `···` semester menu popover ([showSubjectMenu]).
 enum SubjectMenuResult {
@@ -71,9 +71,9 @@ class _SubjectMenuPopover extends ConsumerWidget {
                   child: Text(
                     'SEMESTER',
                     style: AppText.sans(
-                      size: 9,
+                      size: 12,
                       weight: FontWeight.w800,
-                      letterSpacing: AppText.em(0.1, 9),
+                      letterSpacing: AppText.em(0.1, 12),
                       color: colors.textDim,
                     ),
                   ),
@@ -95,19 +95,19 @@ class _SubjectMenuPopover extends ConsumerWidget {
                   color: colors.border,
                 ),
                 _ActionRow(
-                  icon: Icons.add,
+                  icon: 'add',
                   label: 'Add semester',
                   onTap: () =>
                       Navigator.of(context).pop(SubjectMenuResult.addSemester),
                 ),
                 _ActionRow(
-                  icon: Icons.edit_calendar,
+                  icon: 'edit_calendar',
                   label: 'Edit semesters',
                   onTap: () =>
                       Navigator.of(context).pop(SubjectMenuResult.editSemesters),
                 ),
                 _ActionRow(
-                  icon: Icons.sort,
+                  icon: 'sort',
                   label: 'Sort subjects',
                   onTap: () => Navigator.of(context).pop(SubjectMenuResult.sort),
                 ),
@@ -141,18 +141,22 @@ class _SemesterRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
         child: Row(
           children: [
-            AppIcon(
-              Icons.check,
-              size: 17,
+            Ic(
+              'check',
+              size: 21,
               color: on ? colors.accent : Colors.transparent,
             ),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: AppText.sans(
-                size: 13.5,
-                weight: on ? FontWeight.w800 : FontWeight.w600,
-                color: on ? colors.text : colors.textMed,
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.sans(
+                  size: 17,
+                  weight: on ? FontWeight.w800 : FontWeight.w600,
+                  color: on ? colors.text : colors.textMed,
+                ),
               ),
             ),
           ],
@@ -169,7 +173,8 @@ class _ActionRow extends StatelessWidget {
     required this.onTap,
   });
 
-  final IconData icon;
+  /// A design icon name.
+  final String icon;
   final String label;
   final VoidCallback onTap;
 
@@ -183,11 +188,13 @@ class _ActionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Row(
           children: [
-            AppIcon(icon, size: 18, color: colors.text),
+            Ic(icon, size: 18, color: colors.text),
             const SizedBox(width: 12),
-            Text(
-              label,
-              style: AppText.sans(size: 13.5, color: colors.text),
+            Expanded(
+              child: Text(
+                label,
+                style: AppText.sans(size: 17, color: colors.text),
+              ),
             ),
           ],
         ),

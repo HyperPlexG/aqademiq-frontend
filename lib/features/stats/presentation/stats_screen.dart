@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/date_format.dart';
 import '../../../core/utils/launch_external.dart';
@@ -18,10 +17,10 @@ import '../../../data/repositories/mood_repository.dart';
 import '../../../data/repositories/profile_repository.dart';
 import '../../../data/repositories/weekly_report_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_scaffold.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/share_sheet.dart';
 import '../../ice_breakers/presentation/ice_breakers_card.dart';
 import '../../plan/presentation/sheets/log_mood_sheet.dart';
@@ -43,7 +42,9 @@ class StatsScreen extends ConsumerWidget {
     return AppScaffold(
       child: statsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: context.colors.accent)),
-        error: (_, _) => Center(child: Text('Could not load profile', style: AppText.sans(size: 13, color: context.colors.textMed))),
+        error: (_, _) => Center(
+          child: Text('Could not load profile', style: AppText.sans(size: 15, weight: FontWeight.w500, color: context.colors.textMed)),
+        ),
         data: (stats) => _Body(stats: stats),
       ),
     );
@@ -67,59 +68,86 @@ class _Body extends ConsumerWidget {
     // number of days in a seven-day week. `totalActiveDays` is still fetched
     // and is still what the report's lifetime figures rest on; it is simply not
     // what a weekly panel headlines.
-    final onBoard = ref.watch(weeklyReportProvider).value?.activeDays ?? 0;
+    final week = ref.watch(weeklyReportProvider).value;
+    final onBoard = week?.activeDays ?? 0;
     // No fallback to `stats.tasksCompletedLifetime`. That is a lifetime total,
     // and using it while the weekly provider loads put a lifetime number under
     // a "this week" label — which is what the label bug actually was.
     final completed = ref.watch(weeklyCompletedProvider).value ?? 0;
     final moods = ref.watch(moodWeekProvider).value ?? stats.weekMoods;
+    // The week the panel is about, said as dates (v11 `profile-top`). The
+    // report's own range once it has loaded, so the two can never disagree.
+    final monday = AppDate.mondayOf(AppDate.today());
+    final range = week == null
+        ? ReportCopy.weekRange(monday, monday.add(const Duration(days: 6)))
+        : ReportCopy.weekRange(week.weekStart, week.weekEnd);
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
+        // ProfileTopHead: the name in a 44 pill, share and settings beside it.
         Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(AppRadius.pill), boxShadow: colors.cardShadow),
-              child: Text(name, style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.text)),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
+                  decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(22), boxShadow: colors.cardShadow),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text),
+                    ),
+                  ),
+                ),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(AppRadius.pill), boxShadow: colors.cardShadow),
+              decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(22), boxShadow: colors.cardShadow),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _CircleIcon(icon: Icons.ios_share, onTap: () => unawaited(showShareSheet(context))),
+                  _CircleIcon(icon: 'ios_share', onTap: () => unawaited(showShareSheet(context))),
                   const SizedBox(width: 2),
-                  _CircleIcon(icon: Icons.settings, onTap: () => context.push(Routes.settings)),
+                  _CircleIcon(icon: 'settings', onTap: () => context.push(Routes.settings)),
                 ],
               ),
             ),
           ],
         ),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            GestureDetector(
-              onTap: () => unawaited(context.push(Routes.moodMorning)),
-              child: const AdaMascot(size: 46, cheeks: true, sparkles: true),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Keep it frozen, ${name.split(' ').first}', style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text)),
-                  const SizedBox(height: 2),
-                  Text(onBoard == 1 ? '1 day on the board this week' : '$onBoard days on the board this week', style: AppText.sans(size: 10.5, color: colors.textMed)),
-                ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 2, 2, 14),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () => unawaited(context.push(Routes.moodMorning)),
+                child: const AdaMascot(size: 46, cheeks: true, sparkles: true),
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Keep it frozen, ${name.split(' ').first}',
+                      style: AppText.sans(size: 17, weight: FontWeight.w800, letterSpacing: -0.2, color: colors.text),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(range, style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textMed)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 14),
         _StatsCard(onBoard: onBoard, completed: completed),
         const SizedBox(height: 8),
         // Turned off means gone, not greyed. A disabled row that still names
@@ -129,22 +157,23 @@ class _Body extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
         _MoodCard(moods: moods),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         const _LinksCard(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         // Directly above the share hero, and permanent — the student who most
         // needs the tutorials is the one who has not found them.
         const IceBreakersCard(),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _InviteHero(onTap: () => unawaited(showShareSheet(context))),
       ],
     );
   }
 }
 
+/// One 36 circle inside the header's grouped capsule.
 class _CircleIcon extends StatelessWidget {
   const _CircleIcon({required this.icon, required this.onTap});
-  final IconData icon;
+  final String icon;
   final VoidCallback onTap;
 
   @override
@@ -152,7 +181,7 @@ class _CircleIcon extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(width: 30, height: 30, child: AppIcon(icon, size: 16, color: context.colors.text)),
+      child: SizedBox(width: 36, height: 36, child: Center(child: Ic(icon, size: 20, color: context.colors.text))),
     );
   }
 }
@@ -174,9 +203,11 @@ class _StatsCard extends StatelessWidget {
           // student ever chose. A bar that is not full is a bar you are short
           // of, and there is no version of "5/7" that reads as a description
           // rather than a shortfall.
-          Expanded(child: _StatCol(value: '$onBoard', label: 'DAYS THIS WEEK')),
-          Container(width: 1, height: 56, color: colors.border),
-          Expanded(child: _StatCol(value: '$completed', label: 'DONE THIS WEEK')),
+          // The week's counts, under the week's dates in the greeting above —
+          // so the labels can be the design's without reading as lifetime.
+          Expanded(child: _StatCol(value: '$onBoard', label: 'DAYS ON THE BOARD')),
+          Container(width: 1, height: 68, color: colors.border),
+          Expanded(child: _StatCol(value: '$completed', label: 'TASKS DONE')),
         ],
       ),
     );
@@ -192,20 +223,20 @@ class _StatCol extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Stacked rather than inline: without the progress bar under them
-          // these labels carry the column, and "DAYS ON THE BOARD" beside a
-          // 26pt numeral in half a card overflows on a narrow phone.
-          Text(value, style: AppText.numeral(size: 28, color: colors.text)),
+          // Stacked rather than inline: "DAYS ON THE BOARD" beside a 34pt
+          // numeral in half a card overflows on a narrow phone, and on the
+          // narrowest it takes a second line rather than an ellipsis.
+          Text(value, style: AppText.numeral(size: 34, color: colors.text)),
           const SizedBox(height: 5),
           Text(
             label,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppText.sans(size: 8.5, weight: FontWeight.w800, letterSpacing: AppText.em(0.1, 8.5), color: colors.textDim),
+            style: AppText.sans(size: 11, weight: FontWeight.w800, letterSpacing: AppText.em(0.1, 11), color: colors.textDim),
           ),
         ],
       ),
@@ -213,13 +244,7 @@ class _StatCol extends StatelessWidget {
   }
 }
 
-/// The way into the weekly report.
-///
-/// It waits here identically every week, with the same frost dot, whatever the
-/// week held. Nothing pushes it: a notification that fires on good weeks and
-/// stays quiet on bad ones turns its own absence into a verdict on the
-/// lock screen, and this feature is never allowed to deliver one of those.
-/// The way into the weekly report.
+/// The way into the weekly report (v11 `core-entry`).
 ///
 /// It waits here identically every week, with the same frost dot, whatever the
 /// week held. Nothing pushes it: a notification that fires on good weeks and
@@ -243,53 +268,59 @@ class _CoreEntry extends ConsumerWidget {
         [for (var i = 0; i < 7; i++) ReportDay(date: DateTime.now(), weekday: i + 1, hasActivity: false)];
 
     return AppCard(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      radius: 18,
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
       onTap: () => unawaited(context.push(Routes.weeklyReport)),
-      child: Row(
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          CoreColumn.mini(days: days),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  ReportCopy.entryEyebrow,
-                  style: AppText.sans(
-                    size: 9.5,
-                    weight: FontWeight.w800,
-                    letterSpacing: AppText.em(0.16, 9.5),
-                    color: colors.textMed,
-                  ),
+          Row(
+            children: [
+              // `IceCore w={44} band={15}`: seven 15pt bands and the rim.
+              CoreColumn.mini(days: days, width: 44, height: 117),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      ReportCopy.entryEyebrow,
+                      style: AppText.sans(
+                        size: 11,
+                        weight: FontWeight.w800,
+                        letterSpacing: AppText.em(0.14, 11),
+                        color: colors.textDim,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ReportCopy.coreName,
+                      style: AppText.sans(size: 28, weight: FontWeight.w800, letterSpacing: -0.4, color: colors.text),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      ReportCopy.entryTagline,
+                      style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 7),
-                Text(
-                  ReportCopy.coreName,
-                  style: AppText.sans(size: 22, weight: FontWeight.w800, letterSpacing: -0.5, color: colors.text),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  ReportCopy.entryTagline,
-                  style: AppText.sans(size: 12.5, height: 1.35, color: colors.textMed),
-                ),
-              ],
-            ),
+              ),
+              // Room for the frost dot, so a long tagline never runs under it.
+              const SizedBox(width: 8),
+            ],
           ),
           // The frost dot. Identical every week — it marks where the report is,
-          // never whether the week was any good. Sized rather than aligned:
-          // an Align inside a Row expands to fill the width it is offered.
-          Align(
-            alignment: Alignment.topCenter,
-            // widthFactor pins the Align to its child's width; without it an
-            // Align in a Row expands to fill whatever it is offered.
-            widthFactor: 1,
+          // never whether the week was any good.
+          Positioned(
+            top: -1,
+            right: -1,
             child: Container(
-              width: 12,
-              height: 12,
+              width: 8,
+              height: 8,
               decoration: BoxDecoration(
                 color: colors.accent,
                 shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: colors.accent.withValues(alpha: 0.45), blurRadius: 10, spreadRadius: 2)],
+                boxShadow: [BoxShadow(color: colors.accent.withValues(alpha: 0.13), spreadRadius: 4)],
               ),
             ),
           ),
@@ -385,7 +416,7 @@ class _MoodCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('MOOD & DAILY REFLECTIONS', style: AppText.sans(size: 10, weight: FontWeight.w800, letterSpacing: AppText.em(0.08, 10), color: colors.textDim)),
+          Text('MOOD & DAILY REFLECTIONS', style: AppText.sans(size: 12, weight: FontWeight.w800, letterSpacing: AppText.em(0.08, 12), color: colors.textDim)),
           const SizedBox(height: 9),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -412,7 +443,7 @@ class _MoodCard extends ConsumerWidget {
                       Text(
                         _days[i],
                         style: AppText.sans(
-                          size: 9,
+                          size: 12,
                           weight: FontWeight.w700,
                           color: i == todayIndex
                               ? colors.accent
@@ -450,7 +481,7 @@ class _MoodCard extends ConsumerWidget {
   Widget _moodSlot(AppColors colors, DateTime monday, int i, int todayIndex) {
     final mood = _moodFor(monday, i);
     if (mood != null) {
-      return AdaMascot(size: 24, toneIndex: mood, melt: (4 - mood) / 4, bubbles: 0);
+      return AdaMascot(size: 24, toneIndex: mood, melt: (4 - mood) / 4, expr: _moodExpr(mood), bubbles: 0);
     }
     final isToday = i == todayIndex;
     // A day that has not happened is drawn faintly and without a border: the
@@ -466,19 +497,60 @@ class _MoodCard extends ConsumerWidget {
         ),
       );
     }
-    return Container(
-      width: 21,
-      height: 21,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isToday ? colors.accent : const Color(0xFFD8D4CC), width: 1.5),
+    // A day that happened with nothing logged: a dashed slot, the same mark
+    // the core uses for an open band. Today's is the accent and holds a +.
+    return CustomPaint(
+      painter: _DashedSlotPainter(color: isToday ? colors.accent : const Color(0xFFD8D4CC)),
+      child: SizedBox(
+        width: 21,
+        height: 21,
+        child: isToday
+            ? Center(
+                child: Text('+', style: TextStyle(fontSize: 17, color: colors.accent, fontWeight: FontWeight.w700, height: 1)),
+              )
+            : null,
       ),
-      child: isToday
-          ? Text('+', style: TextStyle(fontSize: 12, color: colors.accent, fontWeight: FontWeight.w700, height: 1))
-          : null,
     );
   }
+}
+
+/// The face a logged mood wears in the strip, low to high (v11 `MOOD_EXPR`).
+AdaExpr _moodExpr(int mood) => switch (mood) {
+      <= 0 => AdaExpr.sad,
+      1 => AdaExpr.meh,
+      2 => AdaExpr.neutral,
+      3 => AdaExpr.smile,
+      _ => AdaExpr.happy,
+    };
+
+class _DashedSlotPainter extends CustomPainter {
+  const _DashedSlotPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color;
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+        Rect.fromLTWH(0.75, 0.75, size.width - 1.5, size.height - 1.5),
+        const Radius.circular(8),
+      ));
+    const dash = 3.5;
+    const space = 2.5;
+    for (final m in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < m.length) {
+        canvas.drawPath(m.extractPath(d, (d + dash).clamp(0.0, m.length)), paint);
+        d += dash + space;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedSlotPainter old) => old.color != color;
 }
 
 /// One "daily reflection" line: the day's mood face, the weekday, and the note.
@@ -496,16 +568,16 @@ class _ReflectionRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 1),
-          child: AdaMascot(size: 18, toneIndex: log.mood, melt: (4 - log.mood) / 4, bubbles: 0),
+          child: AdaMascot(size: 20, toneIndex: log.mood, melt: (4 - log.mood) / 4, expr: _moodExpr(log.mood), bubbles: 0),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 9),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(dayName, style: AppText.sans(size: 9, weight: FontWeight.w800, letterSpacing: AppText.em(0.06, 9), color: colors.textDim)),
+              Text(dayName, style: AppText.sans(size: 12, weight: FontWeight.w800, letterSpacing: AppText.em(0.06, 12), color: colors.textDim)),
               const SizedBox(height: 2),
-              Text(log.note!.trim(), style: AppText.sans(size: 12, height: 1.4, color: colors.text)),
+              Text(log.note!.trim(), style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.45, color: colors.text)),
             ],
           ),
         ),
@@ -536,12 +608,13 @@ class _LinksCard extends ConsumerWidget {
               behavior: HitTestBehavior.opaque,
               onTap: links[i].$2,
               child: Container(
+                constraints: const BoxConstraints(minHeight: 52),
                 decoration: BoxDecoration(border: i == links.length - 1 ? null : Border(bottom: BorderSide(color: colors.border))),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   children: [
-                    Expanded(child: Text(links[i].$1, style: AppText.sans(size: 12, color: colors.text))),
-                    Text('›', style: TextStyle(fontSize: 16, color: colors.textDim)),
+                    Expanded(child: Text(links[i].$1, style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text))),
+                    Ic('chevron_right', size: 19, color: colors.textDim),
                   ],
                 ),
               ),
@@ -558,26 +631,33 @@ class _InviteHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = context.colors.accent;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF6B5CF0), Color(0xFFB39DF5), Color(0xFFE9C8D8)],
-            stops: [0, 0.52, 1],
+            colors: [accent, const Color(0xFFB39DF5), const Color(0xFFE9C8D8)],
+            stops: const [0, 0.52, 1],
           ),
+          boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.23), blurRadius: 24, offset: const Offset(0, 8))],
+        ),
+        // The hairline of light around the card's edge.
+        foregroundDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
         ),
         child: Column(
           children: [
             Image.asset('assets/images/logo.png', width: 54, height: 54, fit: BoxFit.contain),
             const SizedBox(height: 2),
-            Text('Aqademiq', style: AppText.sans(size: 22, weight: FontWeight.w800, letterSpacing: -0.5, color: Colors.white)),
+            Text('Aqademiq', style: AppText.sans(size: 28, weight: FontWeight.w800, letterSpacing: -0.5, color: Colors.white)),
             const SizedBox(height: 4),
-            Text('Your focus sanctuary.', style: AppText.sans(size: 11, weight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.92))),
+            Text('Your focus sanctuary.', style: AppText.sans(size: 15, weight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.92))),
           ],
         ),
       ),

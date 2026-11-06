@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/icons/app_icon.dart';
-import '../../../shared/widgets/app_toggle.dart';
+import '../../../shared/widgets/settings_row.dart';
 import '../../settings/presentation/widgets/settings_scaffold.dart';
 import '../report_copy.dart';
 import '../report_optout.dart';
@@ -39,123 +37,54 @@ class ReportSettingsScreen extends ConsumerWidget {
     final colors = context.colors;
     final on = ref.watch(weeklyReportEnabledProvider);
 
+    // v11 `core-off`: the one toggle, the promise under it, and the list of
+    // what it never does.
     return SettingsScaffold(
       title: ReportCopy.settingsTitle,
-      big: true,
       children: [
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.group),
-            boxShadow: colors.cardShadow,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  ReportCopy.settingsToggle,
-                  style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
-                ),
+        SetGroup(
+          children: [
+            SettingsRow(
+              label: ReportCopy.settingsToggle,
+              toggle: on,
+              onToggle: (v) => unawaited(
+                ref.read(weeklyReportEnabledProvider.notifier).set(value: v),
               ),
-              AppToggle(
-                value: on,
-                onChanged: (v) => unawaited(
-                  ref.read(weeklyReportEnabledProvider.notifier).set(value: v),
-                ),
-              ),
-            ],
-          ),
+              last: true,
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        Text(
-          ReportCopy.settingsToggleNote,
-          style: AppText.sans(size: 12.5, height: 1.45, color: colors.textMed),
-        ),
-        const SizedBox(height: 26),
-        Text(
-          ReportCopy.neverDoesTitle,
-          style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
-        ),
-        const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.group),
-            boxShadow: colors.cardShadow,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 3),
+          child: Text(
+            ReportCopy.settingsToggleNote,
+            style: AppText.sans(size: 15, weight: FontWeight.w500, height: 1.65, color: colors.textMed),
           ),
-          child: Column(
-            children: [
-              const _NeverRow(
-                icon: Icons.notifications_off_outlined,
-                title: ReportCopy.neverNotify,
-                sub: ReportCopy.neverNotifySub,
-              ),
-              _Divider(color: colors.border),
-              const _NeverRow(
-                icon: Icons.history_toggle_off,
-                title: ReportCopy.neverBackBrowse,
-                sub: ReportCopy.neverBackBrowseSub,
-              ),
-              _Divider(color: colors.border),
-              const _NeverRow(
-                icon: Icons.visibility_off_outlined,
-                title: ReportCopy.neverShowWriting,
-                sub: ReportCopy.neverShowWritingSub,
-                last: true,
-              ),
-            ],
-          ),
+        ),
+        const SizedBox(height: 18),
+        const GroupLabel(ReportCopy.neverDoesTitle),
+        const SetGroup(
+          children: [
+            SettingsRow(
+              icon: Icons.notifications_off_outlined,
+              label: ReportCopy.neverNotify,
+              sub: ReportCopy.neverNotifySub,
+            ),
+            SettingsRow(
+              icon: Icons.history_toggle_off,
+              label: ReportCopy.neverBackBrowse,
+              sub: ReportCopy.neverBackBrowseSub,
+            ),
+            SettingsRow(
+              icon: Icons.visibility_off_outlined,
+              label: ReportCopy.neverShowWriting,
+              sub: ReportCopy.neverShowWritingSub,
+              last: true,
+            ),
+          ],
         ),
       ],
-    );
-  }
-}
-
-class _Divider extends StatelessWidget {
-  const _Divider({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 54),
-        child: Container(height: 1, color: color),
-      );
-}
-
-class _NeverRow extends StatelessWidget {
-  const _NeverRow({required this.icon, required this.title, required this.sub, this.last = false});
-
-  final IconData icon;
-  final String title;
-  final String sub;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 15, 16, last ? 16 : 15),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: AppIcon(icon, size: 20, color: colors.text),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppText.sans(size: 14.5, weight: FontWeight.w800, color: colors.text)),
-                const SizedBox(height: 3),
-                Text(sub, style: AppText.sans(size: 12, height: 1.35, color: colors.textMed)),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

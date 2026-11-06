@@ -11,17 +11,18 @@ import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/guest_badge.dart';
 import '../../../shared/widgets/guest_nudge_card.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/share_sheet.dart';
 import '../providers/subjects_ui_providers.dart';
 import 'sheets/add_semester_sheet.dart';
 import 'sheets/edit_semesters_sheet.dart';
 import 'sheets/sort_subjects_sheet.dart';
 import 'sheets/subject_menu.dart';
+import 'widgets/subject_bits.dart';
 import 'widgets/subject_form_sheet.dart';
 import 'widgets/subject_tiles.dart';
 
@@ -52,7 +53,7 @@ class SubjectsScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           subjectsAsync.when(
             loading: () => const Expanded(child: Center(child: CircularProgressIndicator())),
-            error: (_, _) => Expanded(child: Center(child: Text('Could not load subjects', style: AppText.sans(size: 13, color: colors.textMed)))),
+            error: (_, _) => Expanded(child: Center(child: Text('Could not load subjects', style: AppText.sans(size: 15, color: colors.textMed)))),
             data: (subjects) => Expanded(
               child: subjects.isEmpty
                   ? _Empty(guest: guest, onAdd: () => _addSubject(context))
@@ -116,6 +117,8 @@ class SubjectsScreen extends ConsumerWidget {
   }
 }
 
+/// SubjHeader: the Share pill on the left (the logo and Guest badge for a
+/// guest), and one white pill holding ··· and + on the right.
 class _SubjHeader extends StatelessWidget {
   const _SubjHeader({required this.guest, required this.onShare, required this.onMenu, required this.onAdd});
   final bool guest;
@@ -126,54 +129,85 @@ class _SubjHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Row(
-      children: [
-        if (guest)
-          const GuestBadge()
-        else
-          GestureDetector(
-            onTap: onShare,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-              decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(AppRadius.pill), boxShadow: colors.cardShadow),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppIcon(Icons.ios_share, size: 15, color: colors.text),
-                  const SizedBox(width: 6),
-                  Text('Share', style: AppText.sans(size: 12, weight: FontWeight.w800, color: colors.text)),
-                ],
-              ),
+    return SizedBox(
+      height: kSubjHeadButton,
+      child: Row(
+        children: [
+          if (guest) ...[
+            Image.asset('assets/images/logo.png', width: 26, height: 26, fit: BoxFit.contain),
+            const SizedBox(width: 8),
+            const GuestBadge(),
+          ] else
+            SubjBarPill(icon: 'ios_share', label: 'Share', onTap: onShare),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(AppRadius.pill), boxShadow: colors.cardShadow),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _HeadIcon(icon: 'more', label: 'Semester menu', onTap: onMenu),
+                const SizedBox(width: 2),
+                _HeadIcon(icon: 'add', label: 'Add subject', onTap: onAdd),
+              ],
             ),
           ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(AppRadius.pill), boxShadow: colors.cardShadow),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onMenu,
-                child: SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: Text('···', style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1, color: colors.text)),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 2),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onAdd,
-                child: SizedBox(width: 30, height: 30, child: AppIcon(Icons.add, size: 21, color: colors.text)),
-              ),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+/// One 36 circle inside the header's white pill, with a 24 glyph.
+class _HeadIcon extends StatelessWidget {
+  const _HeadIcon({required this.icon, required this.label, required this.onTap});
+  final String icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: 36,
+          child: Center(child: Ic(icon, color: context.colors.text)),
+        ),
+      ),
+    );
+  }
+}
+
+/// "Subjects" at 34, the count beside it, and the semester on the right — all
+/// on one baseline.
+class _TitleRow extends StatelessWidget {
+  const _TitleRow({required this.count, this.semesterName});
+  final int count;
+  final String? semesterName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text('Subjects', style: AppText.sans(size: 34, weight: FontWeight.w800, letterSpacing: -0.5, color: colors.text)),
+        const SizedBox(width: 7),
+        Text('$count', style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.textDim)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            semesterName ?? '',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.textMed),
           ),
         ),
       ],
@@ -202,23 +236,7 @@ class _SubjectCollection extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('Subjects', style: AppText.sans(size: 30, weight: FontWeight.w800, letterSpacing: -0.5, color: colors.text)),
-            const SizedBox(width: 7),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('${subjects.length}', style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim)),
-            ),
-            const Spacer(),
-            if (semesterName != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(semesterName!, style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.textMed)),
-              ),
-          ],
-        ),
+        _TitleRow(count: subjects.length, semesterName: semesterName),
         const SizedBox(height: 12),
         if (missingCount > 0) ...[
           Container(
@@ -230,15 +248,15 @@ class _SubjectCollection extends StatelessWidget {
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(
-                    '$missingCount ${missingCount == 1 ? 'subject is' : 'subjects are'} missing a syllabus — add files so I can plan better.',
-                    style: AppText.sans(size: 10.5, height: 1.4, color: colors.text),
+                    '$missingCount ${missingCount == 1 ? 'subject is' : 'subjects are'} missing a syllabus. Add files so I can plan better.',
+                    style: AppText.sans(size: 13, height: 1.4, color: colors.text),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 9),
                 GestureDetector(
                   onTap: onAddMissingFile,
                   behavior: HitTestBehavior.opaque,
-                  child: Text('Add →', style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.accent)),
+                  child: Text('Add →', style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.accent)),
                 ),
               ],
             ),
@@ -246,16 +264,7 @@ class _SubjectCollection extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         if (layout == SubjectsLayout.grid)
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 9,
-            crossAxisSpacing: 9,
-            childAspectRatio: 0.92,
-            padding: EdgeInsets.zero,
-            children: [for (final s in subjects) SubjectTile(subject: s, onTap: () => open(s))],
-          )
+          SubjectGrid(subjects: subjects, onOpen: open)
         else
           for (final s in subjects)
             Padding(
@@ -276,22 +285,13 @@ class _Empty extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text('Subjects', style: AppText.sans(size: 30, weight: FontWeight.w800, letterSpacing: -0.5, color: colors.text)),
-            const SizedBox(width: 7),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('0', style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim)),
-            ),
-          ],
-        ),
+        const _TitleRow(count: 0),
         const SizedBox(height: 14),
         Expanded(
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 18),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -304,26 +304,30 @@ class _Empty extends StatelessWidget {
                     child: const AdaMascot(size: 48),
                   ),
                   const SizedBox(height: 16),
-                  Text('No subjects yet', style: AppText.sans(size: 19, weight: FontWeight.w700, color: colors.text)),
+                  Text('No subjects yet', style: AppText.sans(size: 22, weight: FontWeight.w700, color: colors.text)),
                   const SizedBox(height: 6),
                   Text(
                     "Add the classes you're taking and I'll keep your materials, deadlines and grades in one place.",
                     textAlign: TextAlign.center,
-                    style: AppText.sans(size: 12, height: 1.55, color: colors.textMed),
+                    style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.55, color: colors.textMed),
                   ),
                   const SizedBox(height: 18),
-                  GestureDetector(
-                    onTap: onAdd,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
-                      decoration: BoxDecoration(color: colors.ink, borderRadius: BorderRadius.circular(AppRadius.pill)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const AppIcon(Icons.add, size: 17, color: Colors.white),
-                          const SizedBox(width: 7),
-                          Text('Add your first subject', style: AppText.sans(size: 12.5, weight: FontWeight.w800, color: Colors.white)),
-                        ],
+                  Semantics(
+                    button: true,
+                    child: GestureDetector(
+                      onTap: onAdd,
+                      child: Container(
+                        height: 50,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                        decoration: BoxDecoration(color: colors.ink, borderRadius: BorderRadius.circular(AppRadius.pill)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Ic('add', size: 21, color: Colors.white),
+                            const SizedBox(width: 7),
+                            Text('Add your first subject', style: AppText.sans(size: 17, weight: FontWeight.w800, color: Colors.white)),
+                          ],
+                        ),
                       ),
                     ),
                   ),

@@ -6,7 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/subjects_repository.dart';
-import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/ic.dart';
+import '../widgets/subject_bits.dart';
 
 /// One source row in the add-file sheet (`subj-file`).
 class _FileSource {
@@ -18,7 +19,8 @@ class _FileSource {
     required this.kind,
   });
 
-  final IconData icon;
+  /// A design icon name.
+  final String icon;
   final String label;
   final String sub;
   final Color color;
@@ -29,28 +31,28 @@ class _FileSource {
 
 const List<_FileSource> _sources = [
   _FileSource(
-    icon: Icons.description,
+    icon: 'description',
     label: 'Syllabus',
-    sub: 'PDF or doc — Ada builds your plan from it',
+    sub: 'PDF or doc. Ada builds your plan from it',
     color: Color(0xFF6B5CF0),
     kind: 'syllabus',
   ),
   _FileSource(
-    icon: Icons.slideshow,
+    icon: 'slideshow',
     label: 'Lecture slides',
     sub: 'Decks and handouts',
     color: Color(0xFFE8A430),
     kind: 'slides',
   ),
   _FileSource(
-    icon: Icons.edit_note,
+    icon: 'edit_note',
     label: 'Notes',
     sub: 'Your own notes & summaries',
     color: Color(0xFF5CBBFF),
     kind: 'notes',
   ),
   _FileSource(
-    icon: Icons.quiz,
+    icon: 'quiz',
     label: 'Past papers',
     sub: 'Previous exams to practice',
     color: Color(0xFF2A9D6B),
@@ -155,75 +157,48 @@ class _AddFileSheetState extends ConsumerState<_AddFileSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.sheetTop),
-        ),
-        boxShadow: colors.sheetShadow,
-      ),
-      // Lift above the keyboard if one is up (e.g. left focused on the screen
-      // behind), so the file options are never hidden underneath it.
-      padding: EdgeInsets.fromLTRB(
-        18,
-        12,
-        18,
-        22 + MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0DDD7),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Add to ${widget.subjectName}',
-                style: AppText.sans(
-                  size: 19,
-                  weight: FontWeight.w800,
-                  color: colors.text,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _busy ? 'Uploading…' : 'Ada can read these to plan smarter',
-                style: AppText.sans(size: 11.5, color: colors.textMed),
-              ),
-              const SizedBox(height: 16),
-              for (var i = 0; i < _sources.length; i++)
-                Padding(
-                  padding: EdgeInsets.only(
-                    bottom: i == _sources.length - 1 ? 0 : 8,
-                  ),
-                  child: _SourceRow(
-                    source: _sources[i],
-                    onTap: _busy
-                        ? null
-                        : () => _pickAndUpload(_sources[i].kind),
-                  ),
-                ),
-              const SizedBox(height: 14),
-              _OutlinePill(
-                icon: Icons.folder_open,
-                label: 'Browse',
-                onTap: _busy ? null : () => _pickAndUpload('notes'),
-              ),
-            ],
+    // Floats 8 clear of the edges (v11 SheetPanel) and lifts above the
+    // keyboard if one is up (e.g. left focused on the screen behind), so the
+    // file options are never hidden underneath it.
+    return SubjSheetPanel(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 38),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Add to ${widget.subjectName}',
+            style: AppText.sans(
+              size: 22,
+              weight: FontWeight.w800,
+              color: colors.text,
+            ),
           ),
-        ),
+          const SizedBox(height: 2),
+          Text(
+            _busy ? 'Uploading…' : 'Ada can read these to plan smarter',
+            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
+          ),
+          const SizedBox(height: 16),
+          for (var i = 0; i < _sources.length; i++)
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: i == _sources.length - 1 ? 0 : 8,
+              ),
+              child: _SourceRow(
+                source: _sources[i],
+                onTap: _busy
+                    ? null
+                    : () => _pickAndUpload(_sources[i].kind),
+              ),
+            ),
+          const SizedBox(height: 14),
+          _OutlinePill(
+            icon: 'folder',
+            label: 'Browse',
+            onTap: _busy ? null : () => _pickAndUpload('notes'),
+          ),
+        ],
       ),
     );
   }
@@ -258,7 +233,7 @@ class _SourceRow extends StatelessWidget {
                 color: source.color.alpha8(0x1C),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: AppIcon(source.icon, size: 19, color: source.color),
+              child: Ic(source.icon, size: 19, color: source.color),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -268,21 +243,20 @@ class _SourceRow extends StatelessWidget {
                   Text(
                     source.label,
                     style: AppText.sans(
-                      size: 12.5,
+                      size: 17,
                       weight: FontWeight.w800,
                       color: colors.text,
                     ),
                   ),
-                  const SizedBox(height: 1),
                   Text(
                     source.sub,
-                    style: AppText.sans(size: 9.5, color: colors.textDim),
+                    style: AppText.sans(size: 12, color: colors.textDim),
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 12),
-            AppIcon(Icons.chevron_right, size: 18, color: colors.textDim),
+            Ic('chevron_right', size: 18, color: colors.textDim),
           ],
         ),
       ),
@@ -295,7 +269,8 @@ class _SourceRow extends StatelessWidget {
 class _OutlinePill extends StatelessWidget {
   const _OutlinePill({required this.icon, required this.label, this.onTap});
 
-  final IconData icon;
+  /// A design icon name.
+  final String icon;
   final String label;
   final VoidCallback? onTap;
 
@@ -315,12 +290,12 @@ class _OutlinePill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppIcon(icon, size: 16, color: colors.text),
+            Ic(icon, size: 20, color: colors.text),
             const SizedBox(width: 6),
             Text(
               label,
               style: AppText.sans(
-                size: 12,
+                size: 17,
                 weight: FontWeight.w800,
                 color: colors.text,
               ),

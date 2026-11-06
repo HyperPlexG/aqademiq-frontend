@@ -16,13 +16,55 @@ import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/data/models/weekly_report.dart';
 import 'package:aqademiq/data/repositories/weekly_report_repository.dart';
+import 'package:aqademiq/features/freeze/domain/freeze_models.dart';
+import 'package:aqademiq/features/freeze/providers/freeze_controller.dart';
 import 'package:aqademiq/features/report/presentation/weekly_report_screen.dart';
 import 'package:aqademiq/features/report/report_copy.dart';
+import 'package:aqademiq/shared/widgets/ic.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 final _monday = DateTime(2026, 8, 31);
+
+/// App freeze, held still: the report reads its thaw log and nothing else, so
+/// the tests hand it one rather than building the real controller.
+class _FixedFreeze extends FreezeController {
+  _FixedFreeze(this._data);
+  final FreezeData _data;
+
+  @override
+  FreezeData build() => _data;
+}
+
+/// App freeze set up, with three thaws this week (two on Tuesday, one on
+/// Thursday), a "Thaw everything" on Wednesday — which is not a thaw — and one
+/// thaw the Sunday before, which belongs to last week.
+FreezeData _thawedWeek() => FreezeData(
+      setUp: true,
+      thawLog: [
+        ThawRecord(at: _monday.subtract(const Duration(hours: 3)), minutes: 5),
+        ThawRecord(at: _monday.add(const Duration(days: 1, hours: 10)), minutes: 5),
+        ThawRecord(at: _monday.add(const Duration(days: 1, hours: 21)), minutes: 2),
+        ThawRecord(at: _monday.add(const Duration(days: 2, hours: 9)), minutes: 0, target: ThawGrant.allApps),
+        ThawRecord(at: _monday.add(const Duration(days: 3, hours: 15)), minutes: 15),
+      ],
+    );
+
+Finder _crackedCubes() => find.byWidgetPredicate((w) => w is Ic && w.name == 'cube_cracked');
+
+/// What the phone sends when a screenshot is taken (ScreenshotPlugin.swift,
+/// MainActivity.kt): one call, no arguments.
+Future<void> _screenshot(WidgetTester tester) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'aqademiq/screenshot',
+    const StandardMethodCodec().encodeMethodCall(const MethodCall('screenshotTaken')),
+    (_) {},
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}
 
 ReportDay _day(int i, {bool active = true, int? mood, int mins = 30, bool future = false}) => ReportDay(
       date: _monday.add(Duration(days: i)),
@@ -84,6 +126,7 @@ Future<void> _pump(
   WeeklyReport report, {
   Size size = const Size(390, 844),
   Brightness brightness = Brightness.light,
+  FreezeData freeze = const FreezeData(),
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
@@ -91,7 +134,10 @@ Future<void> _pump(
 
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [weeklyReportProvider.overrideWith((ref) async => report)],
+      overrides: [
+        weeklyReportProvider.overrideWith((ref) async => report),
+        freezeControllerProvider.overrideWith(() => _FixedFreeze(freeze)),
+      ],
       child: MaterialApp(
         theme: buildAppTheme(brightness: brightness, accent: AppAccent.violet),
         home: const WeeklyReportScreen(),
@@ -132,7 +178,10 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [weeklyReportProvider.overrideWith((ref) async => _full())],
+        overrides: [
+          weeklyReportProvider.overrideWith((ref) async => _full()),
+          freezeControllerProvider.overrideWith(() => _FixedFreeze(const FreezeData())),
+        ],
         child: MaterialApp(
           theme: buildAppTheme(brightness: Brightness.light, accent: AppAccent.violet),
           home: const WeeklyReportScreen(),
@@ -158,7 +207,7 @@ void main() {
   });
 
   testWidgets('every page of a full week renders without overflowing', (tester) async {
-    await _pump(tester, _full());
+    await _pump(tester, _full(), freeze: _thawedWeek());
     await _walk(tester, (i) async {
       expect(tester.takeException(), isNull, reason: 'page $i overflowed');
     });
@@ -167,14 +216,14 @@ void main() {
   testWidgets('every page survives a small phone', (tester) async {
     // 320pt is the narrowest viewport the app still supports, and the core plus
     // its day labels take a fixed ~140pt out of it before any text is laid out.
-    await _pump(tester, _full(), size: const Size(320, 640));
+    await _pump(tester, _full(), size: const Size(320, 640), freeze: _thawedWeek());
     await _walk(tester, (i) async {
       expect(tester.takeException(), isNull, reason: 'page $i overflowed at 320pt');
     });
   });
 
   testWidgets('every page renders in dark mode', (tester) async {
-    await _pump(tester, _full(), brightness: Brightness.dark);
+    await _pump(tester, _full(), brightness: Brightness.dark, freeze: _thawedWeek());
     await _walk(tester, (i) async {
       expect(tester.takeException(), isNull, reason: 'page $i broke in dark mode');
     });
@@ -212,6 +261,7 @@ void main() {
       expect(find.text(ReportCopy.attentionTitle), findsNothing);
       expect(find.text(ReportCopy.longestTitle), findsNothing);
       expect(find.text(ReportCopy.heldTitle), findsNothing);
+      expect(find.text(ReportCopy.thawedTitle), findsNothing);
     });
   });
 
@@ -228,8 +278,75 @@ void main() {
     // ProviderScope leaves the previous AsyncValue in place long enough to
     // measure the wrong week, which made the comparison pass on stale data.
     await _pump(tester, _full());
-    // shape, core, moment, numeral, attention, recovery, texture, landing.
+    // shape, core, moment, numeral, attention, recovery, texture, landing —
+    // and no "When you thawed", because App freeze is not set up.
     expect(_pageCount(tester), 8);
+  });
+
+  testWidgets('a week with thaws gets "When you thawed", after attention', (tester) async {
+    await _pump(tester, _full(), freeze: _thawedWeek());
+    // shape, core, moment, numeral, attention, thawed, recovery, texture,
+    // landing: the design's nine.
+    expect(_pageCount(tester), 9);
+    var thawedAt = -1;
+    var attentionAt = -1;
+    await _walk(tester, (i) async {
+      if (find.text(ReportCopy.attentionTitle).evaluate().isNotEmpty) attentionAt = i;
+      if (find.text(ReportCopy.thawedTitle).evaluate().isNotEmpty) {
+        thawedAt = i;
+        expect(find.text(ReportCopy.thawed), findsOneWidget);
+        expect(find.text(ReportCopy.thawedCaption), findsOneWidget);
+        // One cracked cube per thaw, this week only: two on Tuesday, one on
+        // Thursday. Not "Thaw everything", not last Sunday.
+        expect(_crackedCubes(), findsNWidgets(3));
+        // Drawn, not counted: no numeral on the beat.
+        expect(find.text('3'), findsNothing);
+      }
+    });
+    expect(thawedAt, attentionAt + 1, reason: 'the thawed beat follows where attention went');
+  });
+
+  testWidgets('no thaw this week, no beat — even with App freeze set up', (tester) async {
+    await _pump(
+      tester,
+      _full(),
+      freeze: FreezeData(
+        setUp: true,
+        thawLog: [
+          // Last week, and a stand-down this week: neither is a thaw this week.
+          ThawRecord(at: _monday.subtract(const Duration(days: 2)), minutes: 10),
+          ThawRecord(at: _monday.add(const Duration(days: 1)), minutes: 0, target: ThawGrant.allApps),
+        ],
+      ),
+    );
+    expect(_pageCount(tester), 8);
+    await _walk(tester, (i) async {
+      expect(find.text(ReportCopy.thawedTitle), findsNothing, reason: 'page $i showed an empty thaw beat');
+    });
+  });
+
+  testWidgets('App freeze not set up: the beat is absent, whatever the log says', (tester) async {
+    await _pump(tester, _full(), freeze: FreezeData(thawLog: _thawedWeek().thawLog));
+    expect(_pageCount(tester), 8);
+  });
+
+  testWidgets('a heavy thaw day stays on the page at 320pt and in dark mode', (tester) async {
+    final heavy = FreezeData(
+      setUp: true,
+      thawLog: [
+        for (var i = 0; i < 9; i++) ThawRecord(at: _monday.add(Duration(days: 4, minutes: 20 * i)), minutes: 2),
+      ],
+    );
+    await _pump(tester, _full(), size: const Size(320, 640), freeze: heavy, brightness: Brightness.dark);
+    var saw = false;
+    await _walk(tester, (i) async {
+      expect(tester.takeException(), isNull, reason: 'page $i overflowed');
+      if (find.text(ReportCopy.thawedTitle).evaluate().isNotEmpty) {
+        saw = true;
+        expect(_crackedCubes(), findsNWidgets(9));
+      }
+    });
+    expect(saw, isTrue);
   });
 
   testWidgets('the empty week lands on its own closing, and asks for nothing', (tester) async {
@@ -245,7 +362,7 @@ void main() {
   testWidgets('nothing on any page renders an x-of-y denominator', (tester) async {
     // The runtime version of the copy lint: whatever the widgets compose, no
     // rendered string may contain one.
-    await _pump(tester, _full());
+    await _pump(tester, _full(), freeze: _thawedWeek());
     final denominator = RegExp(r'\d\s*/\s*\d');
     await _walk(tester, (i) async {
       final offenders = tester
@@ -268,6 +385,24 @@ void main() {
       }
     });
     expect(sawGapCaption, isTrue, reason: 'the open band was never explained');
+  });
+
+  testWidgets('a thin week is told in the same register, with its smallest true thing', (tester) async {
+    final thin = WeeklyReport(
+      weekStart: _monday,
+      weekEnd: _monday.add(const Duration(days: 6)),
+      shape: WeekShape.single,
+      activeDays: 1,
+      daysOnBoard: 4,
+      days: [for (var i = 0; i < 7; i++) _day(i, active: i == 1, mood: i == 1 ? 2 : null)],
+    );
+    await _pump(tester, thin);
+    var sawSmallest = false;
+    await _walk(tester, (i) async {
+      expect(tester.takeException(), isNull, reason: 'page $i overflowed');
+      if (find.text(ReportCopy.smallestTrueThing(thin.days[1])).evaluate().isNotEmpty) sawSmallest = true;
+    });
+    expect(sawSmallest, isTrue, reason: 'the one day was never named');
   });
 
   testWidgets('a week with no gaps is not handed an explanation it does not need', (tester) async {
@@ -293,9 +428,11 @@ void main() {
   });
 
   testWidgets('leaving is one tap, on every page', (tester) async {
-    await _pump(tester, _full());
+    await _pump(tester, _full(), freeze: _thawedWeek());
+    // The ✕ is drawn from the icon pack now, so it is found by what it says
+    // rather than by a Material glyph.
     await _walk(tester, (i) async {
-      expect(find.byIcon(Icons.close), findsOneWidget, reason: 'page $i had no way out');
+      expect(find.byTooltip('Close'), findsOneWidget, reason: 'page $i had no way out');
     });
   });
 
@@ -325,5 +462,32 @@ void main() {
         reason: 'page $i called a future day a gap',
       );
     });
+  });
+
+  testWidgets('a screenshot of the report offers the tag and the clean card, then eases away', (tester) async {
+    await _pump(tester, _full());
+    expect(find.text(ReportCopy.screenshotTitle), findsNothing);
+    await _screenshot(tester);
+    expect(tester.takeException(), isNull);
+    expect(find.text(ReportCopy.screenshotTitle), findsOneWidget);
+    expect(find.text(ReportCopy.copyTag), findsOneWidget);
+    expect(find.text(ReportCopy.useStoryCard), findsOneWidget);
+    // Non-blocking, and gone on its own.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text(ReportCopy.screenshotTitle), findsNothing);
+  });
+
+  testWidgets('the banner fits a small phone, and "Use story card" opens the card', (tester) async {
+    await _pump(tester, _full(), size: const Size(320, 640));
+    await _screenshot(tester);
+    expect(tester.takeException(), isNull, reason: 'the banner overflowed at 320pt');
+    await tester.tap(find.text(ReportCopy.useStoryCard));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(tester.takeException(), isNull, reason: 'the share screen overflowed at 320pt');
+    expect(find.text(ReportCopy.shareAction), findsOneWidget);
+    expect(find.text(ReportCopy.shareMore), findsOneWidget);
+    expect(find.text(ReportCopy.screenshotTitle), findsNothing);
   });
 }

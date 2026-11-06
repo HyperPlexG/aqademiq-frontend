@@ -4,16 +4,18 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_mood.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/hex_color.dart';
 import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
-import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import 'sheets/add_file_sheet.dart';
+import 'widgets/subject_bits.dart';
 import 'widgets/subject_form_sheet.dart';
 
 /// FRAMES `subj-detail` — subject hero + stats + materials.
@@ -21,23 +23,24 @@ class SubjectDetailScreen extends ConsumerWidget {
   const SubjectDetailScreen({super.key, required this.id});
   final String id;
 
-  /// Icon + accent for a material, chosen from its file extension.
-  static (IconData, Color) _fileVisual(String name) {
+  /// Icon (a design name) + accent for a material, chosen from its file
+  /// extension.
+  static (String, Color) _fileVisual(String name) {
     final n = name.toLowerCase();
-    if (n.endsWith('.pdf')) return (Icons.picture_as_pdf, const Color(0xFFE85476));
+    if (n.endsWith('.pdf')) return ('picture_as_pdf', const Color(0xFFE85476));
     if (n.endsWith('.ppt') || n.endsWith('.pptx')) {
-      return (Icons.slideshow, const Color(0xFFE8A430));
+      return ('slideshow', const Color(0xFFE8A430));
     }
     if (n.endsWith('.doc') || n.endsWith('.docx')) {
-      return (Icons.article, const Color(0xFF5C7CFF));
+      return ('description', const Color(0xFF5C7CFF));
     }
     if (n.endsWith('.png') || n.endsWith('.jpg') || n.endsWith('.jpeg')) {
-      return (Icons.image, const Color(0xFF2A9D6B));
+      return ('file', const Color(0xFF2A9D6B));
     }
     if (n.endsWith('.md') || n.endsWith('.txt')) {
-      return (Icons.description, const Color(0xFF5CBBFF));
+      return ('note', const Color(0xFF5CBBFF));
     }
-    return (Icons.insert_drive_file, const Color(0xFF7A8699));
+    return ('file', const Color(0xFF7A8699));
   }
 
   @override
@@ -48,12 +51,13 @@ class SubjectDetailScreen extends ConsumerWidget {
     if (subject == null) {
       return Scaffold(
         backgroundColor: colors.bg,
-        body: Center(child: Text('Subject not found', style: AppText.sans(size: 13, color: colors.textMed))),
+        body: Center(child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed))),
       );
     }
     final color = hexColor(subject.color);
     final filesAsync = ref.watch(subjectFilesProvider(subject.id));
     final files = filesAsync.value;
+    final mood = (subject.mood ?? 2).clamp(0, 4);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 96),
@@ -82,8 +86,13 @@ class SubjectDetailScreen extends ConsumerWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('You feel', style: AppText.sans(size: 9, weight: FontWeight.w700, color: colors.textDim)),
-                                Text(MoodScale.labels[(subject.mood ?? 2).clamp(0, 4)], style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.text)),
+                                Text('You feel', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
+                                Text(
+                                  MoodScale.labels[mood],
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.sans(size: 15, weight: FontWeight.w800, color: AppMood.ramp[mood]),
+                                ),
                               ],
                             ),
                           ),
@@ -96,14 +105,19 @@ class SubjectDetailScreen extends ConsumerWidget {
                     child: _StatCard(
                       child: Row(
                         children: [
-                          AppIcon(Icons.timer, size: 20, color: color),
+                          Ic('focus', size: 20, color: color),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('This week', style: AppText.sans(size: 9, weight: FontWeight.w700, color: colors.textDim)),
-                                Text('${subject.focusHours ?? 0}h focus', style: AppText.sans(size: 11, weight: FontWeight.w800, color: colors.text)),
+                                Text('This week', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
+                                Text(
+                                  '${subject.focusHours ?? 0}h focus',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
+                                ),
                               ],
                             ),
                           ),
@@ -116,21 +130,24 @@ class SubjectDetailScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Text('MATERIALS (${files?.length ?? subject.fileCount})', style: AppText.sans(size: 9, weight: FontWeight.w800, letterSpacing: AppText.em(0.12, 9), color: colors.textDim)),
-                  const Spacer(),
+                  Expanded(child: SubjLabel('Materials (${files?.length ?? subject.fileCount})', bottom: 0)),
                   GestureDetector(
                     onTap: () => showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
-                    child: Row(
-                      children: [
-                        AppIcon(Icons.add, size: 13, color: colors.accent),
-                        const SizedBox(width: 2),
-                        Text('Add file', style: AppText.sans(size: 10.5, weight: FontWeight.w800, color: colors.accent)),
-                      ],
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          Ic('add', size: 16, color: colors.accent),
+                          const SizedBox(width: 2),
+                          Text('Add file', style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 1),
               ...filesAsync.when(
                 data: (list) => list.isEmpty
                     ? [
@@ -138,7 +155,7 @@ class SubjectDetailScreen extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           child: Text(
                             'No materials yet — add your syllabus or notes.',
-                            style: AppText.sans(size: 11.5, color: colors.textMed),
+                            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
                           ),
                         ),
                       ]
@@ -179,7 +196,7 @@ class SubjectDetailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       "Couldn't load materials.",
-                      style: AppText.sans(size: 11.5, color: colors.textMed),
+                      style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
                     ),
                   ),
                 ],
@@ -327,7 +344,7 @@ class _Hero extends StatelessWidget {
     ].join(' · ');
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: LinearGradient(
@@ -342,46 +359,49 @@ class _Hero extends StatelessWidget {
         children: [
           Row(
             children: [
-              GestureDetector(onTap: onBack, child: const AppIcon(Icons.arrow_back, size: 20, color: Colors.white)),
+              SubjBarCircle(icon: 'arrow_back', fill: SubjFill.glass, onTap: onBack, semanticLabel: 'Back'),
               const Spacer(),
-              Semantics(
-                button: true,
-                label: 'Delete subject',
-                excludeSemantics: true,
-                child: GestureDetector(
-                  onTap: onDelete,
-                  behavior: HitTestBehavior.opaque,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    child: AppIcon(Icons.delete_outline, size: 17, color: Colors.white),
-                  ),
-                ),
-              ),
+              SubjBarCircle(icon: 'delete', fill: SubjFill.glass, onTap: onDelete, semanticLabel: 'Delete subject'),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onEdit,
-                behavior: HitTestBehavior.opaque,
-                child: Row(
-                  children: [
-                    const AppIcon(Icons.edit, size: 15, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Text('Edit', style: AppText.sans(size: 12, weight: FontWeight.w800, color: Colors.white)),
-                  ],
-                ),
-              ),
+              SubjBarPill(icon: 'edit', label: 'Edit', fill: SubjFill.glass, onTap: onEdit),
             ],
           ),
           const SizedBox(height: 12),
-          Text(eyebrow.toUpperCase(), style: AppText.sans(size: 10, weight: FontWeight.w800, letterSpacing: AppText.em(0.06, 10), color: Colors.white.withValues(alpha: 0.85))),
-          const SizedBox(height: 3),
-          Text(subject.name, style: AppText.sans(size: 22, weight: FontWeight.w800, height: 1.15, color: Colors.white)),
+          if (eyebrow.isNotEmpty) ...[
+            Text(
+              eyebrow.toUpperCase(),
+              style: AppText.sans(
+                size: 12,
+                weight: FontWeight.w800,
+                letterSpacing: AppText.em(0.06, 12),
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
+            const SizedBox(height: 3),
+          ],
+          Text(subject.name, style: AppText.sans(size: 28, weight: FontWeight.w800, height: 1.15, color: Colors.white)),
           const SizedBox(height: 8),
-          Row(
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              AppIcon(Icons.person_outline, size: 14, color: Colors.white.withValues(alpha: 0.92)),
-              const SizedBox(width: 4),
-              Text(subject.professor ?? '', style: AppText.sans(size: 11, color: Colors.white.withValues(alpha: 0.92))),
-              const SizedBox(width: 10),
+              if (subject.professor != null && subject.professor!.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Ic('profile', size: 18, color: Colors.white.withValues(alpha: 0.92)),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        subject.professor!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, color: Colors.white.withValues(alpha: 0.92)),
+                      ),
+                    ),
+                  ],
+                ),
               if (subject.targetGrade != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -389,9 +409,9 @@ class _Hero extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const AppIcon(Icons.track_changes, size: 11, color: Colors.white),
+                      const Ic('goal', size: 14, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text('Target ${subject.targetGrade}', style: AppText.sans(size: 10, weight: FontWeight.w800, color: Colors.white)),
+                      Text('Target ${subject.targetGrade}', style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white)),
                     ],
                   ),
                 ),
@@ -428,7 +448,9 @@ class _FileRow extends StatelessWidget {
     required this.onDelete,
     super.key,
   });
-  final IconData icon;
+
+  /// A design icon name.
+  final String icon;
   final String name;
   final String size;
   final Color color;
@@ -465,31 +487,36 @@ class _FileRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           child: Row(
             children: [
-            Container(
-              width: 30,
-              height: 30,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: color.alpha8(0x18), borderRadius: BorderRadius.circular(9)),
-              child: AppIcon(icon, size: 16, color: color),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 11.5, weight: FontWeight.w700, color: colors.text)),
-                  Text(size, style: AppText.sans(size: 9, color: colors.textDim)),
-                ],
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: color.alpha8(0x18), borderRadius: BorderRadius.circular(9)),
+                child: Ic(icon, size: 20, color: color),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                    Text(size, style: AppText.sans(size: 12, color: colors.textDim)),
+                  ],
+                ),
+              ),
               // Explicit delete affordance next to swipe-to-delete, so the
               // action is discoverable without knowing to swipe.
-              GestureDetector(
-                onTap: onDelete,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  child: AppIcon(Icons.delete_outline, size: 18, color: colors.textDim),
+              Semantics(
+                button: true,
+                label: 'Delete file',
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: onDelete,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Ic('delete', size: 18, color: colors.textDim),
+                  ),
                 ),
               ),
             ],
