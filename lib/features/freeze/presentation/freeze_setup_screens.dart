@@ -70,7 +70,7 @@ class FreezeIntroScreen extends StatelessWidget {
             ],
           ),
         ),
-        FzBtn(label: 'Set up App freeze', onTap: () => unawaited(context.pushReplacement(Routes.freezePermission))),
+        FzBtn(label: 'Set up App freeze', onTap: () => context.pushReplacement(Routes.freezePermission)),
         const SizedBox(height: 12),
         FzLink('Not now', onTap: () => context.pop()),
       ],
@@ -128,7 +128,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
       ..invalidate(floorAppsProvider);
     if (!mounted) return;
     if (access.batteryRestricted) await showBatterySheet(context, ref);
-    if (mounted) unawaited(context.pushReplacement(Routes.freeze));
+    if (mounted) context.pushReplacement(Routes.freeze);
   }
 
   Future<void> _continueIos() async {
@@ -140,7 +140,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
     if (ok) {
       await _finish(await ref.read(appFreezeChannelProvider).status());
     } else {
-      unawaited(context.pushReplacement(Routes.freezeDenied));
+      context.pushReplacement(Routes.freezeDenied);
     }
   }
 
@@ -354,7 +354,7 @@ class FreezeDeniedScreen extends ConsumerWidget {
             final channel = ref.read(appFreezeChannelProvider);
             if (ios && await channel.requestAuthorization()) {
               ref.read(freezeControllerProvider.notifier).markSetUp();
-              if (context.mounted) unawaited(context.pushReplacement(Routes.freeze));
+              if (context.mounted) context.pushReplacement(Routes.freeze);
               return;
             }
             // Neither OS asks twice: Settings is the way back.

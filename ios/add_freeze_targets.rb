@@ -105,6 +105,19 @@ unless entitlements.include?('<key>com.apple.developer.family-controls</key>')
   puts 'Runner.entitlements: added com.apple.developer.family-controls'
 end
 
+# And tell the app it has it: AppFreezePlugin reads AQAppFreezeEnabled, because
+# iOS gives an app no way to read its own entitlements. Without the flip the
+# app keeps hiding App freeze even though the build could run it.
+info_path = File.join(ROOT, 'Runner', 'Info.plist')
+info = File.read(info_path)
+off = "<key>AQAppFreezeEnabled</key>\n\t<false/>"
+if info.include?(off)
+  File.write(info_path, info.sub(off, "<key>AQAppFreezeEnabled</key>\n\t<true/>"))
+  puts 'Info.plist: AQAppFreezeEnabled = true'
+elsif !info.include?("<key>AQAppFreezeEnabled</key>\n\t<true/>")
+  abort 'Info.plist has no AQAppFreezeEnabled key — add it (true) by hand.'
+end
+
 # --- The extensions ------------------------------------------------------------
 
 embed = app.build_phases.find { |p| p.respond_to?(:name) && p.name == 'Embed Foundation Extensions' }

@@ -314,7 +314,9 @@ distracting apps now or with a frost; thawing takes a breath. Things to preserve
   on every mutation and every resume.
 - iOS: the Family Controls entitlement is added by `ios/add_freeze_targets.rb`,
   not checked in — a distribution export carrying it fails to sign until Apple
-  approves Family Controls for the four bundle ids.
+  approves Family Controls for the four bundle ids. The script also sets
+  `AQAppFreezeEnabled` in Info.plist; while it is false, iOS reports App freeze
+  unsupported and `appFreezeAvailableProvider` hides it everywhere.
 
 **Icons** — screens draw the Aqademiq icon pack (`lib/shared/icons/`,
 `docs/ICONS.md`). Use `AppIcon(Icons.x)` (drop-in for `Icon`) or

@@ -59,7 +59,7 @@ class _PasteListScreenState extends ConsumerState<PasteListScreen> {
     unawaited(ref.read(importSessionProvider.notifier).startPastedList(_controller.text));
     // Replaces this screen, so "Done" on the review lands back on Reminder
     // import rather than on the text that was just imported.
-    unawaited(context.pushReplacement(Routes.importReview));
+    context.pushReplacement(Routes.importReview);
   }
 
   @override

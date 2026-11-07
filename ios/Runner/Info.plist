@@ -121,6 +121,13 @@
 	     lock screen and the Dynamic Island simply never appear. -->
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<!-- App freeze is on only in a build that carries Apple's Family Controls
+	     entitlement. `ruby ios/add_freeze_targets.rb` adds the entitlement and
+	     flips this to true; until Apple approves distribution it stays false,
+	     and AppFreezePlugin reports App freeze as unsupported so the app hides
+	     it (APP_FREEZE.md §7). -->
+	<key>AQAppFreezeEnabled</key>
+	<false/>
 	<!-- Lets a Freeze taken on the lock screen update the activity without the
 	     app being brought to the foreground. -->
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

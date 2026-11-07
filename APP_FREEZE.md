@@ -388,6 +388,10 @@ with ink text, the thaw glyph in `#6B5CF0`.
   `.freeze-monitor`, `.freeze-shield` and `.freeze-action`, a TestFlight /
   App Store export with the key fails to sign. `ruby ios/add_freeze_targets.rb`
   adds the key along with the three extensions — run it once Apple has
-  approved (development builds work before that). Without it the app ships
-  as before: `status` reports App freeze as not authorized and the screens say
-  it is off.
+  approved (development builds work before that). It also flips Runner's
+  `AQAppFreezeEnabled` Info.plist key to true. iOS gives an app no way to read
+  its own entitlements, so that key is how the app knows: while it is false,
+  `status` answers `supported: false`, and `appFreezeAvailableProvider` hides
+  every door into App freeze — the two onboarding steps (Study hours goes
+  straight to Prism), the timer's App freeze pill and ice chip, and the
+  Settings row. Android always shows them (Android 8+).

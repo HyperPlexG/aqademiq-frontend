@@ -341,18 +341,26 @@ class StoryCard extends StatelessWidget {
               children: [
                 const AdaMascot(size: 30, bubbles: 2),
                 const SizedBox(width: 8),
-                Text(
-                  ReportCopy.shareBrand,
-                  style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: Colors.white),
+                Flexible(
+                  child: Text(
+                    ReportCopy.shareBrand,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(size: 15, weight: FontWeight.w800, letterSpacing: -0.2, color: Colors.white),
+                  ),
                 ),
                 const Spacer(),
-                Text(
-                  ReportCopy.weekRange(report.weekStart, report.weekEnd).toUpperCase(),
-                  style: AppText.sans(
-                    size: 11,
-                    weight: FontWeight.w800,
-                    letterSpacing: AppText.em(0.14, 11),
-                    color: _sub,
+                Flexible(
+                  child: Text(
+                    ReportCopy.weekRange(report.weekStart, report.weekEnd).toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(
+                      size: 11,
+                      weight: FontWeight.w800,
+                      letterSpacing: AppText.em(0.14, 11),
+                      color: _sub,
+                    ),
                   ),
                 ),
               ],
@@ -390,9 +398,23 @@ class StoryCard extends StatelessWidget {
             right: 30,
             child: Row(
               children: [
-                Text(ReportCopy.storyFooter, style: AppText.sans(size: 13, weight: FontWeight.w700, color: _sub)),
+                Flexible(
+                  child: Text(
+                    ReportCopy.storyFooter,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(size: 13, weight: FontWeight.w700, color: _sub),
+                  ),
+                ),
                 const Spacer(),
-                Text(ReportCopy.storyHandle, style: AppText.sans(size: 13, weight: FontWeight.w700, color: Colors.white)),
+                Flexible(
+                  child: Text(
+                    ReportCopy.storyHandle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.sans(size: 13, weight: FontWeight.w700, color: Colors.white),
+                  ),
+                ),
               ],
             ),
           ),

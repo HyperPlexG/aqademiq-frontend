@@ -28,6 +28,20 @@ final freezeClockProvider = StreamProvider<DateTime>((ref) async* {
 /// returning from Settings).
 final freezeAccessProvider = FutureProvider<FreezeAccess>((ref) => ref.watch(appFreezeChannelProvider).status());
 
+/// Whether this phone can run App freeze at all, for hiding its doors.
+///
+/// False on iOS until the build carries Apple's Family Controls entitlement
+/// (`AQAppFreezeEnabled`, set by `ios/add_freeze_targets.rb`) and below iOS
+/// 16. While the answer is loading, Android shows the doors (it supports App
+/// freeze on every version the app runs on) and iOS hides them, so neither
+/// flickers on the common path.
+final appFreezeAvailableProvider = Provider<bool>(
+  (ref) => ref.watch(freezeAccessProvider).maybeWhen(
+    data: (access) => access.supported,
+    orElse: () => defaultTargetPlatform == TargetPlatform.android,
+  ),
+);
+
 /// Android: the installed apps, for Choose apps and Pick what freezes.
 final installedAppsProvider =
     FutureProvider<List<DeviceApp>>((ref) => ref.watch(appFreezeChannelProvider).installedApps());

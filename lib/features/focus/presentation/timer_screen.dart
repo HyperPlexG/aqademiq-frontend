@@ -60,6 +60,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
     // The ice chip (fc-ice): only once App freeze is set up, and then a bare
     // outline when nothing is on ice — no badge, no nag, forever.
     final iceCount = freeze.setUp ? freeze.recentApps.count : null;
+    final freezeAvailable = ref.watch(appFreezeAvailableProvider);
     final prismMode = session.prismMode ?? defaultPrismMode;
 
     ref.listen(focusControllerProvider, (prev, next) {
@@ -98,7 +99,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               remaining: _clock(session.durationMin * 60 - session.elapsedSec),
               progress: session.progress,
               onPrism: _prism,
-              onAppFreeze: _appFreeze,
+              onAppFreeze: freezeAvailable ? _appFreeze : null,
               onFreeze: ctrl.pause,
               onResume: ctrl.resume,
               onEnd: ctrl.complete,
@@ -110,8 +111,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               onLink: _link,
               onSetTime: _setTime,
               onPrism: _prism,
-              onAppFreeze: _appFreeze,
-              iceCount: iceCount,
+              onAppFreeze: freezeAvailable ? _appFreeze : null,
+              iceCount: freezeAvailable ? iceCount : null,
               iceKeepOnly: freeze.recentApps.keepOnly,
               onIce: _ice,
               onStart: () => unawaited(_start()),
@@ -189,7 +190,8 @@ class _SetupView extends StatelessWidget {
   final VoidCallback onLink;
   final VoidCallback onSetTime;
   final VoidCallback onPrism;
-  final VoidCallback onAppFreeze;
+  /// Null hides the pill: App freeze can't run on this phone.
+  final VoidCallback? onAppFreeze;
 
   /// Null hides the ice chip (App freeze not set up yet).
   final int? iceCount;
@@ -205,8 +207,10 @@ class _SetupView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(child: FocusPill(iconName: 'prism', label: 'Prism', onTap: onPrism)),
-          const SizedBox(width: 8),
-          Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze)),
+          if (onAppFreeze != null) ...[
+            const SizedBox(width: 8),
+            Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze!)),
+          ],
         ],
       ),
       children: [
@@ -308,7 +312,8 @@ class _RunningView extends StatelessWidget {
   final String remaining;
   final double progress;
   final VoidCallback onPrism;
-  final VoidCallback onAppFreeze;
+  /// Null hides the pill: App freeze can't run on this phone.
+  final VoidCallback? onAppFreeze;
   final VoidCallback onFreeze;
   final VoidCallback onResume;
   final VoidCallback onEnd;
@@ -321,8 +326,10 @@ class _RunningView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Flexible(child: FocusPill(iconName: 'prism', label: prismMode, onTap: onPrism)),
-          const SizedBox(width: 8),
-          Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze)),
+          if (onAppFreeze != null) ...[
+            const SizedBox(width: 8),
+            Flexible(child: FocusPill(iconName: 'ac_unit', label: 'App freeze', onTap: onAppFreeze!)),
+          ],
         ],
       ),
       children: [
