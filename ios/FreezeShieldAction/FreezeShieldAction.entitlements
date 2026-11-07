@@ -13,9 +13,14 @@
 	<array>
 		<string>group.com.r13.aqademiq.shared</string>
 	</array>
-	<!-- "Thaw in Aqademiq" is the reply to a button the student just pressed,
-	     usually during a study Focus; time-sensitive lets it through. -->
-	<key>com.apple.developer.usernotifications.time-sensitive</key>
-	<true/>
+	<!-- No com.apple.developer.usernotifications.time-sensitive here (yet):
+	     Xcode's automatic signing cannot add that capability to a new
+	     extension id ("not found and could not be included in profile"), so
+	     signing fails with it. Without it iOS delivers "Thaw in Aqademiq" as
+	     an ordinary notification, which a study Focus may hold back. To get it
+	     back: tick Time Sensitive Notifications on com.r13.aqademiq.freeze-action
+	     in Certificates, Identifiers & Profiles, then restore this key:
+	       <key>com.apple.developer.usernotifications.time-sensitive</key>
+	       <true/> -->
 </dict>
 </plist>

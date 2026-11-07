@@ -127,7 +127,7 @@
 	     and AppFreezePlugin reports App freeze as unsupported so the app hides
 	     it (APP_FREEZE.md §7). -->
 	<key>AQAppFreezeEnabled</key>
-	<false/>
+	<true/>
 	<!-- Lets a Freeze taken on the lock screen update the activity without the
 	     app being brought to the foreground. -->
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
