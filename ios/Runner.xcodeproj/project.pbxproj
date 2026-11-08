@@ -8,46 +8,83 @@
 
 /* Begin PBXBuildFile section */
 		06FAB55517A4A01D85AAD19A /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
+		11B7B74C82575CFEA4E7E182 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
 		1414770647FDEF47FBDD2999 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13516D050481EF87D54B78A8 /* Assets.xcassets */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
 		27F639E286C203F37CFBEA88 /* AmbientWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		28F4B91D8FFAB5AB360A99A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
 		2AC69012EDCDFCE17E3856FF /* FocusLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CEB09A799A5BA3080E3C744 /* FocusLiveActivity.swift */; };
+		2C01443A67AE930FA0030835 /* AppFreezePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */; };
+		2E986BBE2E398D0DAF0031BF /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
+		2EB241B18915F469DA501DC2 /* FreezeShieldAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF6F7B7CB74512D6E4F9339E /* FreezeShieldAction.swift */; };
+		31F5D47DB6FCFE758BA7A512 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
+		384BE55F7739C5EAED5D0CF3 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		3D1FF8459958CBE77FA7C34E /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D418A86F7BC927D158725510 /* DeviceActivity.framework */; };
+		47567FF0090811500A2A4E39 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D418A86F7BC927D158725510 /* DeviceActivity.framework */; };
+		4C72AB9C9CCE2343B2DD5183 /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
 		518AE02524526747B54807EC /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 004734AFE3AC492C3D078C23 /* Pods_Runner.framework */; };
+		527A4A300E6C5A2AA8F0B324 /* ScreenshotPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76B5540F90406AC30CE7B73 /* ScreenshotPlugin.swift */; };
 		59AE08FB9656EEDE6BEF8BC0 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF53A998BC55D853E629F440 /* WatchBridge.swift */; };
+		5A15E9BC5A82665F29678E87 /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
+		5A9E695DA6A2E4A008C15B20 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
 		5CCF4A0F59BF854C23CF38F4 /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
+		621BC59F474D9753F9C18653 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
 		70055F70DFD9E5322539E408 /* WatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071168B7E6D42BF20FDE924B /* WatchApp.swift */; };
+		719A76A153C037380C9811F8 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
+		7366DD34AC12B27E2C1C7B76 /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		826A280562D01DEE90D2F409 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
 		876FD2D54F26619C7DACD9DB /* AccessoryWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9550DA3BC330DF13A231DE9B /* AccessoryWidgets.swift */; };
 		8B8D4AC01EE389EF9523F98E /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F6CBD3F1A10FF6DB7A7D95CB /* Pods_RunnerTests.framework */; };
+		8DAFB159CBA10AACCE52BCCC /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDE38475CB8C77215E44E333 /* UserNotifications.framework */; };
+		8DCEC2FB11BF7128381EA0D5 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDE38475CB8C77215E44E333 /* UserNotifications.framework */; };
 		915DC9A525786E8555B35A30 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
 		93476E61686B9D31D796878C /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
+		9389C005890FCD7F73492FB3 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 350B041BB4175B069B161EE1 /* ManagedSettings.framework */; };
 		96B254DB82EEFF680BA95108 /* AmbientPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */; };
-		A7F3C21D9E4B06583C1D2E4F /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */; };
-		D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */; };
-		2C01443A67AE930FA0030835 /* AppFreezePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */; };
-		527A4A300E6C5A2AA8F0B324 /* ScreenshotPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76B5540F90406AC30CE7B73 /* ScreenshotPlugin.swift */; };
-		BA6F1DA1921A6254A92BE886 /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
-		D7E55117D0C414C977162FD6 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
-		621BC59F474D9753F9C18653 /* FreezeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */; };
-		7366DD34AC12B27E2C1C7B76 /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		9D66850955117E94F08024D3 /* SessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85AD59F1B1F4B3934267559 /* SessionIntent.swift */; };
 		9D7B0ACED78310431452C207 /* AmbientWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3BA01ED19694CF4833BAC04 /* AmbientWidgets.swift */; };
+		A282A054FFA665ABE0CAE4E4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
+		A7F3C21D9E4B06583C1D2E4F /* HapticsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */; };
 		AD6F5751A35D16314DE48687 /* AqademiqWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AF65ED8AEE189C4A4C47B5BA /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1E10B1538347AC7E2BFAFB04 /* PrivacyInfo.xcprivacy */; };
 		B7635F1A96F3A3B2F8CCD2CA /* WatchSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347CF04A195330D4BBAD496F /* WatchSessionView.swift */; };
+		B7EB62CDBC6DEA32C9B5A7DE /* FreezeShieldConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2012F0D8C90267D5D8BCAD /* FreezeShieldConfiguration.swift */; };
+		BA6F1DA1921A6254A92BE886 /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
+		BC5F15525CF9F68415048814 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 83AFD6B16E4801621CAD0B4D /* PrivacyInfo.xcprivacy */; };
+		BCFD0267F731EF51277E6734 /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
+		BFCCE66CCA4BF60F07B46E06 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 350B041BB4175B069B161EE1 /* ManagedSettings.framework */; };
+		C25423B3491CF605BF4CD0AB /* FreezeSchedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */; };
 		C2F724459B481153027ED412 /* FocusActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */; };
 		C3833B7AA2738671E217A544 /* WatchLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159215F43CA55688262DC9D9 /* WatchLink.swift */; };
+		C4AC1B9397792D5042B08EBF /* FreezeShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4E51C55481A382B568B9470D /* FreezeShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C91EEB2E04F6E6471403A959 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */; };
+		CEC33A5579ECDC8532FD961A /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C78EA7665AED2969A2242715 /* ManagedSettingsUI.framework */; };
+		D3E1A7C4B8F2059A6C1D4E7B /* DeviceImportPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */; };
+		D61199075822C93B03D8695F /* FreezePolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45E2636969D02097534950F /* FreezePolicy.swift */; };
+		D78417A7ADF0FAEF0A697685 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FDE38475CB8C77215E44E333 /* UserNotifications.framework */; };
+		D7E55117D0C414C977162FD6 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
+		D8E217A4014A8850E66D3B93 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0F6C6752F9D882679782106 /* FamilyControls.framework */; };
+		DDE759B4ADADE53165613114 /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0F6C6752F9D882679782106 /* FamilyControls.framework */; };
+		E2F27198970A78ADCC65685F /* FamilyControls.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0F6C6752F9D882679782106 /* FamilyControls.framework */; };
+		E38C3EDFD825EAB434039B5B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C3F25309F0F3CAFDAA63F26F /* PrivacyInfo.xcprivacy */; };
 		E39F4D6F8F1A2F5E0424FE45 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1787A1223E80E4BAB8424154 /* Foundation.framework */; };
+		E3A8F994B051F7A81FFE7BBE /* FreezeShieldAction.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = C1FA92AD2D1AED7FF81D915E /* FreezeShieldAction.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9BF6B2A220DB73EEF6F017B /* FreezeMonitorExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622A90325A8E20F80447F11C /* FreezeMonitorExtension.swift */; };
+		EC2E310CA73382B73B7087A2 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D418A86F7BC927D158725510 /* DeviceActivity.framework */; };
+		F3846E2C6FF2FA6D26B8D129 /* FreezeRules.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */; };
 		F5AD224F902D22A3EA5115BE /* AmbientState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550699B9FE5E3FD68C938C10 /* AmbientState.swift */; };
+		FA528886D8D80927037C9C35 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 350B041BB4175B069B161EE1 /* ManagedSettings.framework */; };
 		FEEDA9AD000000000000C0C2 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */; };
 		FFB0D8DF3C53B530F636CEF3 /* AdaShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1B6E32B519F5489D525134 /* AdaShape.swift */; };
+		FFC4527036B7948855C61D54 /* FreezeMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2AFA24153AC5CE8B5D38DA79 /* FreezeMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,12 +102,33 @@
 			remoteGlobalIDString = D575B1C9E709C74CFD3CF78B;
 			remoteInfo = AmbientWidgets;
 		};
+		74FD960651CB4775AC5F4098 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BF552F1F67BA04E79440215A;
+			remoteInfo = FreezeShield;
+		};
+		895A51E9AB3BBE0DB0905D6D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0172EFB386C0FC590F01225E;
+			remoteInfo = FreezeShieldAction;
+		};
 		9F3AD7894A4C4CF75F5C85DC /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A8F50F21C6F7C5BA5B33C73B;
 			remoteInfo = AqademiqWatch;
+		};
+		FA1B0C3D4C520D34553CC896 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 10925EB7D4E89ED39D85EAD3;
+			remoteInfo = FreezeMonitor;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -103,6 +161,9 @@
 			dstSubfolderSpec = 13;
 			files = (
 				27F639E286C203F37CFBEA88 /* AmbientWidgets.appex in Embed Foundation Extensions */,
+				FFC4527036B7948855C61D54 /* FreezeMonitor.appex in Embed Foundation Extensions */,
+				C4AC1B9397792D5042B08EBF /* FreezeShield.appex in Embed Foundation Extensions */,
+				E3A8F994B051F7A81FFE7BBE /* FreezeShieldAction.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -112,29 +173,30 @@
 /* Begin PBXFileReference section */
 		004734AFE3AC492C3D078C23 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		071168B7E6D42BF20FDE924B /* WatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchApp.swift; sourceTree = "<group>"; };
+		07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppFreezePlugin.swift; sourceTree = "<group>"; };
 		1082CF61BFCDFE0BB1A7B51D /* Pods-RunnerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.debug.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		13516D050481EF87D54B78A8 /* Assets.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		159215F43CA55688262DC9D9 /* WatchLink.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchLink.swift; sourceTree = "<group>"; };
 		1787A1223E80E4BAB8424154 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		1E10B1538347AC7E2BFAFB04 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		21A18CF3C1A551C70D1AE868 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		22D9DB4F300D10270044D165 /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		2A1B6E32B519F5489D525134 /* AdaShape.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdaShape.swift; sourceTree = "<group>"; };
+		2AFA24153AC5CE8B5D38DA79 /* FreezeMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FreezeMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		347CF04A195330D4BBAD496F /* WatchSessionView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchSessionView.swift; sourceTree = "<group>"; };
+		350B041BB4175B069B161EE1 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/ManagedSettings.framework; sourceTree = DEVELOPER_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = FreezeExtension.xcconfig; sourceTree = "<group>"; };
 		4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		4E51C55481A382B568B9470D /* FreezeShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FreezeShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4F8C6094975C2DB0B2719006 /* FreezeShieldAction.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FreezeShieldAction.entitlements; sourceTree = "<group>"; };
 		550699B9FE5E3FD68C938C10 /* AmbientState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientState.swift; sourceTree = "<group>"; };
 		5FCCCD6AC450E7F6BBCCA44C /* AmbientPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientPlugin.swift; sourceTree = "<group>"; };
-		B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
-		E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceImportPlugin.swift; sourceTree = "<group>"; };
-		07B3D1F73E05F164D35ED7D5 /* AppFreezePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppFreezePlugin.swift; sourceTree = "<group>"; };
-		D76B5540F90406AC30CE7B73 /* ScreenshotPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenshotPlugin.swift; sourceTree = "<group>"; };
-		D45E2636969D02097534950F /* FreezePolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezePolicy.swift; sourceTree = "<group>"; };
-		9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeRules.swift; sourceTree = "<group>"; };
-		E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeStore.swift; sourceTree = "<group>"; };
-		A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeSchedule.swift; sourceTree = "<group>"; };
+		622A90325A8E20F80447F11C /* FreezeMonitorExtension.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeMonitorExtension.swift; sourceTree = "<group>"; };
 		6320E9A85CC5E9E585A4FE87 /* AqademiqWatch.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AqademiqWatch.xcconfig; sourceTree = "<group>"; };
 		63BC88FC67DAA3E60A1A6B63 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AqademiqWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -142,8 +204,11 @@
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
+		7A2012F0D8C90267D5D8BCAD /* FreezeShieldConfiguration.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeShieldConfiguration.swift; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7C311915298FD427FB2F2024 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
+		81A9DBE65A5AB25929E0A7AA /* FreezeMonitor.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FreezeMonitor.entitlements; sourceTree = "<group>"; };
+		83AFD6B16E4801621CAD0B4D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		86F7F8C0D0BEBA2DE7127B66 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		9550DA3BC330DF13A231DE9B /* AccessoryWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AccessoryWidgets.swift; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
@@ -154,14 +219,31 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9CEB09A799A5BA3080E3C744 /* FocusLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusLiveActivity.swift; sourceTree = "<group>"; };
+		9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeRules.swift; sourceTree = "<group>"; };
+		A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeSchedule.swift; sourceTree = "<group>"; };
 		A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AmbientWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A85AD59F1B1F4B3934267559 /* SessionIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionIntent.swift; sourceTree = "<group>"; };
+		B0F6C6752F9D882679782106 /* FamilyControls.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FamilyControls.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/FamilyControls.framework; sourceTree = DEVELOPER_DIR; };
+		B2E8D47A1C9F35604A8B7C2D /* HapticsPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HapticsPlugin.swift; sourceTree = "<group>"; };
 		B3BA01ED19694CF4833BAC04 /* AmbientWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AmbientWidgets.swift; sourceTree = "<group>"; };
 		B4492A0682E5E32CB370385D /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
+		B5748E0056D3C5C9C64C000E /* FreezeShield.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FreezeShield.entitlements; sourceTree = "<group>"; };
 		BAB5AFF1AA513D598E81855C /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
+		C1FA92AD2D1AED7FF81D915E /* FreezeShieldAction.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FreezeShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C2388CCE972579FC8E9A4A1A /* AmbientWidgets.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = AmbientWidgets.xcconfig; sourceTree = "<group>"; };
+		C3F25309F0F3CAFDAA63F26F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C78EA7665AED2969A2242715 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = DEVELOPER_DIR; };
+		D1C249EFF5C7C671EA93F575 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D418A86F7BC927D158725510 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/DeviceActivity.framework; sourceTree = DEVELOPER_DIR; };
+		D45E2636969D02097534950F /* FreezePolicy.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezePolicy.swift; sourceTree = "<group>"; };
+		D76B5540F90406AC30CE7B73 /* ScreenshotPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenshotPlugin.swift; sourceTree = "<group>"; };
 		E072EF20477006C8592740E4 /* FocusActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FocusActivityAttributes.swift; sourceTree = "<group>"; };
+		E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeStore.swift; sourceTree = "<group>"; };
+		E4F2B8D5C9A3160B7D2E5F8C /* DeviceImportPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DeviceImportPlugin.swift; sourceTree = "<group>"; };
+		EF6F7B7CB74512D6E4F9339E /* FreezeShieldAction.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FreezeShieldAction.swift; sourceTree = "<group>"; };
 		F6CBD3F1A10FF6DB7A7D95CB /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F98546D615DAF73A5D2F49AA /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FDE38475CB8C77215E44E333 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/UserNotifications.framework; sourceTree = DEVELOPER_DIR; };
 		FEEDA9AD000000000000C0C1 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		FF53A998BC55D853E629F440 /* WatchBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -191,6 +273,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8F902AEFCB5F9DC73308E9E0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A282A054FFA665ABE0CAE4E4 /* Foundation.framework in Frameworks */,
+				3D1FF8459958CBE77FA7C34E /* DeviceActivity.framework in Frameworks */,
+				FA528886D8D80927037C9C35 /* ManagedSettings.framework in Frameworks */,
+				D8E217A4014A8850E66D3B93 /* FamilyControls.framework in Frameworks */,
+				8DAFB159CBA10AACCE52BCCC /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -200,9 +294,46 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9C5FF534286FC3AAA86860E9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28F4B91D8FFAB5AB360A99A5 /* Foundation.framework in Frameworks */,
+				CEC33A5579ECDC8532FD961A /* ManagedSettingsUI.framework in Frameworks */,
+				BFCCE66CCA4BF60F07B46E06 /* ManagedSettings.framework in Frameworks */,
+				E2F27198970A78ADCC65685F /* FamilyControls.framework in Frameworks */,
+				EC2E310CA73382B73B7087A2 /* DeviceActivity.framework in Frameworks */,
+				8DCEC2FB11BF7128381EA0D5 /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D932B10B63D011C8BA160775 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				31F5D47DB6FCFE758BA7A512 /* Foundation.framework in Frameworks */,
+				9389C005890FCD7F73492FB3 /* ManagedSettings.framework in Frameworks */,
+				DDE759B4ADADE53165613114 /* FamilyControls.framework in Frameworks */,
+				47567FF0090811500A2A4E39 /* DeviceActivity.framework in Frameworks */,
+				D78417A7ADF0FAEF0A697685 /* UserNotifications.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		27B34BE87D01D432BBC7FA69 /* FreezeShield */ = {
+			isa = PBXGroup;
+			children = (
+				7A2012F0D8C90267D5D8BCAD /* FreezeShieldConfiguration.swift */,
+				21A18CF3C1A551C70D1AE868 /* Info.plist */,
+				B5748E0056D3C5C9C64C000E /* FreezeShield.entitlements */,
+				83AFD6B16E4801621CAD0B4D /* PrivacyInfo.xcprivacy */,
+			);
+			name = FreezeShield;
+			path = FreezeShield;
+			sourceTree = SOURCE_ROOT;
+		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -210,6 +341,19 @@
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
+		};
+		669F0C4CFA65EFF9173123B3 /* FreezeShared */ = {
+			isa = PBXGroup;
+			children = (
+				D45E2636969D02097534950F /* FreezePolicy.swift */,
+				9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */,
+				A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */,
+				E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */,
+				43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */,
+			);
+			name = FreezeShared;
+			path = FreezeShared;
+			sourceTree = SOURCE_ROOT;
 		};
 		83C28780CF97255F3D200FB0 /* AqademiqWatch */ = {
 			isa = PBXGroup;
@@ -222,18 +366,6 @@
 			);
 			name = AqademiqWatch;
 			path = AqademiqWatch;
-			sourceTree = SOURCE_ROOT;
-		};
-		669F0C4CFA65EFF9173123B3 /* FreezeShared */ = {
-			isa = PBXGroup;
-			children = (
-				D45E2636969D02097534950F /* FreezePolicy.swift */,
-				9EDF2479C418615C7B1BBD41 /* FreezeRules.swift */,
-				A3F57E1B116051BEAAC5BC67 /* FreezeSchedule.swift */,
-				E487E1E1A3F021B4D0E0F654 /* FreezeStore.swift */,
-			);
-			name = FreezeShared;
-			path = FreezeShared;
 			sourceTree = SOURCE_ROOT;
 		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
@@ -260,6 +392,9 @@
 				B76B709933370D46FF984DFD /* AmbientWidgets */,
 				83C28780CF97255F3D200FB0 /* AqademiqWatch */,
 				669F0C4CFA65EFF9173123B3 /* FreezeShared */,
+				EC407211F70162F46BBEBBFD /* FreezeMonitor */,
+				27B34BE87D01D432BBC7FA69 /* FreezeShield */,
+				D27AD292E2A2C322FDB95DE8 /* FreezeShieldAction */,
 			);
 			sourceTree = "<group>";
 		};
@@ -270,6 +405,9 @@
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				A6C6167CE90F8F6585ACC5CE /* AmbientWidgets.appex */,
 				65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */,
+				2AFA24153AC5CE8B5D38DA79 /* FreezeMonitor.appex */,
+				4E51C55481A382B568B9470D /* FreezeShield.appex */,
+				C1FA92AD2D1AED7FF81D915E /* FreezeShieldAction.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -302,6 +440,11 @@
 			isa = PBXGroup;
 			children = (
 				4BE78C4880E1DCEA82D7D1FA /* Foundation.framework */,
+				D418A86F7BC927D158725510 /* DeviceActivity.framework */,
+				350B041BB4175B069B161EE1 /* ManagedSettings.framework */,
+				B0F6C6752F9D882679782106 /* FamilyControls.framework */,
+				FDE38475CB8C77215E44E333 /* UserNotifications.framework */,
+				C78EA7665AED2969A2242715 /* ManagedSettingsUI.framework */,
 			);
 			name = iOS;
 			sourceTree = "<group>";
@@ -320,6 +463,18 @@
 			);
 			name = AmbientWidgets;
 			path = AmbientWidgets;
+			sourceTree = SOURCE_ROOT;
+		};
+		D27AD292E2A2C322FDB95DE8 /* FreezeShieldAction */ = {
+			isa = PBXGroup;
+			children = (
+				EF6F7B7CB74512D6E4F9339E /* FreezeShieldAction.swift */,
+				F98546D615DAF73A5D2F49AA /* Info.plist */,
+				4F8C6094975C2DB0B2719006 /* FreezeShieldAction.entitlements */,
+				C3F25309F0F3CAFDAA63F26F /* PrivacyInfo.xcprivacy */,
+			);
+			name = FreezeShieldAction;
+			path = FreezeShieldAction;
 			sourceTree = SOURCE_ROOT;
 		};
 		E4E5967BF208E1096F3BA96F /* Pods */ = {
@@ -346,6 +501,18 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		EC407211F70162F46BBEBBFD /* FreezeMonitor */ = {
+			isa = PBXGroup;
+			children = (
+				622A90325A8E20F80447F11C /* FreezeMonitorExtension.swift */,
+				D1C249EFF5C7C671EA93F575 /* Info.plist */,
+				81A9DBE65A5AB25929E0A7AA /* FreezeMonitor.entitlements */,
+				1E10B1538347AC7E2BFAFB04 /* PrivacyInfo.xcprivacy */,
+			);
+			name = FreezeMonitor;
+			path = FreezeMonitor;
+			sourceTree = SOURCE_ROOT;
+		};
 		F4811886BCE33C1015262A7A /* watchOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -357,6 +524,40 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0172EFB386C0FC590F01225E /* FreezeShieldAction */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 918AF0083BAC9F2795083659 /* Build configuration list for PBXNativeTarget "FreezeShieldAction" */;
+			buildPhases = (
+				89CE4663C88F9CD0C920FE51 /* Sources */,
+				D932B10B63D011C8BA160775 /* Frameworks */,
+				394DA547C1D6BF384381F8B0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FreezeShieldAction;
+			productName = FreezeShieldAction;
+			productReference = C1FA92AD2D1AED7FF81D915E /* FreezeShieldAction.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		10925EB7D4E89ED39D85EAD3 /* FreezeMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4A55E24D077DF22F18E02E89 /* Build configuration list for PBXNativeTarget "FreezeMonitor" */;
+			buildPhases = (
+				9C0BFE98E8A89CE0E3F6AF9C /* Sources */,
+				8F902AEFCB5F9DC73308E9E0 /* Frameworks */,
+				46C03F1074C9063D26859085 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FreezeMonitor;
+			productName = FreezeMonitor;
+			productReference = 2AFA24153AC5CE8B5D38DA79 /* FreezeMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		331C8080294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 331C8087294A63A400263BE5 /* Build configuration list for PBXNativeTarget "RunnerTests" */;
@@ -396,6 +597,9 @@
 			dependencies = (
 				0318674A8FBA104B8CD30750 /* PBXTargetDependency */,
 				5B7A4CC8D46F543677270525 /* PBXTargetDependency */,
+				C291992A093D916E869139B9 /* PBXTargetDependency */,
+				388B841517494D5D416C178A /* PBXTargetDependency */,
+				6B0F2103039D23A966719E5C /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -421,6 +625,23 @@
 			productName = AqademiqWatch;
 			productReference = 65E112FC6575D21E22FEEE7C /* AqademiqWatch.app */;
 			productType = "com.apple.product-type.application";
+		};
+		BF552F1F67BA04E79440215A /* FreezeShield */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 344A2A27E9628091A92D5EA4 /* Build configuration list for PBXNativeTarget "FreezeShield" */;
+			buildPhases = (
+				CACF3DB7395E036535280DAD /* Sources */,
+				9C5FF534286FC3AAA86860E9 /* Frameworks */,
+				249BF5D75B296DC7723BB968 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FreezeShield;
+			productName = FreezeShield;
+			productReference = 4E51C55481A382B568B9470D /* FreezeShield.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		D575B1C9E709C74CFD3CF78B /* AmbientWidgets */ = {
 			isa = PBXNativeTarget;
@@ -479,6 +700,9 @@
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				D575B1C9E709C74CFD3CF78B /* AmbientWidgets */,
 				A8F50F21C6F7C5BA5B33C73B /* AqademiqWatch */,
+				10925EB7D4E89ED39D85EAD3 /* FreezeMonitor */,
+				BF552F1F67BA04E79440215A /* FreezeShield */,
+				0172EFB386C0FC590F01225E /* FreezeShieldAction */,
 			);
 		};
 /* End PBXProject section */
@@ -492,10 +716,34 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		249BF5D75B296DC7723BB968 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BC5F15525CF9F68415048814 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		394DA547C1D6BF384381F8B0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E38C3EDFD825EAB434039B5B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		46C03F1074C9063D26859085 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF65ED8AEE189C4A4C47B5BA /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -635,6 +883,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		89CE4663C88F9CD0C920FE51 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2EB241B18915F469DA501DC2 /* FreezeShieldAction.swift in Sources */,
+				D61199075822C93B03D8695F /* FreezePolicy.swift in Sources */,
+				826A280562D01DEE90D2F409 /* FreezeRules.swift in Sources */,
+				5A15E9BC5A82665F29678E87 /* FreezeSchedule.swift in Sources */,
+				384BE55F7739C5EAED5D0CF3 /* FreezeStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -658,6 +918,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9C0BFE98E8A89CE0E3F6AF9C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9BF6B2A220DB73EEF6F017B /* FreezeMonitorExtension.swift in Sources */,
+				2E986BBE2E398D0DAF0031BF /* FreezePolicy.swift in Sources */,
+				719A76A153C037380C9811F8 /* FreezeRules.swift in Sources */,
+				4C72AB9C9CCE2343B2DD5183 /* FreezeSchedule.swift in Sources */,
+				5A9E695DA6A2E4A008C15B20 /* FreezeStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9C5FE8775A8E96D9BC23DDFC /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -669,6 +941,18 @@
 				915DC9A525786E8555B35A30 /* FocusActivityAttributes.swift in Sources */,
 				2AC69012EDCDFCE17E3856FF /* FocusLiveActivity.swift in Sources */,
 				9D66850955117E94F08024D3 /* SessionIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CACF3DB7395E036535280DAD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B7EB62CDBC6DEA32C9B5A7DE /* FreezeShieldConfiguration.swift in Sources */,
+				BCFD0267F731EF51277E6734 /* FreezePolicy.swift in Sources */,
+				F3846E2C6FF2FA6D26B8D129 /* FreezeRules.swift in Sources */,
+				C25423B3491CF605BF4CD0AB /* FreezeSchedule.swift in Sources */,
+				11B7B74C82575CFEA4E7E182 /* FreezeStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -686,11 +970,29 @@
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
 		};
+		388B841517494D5D416C178A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FreezeShield;
+			target = BF552F1F67BA04E79440215A /* FreezeShield */;
+			targetProxy = 74FD960651CB4775AC5F4098 /* PBXContainerItemProxy */;
+		};
 		5B7A4CC8D46F543677270525 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = AqademiqWatch;
 			target = A8F50F21C6F7C5BA5B33C73B /* AqademiqWatch */;
 			targetProxy = 9F3AD7894A4C4CF75F5C85DC /* PBXContainerItemProxy */;
+		};
+		6B0F2103039D23A966719E5C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FreezeShieldAction;
+			target = 0172EFB386C0FC590F01225E /* FreezeShieldAction */;
+			targetProxy = 895A51E9AB3BBE0DB0905D6D /* PBXContainerItemProxy */;
+		};
+		C291992A093D916E869139B9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FreezeMonitor;
+			target = 10925EB7D4E89ED39D85EAD3 /* FreezeMonitor */;
+			targetProxy = FA1B0C3D4C520D34553CC896 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -849,6 +1151,65 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
 			};
 			name = Profile;
+		};
+		4330090933F5EE2389EDABD2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeMonitor/FreezeMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-monitor";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		45E6225021AEF592030E3632 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShield/FreezeShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-shield";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 		56D520CAE286A4CFB9E77BCC /* Profile */ = {
 			isa = XCBuildConfiguration;
@@ -1078,6 +1439,65 @@
 			};
 			name = Release;
 		};
+		9F04D77242F5E8618D8C45EF /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShieldAction/FreezeShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-action";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
+		A196584E368F334F957D527A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeMonitor/FreezeMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-monitor";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		A92DB935FE34403A939B9C1D /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 6320E9A85CC5E9E585A4FE87 /* AqademiqWatch.xcconfig */;
@@ -1101,6 +1521,36 @@
 				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
+		};
+		AFAF94A2DC4F80B0EA51250E /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeMonitor/FreezeMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeMonitor/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-monitor";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
 		};
 		C6B516D790D3FBCFCCA438E0 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -1172,6 +1622,125 @@
 			};
 			name = Release;
 		};
+		D312A50FEFCFCB8949FD62BD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShieldAction/FreezeShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-action";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D7B4665FC67CA7771829176D /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShieldAction/FreezeShieldAction.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShieldAction/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-action";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E5C088DF94314EF8188F6B8B /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShield/FreezeShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-shield";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F0DDB245E3AA95B570326771 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 43FCA2B05998C2EF0EB2CAB8 /* FreezeExtension.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = FreezeShield/FreezeShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = R6YW5K2YSP;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FreezeShield/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.r13.aqademiq.freeze-shield";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1185,12 +1754,42 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		344A2A27E9628091A92D5EA4 /* Build configuration list for PBXNativeTarget "FreezeShield" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E5C088DF94314EF8188F6B8B /* Release */,
+				45E6225021AEF592030E3632 /* Debug */,
+				F0DDB245E3AA95B570326771 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		483D94D021171CEEC5A9EF72 /* Build configuration list for PBXNativeTarget "AqademiqWatch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A92DB935FE34403A939B9C1D /* Release */,
 				CB99F5D282C2802AFB926F21 /* Debug */,
 				56D520CAE286A4CFB9E77BCC /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4A55E24D077DF22F18E02E89 /* Build configuration list for PBXNativeTarget "FreezeMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4330090933F5EE2389EDABD2 /* Release */,
+				A196584E368F334F957D527A /* Debug */,
+				AFAF94A2DC4F80B0EA51250E /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		918AF0083BAC9F2795083659 /* Build configuration list for PBXNativeTarget "FreezeShieldAction" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D7B4665FC67CA7771829176D /* Release */,
+				D312A50FEFCFCB8949FD62BD /* Debug */,
+				9F04D77242F5E8618D8C45EF /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
