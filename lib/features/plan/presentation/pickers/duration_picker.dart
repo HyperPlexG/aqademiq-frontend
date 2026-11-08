@@ -84,7 +84,7 @@ class _DurationSheet extends StatelessWidget {
 
 /// A single preset cell in the 3-column grid: 17 on a well, accent / white 800
 /// when it is the current duration.
-class _PresetCell extends StatelessWidget {
+class _PresetCell extends ConsumerWidget {
   const _PresetCell({
     required this.preset,
     required this.active,
@@ -96,7 +96,7 @@ class _PresetCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final borderRadius = BorderRadius.circular(14);
     return Semantics(
@@ -107,7 +107,11 @@ class _PresetCell extends StatelessWidget {
         borderRadius: borderRadius,
         child: InkWell(
           borderRadius: borderRadius,
-          onTap: onTap,
+          onTap: () {
+            // A chip: tick on a new value, nothing on the one already set.
+            if (!active) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+            onTap();
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 14),
             child: Center(
@@ -161,8 +165,26 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
   /// `focus_duration_dialog.dart`; Pickers get one event (§7) and this is it.
   void _setMinutes(int value, {bool detent = false}) {
     final next = value.clamp(_min, _max);
-    if (detent && next != _minutes) ref.read(hapticsProvider).sliderStop();
+    if (detent && next != _minutes) {
+      ref.read(hapticsProvider).play(HapticMoment.wheelStep);
+      _slid = true;
+    }
     setState(() => _minutes = next);
+  }
+
+  /// The slider moved during this drag, so letting go earns a landing tick.
+  bool _slid = false;
+
+  /// The slider is let go: the final value plays at full strength.
+  void _slideEnd() {
+    if (_slid) ref.read(hapticsProvider).play(HapticMoment.wheelStep, landed: true);
+    _slid = false;
+  }
+
+  /// A quick chip: tick on a new value, nothing on the one already set.
+  void _pickChip(int minutes) {
+    if (minutes != _minutes) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+    _setMinutes(minutes);
   }
 
   @override
@@ -224,6 +246,7 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
               (_min + value * (_max - _min)).round(),
               detent: true,
             ),
+            onEnd: _slideEnd,
           ),
           const SizedBox(height: 14),
           Row(
@@ -236,7 +259,7 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
                     size: 15,
                     expand: true,
                     active: _minutes == _chips[i].minutes,
-                    onTap: () => _setMinutes(_chips[i].minutes),
+                    onTap: () => _pickChip(_chips[i].minutes),
                   ),
                 ),
               ],
@@ -251,10 +274,13 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
 /// The custom-duration slider: a `bg` track with an accent fill and a white
 /// accent-bordered thumb. Drags translate the local fraction to minutes.
 class _DurationSlider extends StatelessWidget {
-  const _DurationSlider({required this.fraction, required this.onChanged});
+  const _DurationSlider({required this.fraction, required this.onChanged, required this.onEnd});
 
   final double fraction;
   final ValueChanged<double> onChanged;
+
+  /// The finger lifted after a drag.
+  final VoidCallback onEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -267,6 +293,7 @@ class _DurationSlider extends StatelessWidget {
           behavior: HitTestBehavior.opaque,
           onTapDown: (details) => handle(details.localPosition),
           onHorizontalDragUpdate: (details) => handle(details.localPosition),
+          onHorizontalDragEnd: (_) => onEnd(),
           child: SizedBox(
             height: 18,
             child: Stack(

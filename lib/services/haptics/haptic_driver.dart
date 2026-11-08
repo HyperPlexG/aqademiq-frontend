@@ -1,115 +1,139 @@
-/// The transport. `haptic_patterns.dart` decides what an event feels like;
-/// this decides how to get that onto whatever motor is actually present.
+/// The transport: how an admitted pattern reaches whatever motor is present.
 ///
-/// Four rungs, in order:
+/// The native side (`ios/Runner/HapticsPlugin.swift`,
+/// `android/.../HapticsBridge.kt`) picks the best rendering it can play:
 ///
-///  1. **Core Haptics** (iPhone 8+) — intensity, sharpness, transients and
-///     continuous events on a real timeline. Everything the vocabulary can say.
-///  2. **`UIImpactFeedbackGenerator(intensity:)`** (older iPhones, iOS 13+) —
-///     intensity survives, sharpness and multi-beat timing do not.
-///  3. **Android `VibrationEffect`** — a waveform of durations and amplitudes.
-///     Duration and intensity survive; sharpness does not exist on Android at
-///     all and is approximated by pulse length.
-///  4. **Flutter's five fixed effects** — the old behaviour, for desktop
-///     embedders, tests, and any phone the channel cannot reach.
+///  * **iOS** — Core Haptics with the pattern's transients and intensity
+///    curves; the system generators for `aq.success`, `aq.error` and phones
+///    without Core Haptics.
+///  * **Android** — composition primitives where the phone supports every one
+///    a pattern uses, else the `performHapticFeedback` constant or predefined
+///    effect, else the amplitude waveform, else a plain on/off rhythm. Every
+///    vibration is tagged as touch feedback, so the phone's own touch-vibration
+///    setting applies.
 ///
-/// Rungs 1–3 live natively (`ios/Runner/HapticsPlugin.swift`,
-/// `android/.../HapticsBridge.kt`); rung 4 is [_FallbackHaptics] below.
+/// When there is no native side at all (a desktop embedder, a unit test),
+/// [PlatformHapticDriver] plays the pattern's fallback preset through
+/// Flutter's five effects.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'haptic_patterns.dart';
+import 'haptic_governor.dart';
+import 'haptic_lexicon.dart';
 
-/// Renders a [HapticPattern] on this device.
-abstract interface class HapticDriver {
-  /// Never throws, never rejects. Silence is an acceptable outcome; an error
-  /// reaching the app because a motor is missing is not.
-  Future<void> play(HapticPattern pattern);
+/// The phone's state, as far as haptics care (§3, "Device state").
+@immutable
+class HapticDeviceState {
+  const HapticDeviceState({this.lowPower = false, this.hot = false});
+
+  final bool lowPower;
+  final bool hot;
+
+  /// Low Power Mode or a phone running hot drops Full down to Essential.
+  bool get constrained => lowPower || hot;
 }
 
-/// The one the app uses. Swappable so tests can record patterns instead of
-/// vibrating — see `test/haptic_patterns_test.dart`.
-HapticDriver hapticDriver = const PlatformHapticDriver();
+/// Renders admitted patterns on this device.
+abstract interface class HapticDriver {
+  /// Fire and forget. Never throws: silence is an acceptable outcome, an error
+  /// reaching the app because a motor is missing is not.
+  void play(AdmittedHaptic haptic);
+
+  /// Stop [id] if it is still playing, fading out over [fade] from [level]
+  /// (0–1, how strong it was at the moment of stopping).
+  void stop(int id, {Duration fade = Duration.zero, double level = 0});
+
+  /// Low Power Mode and thermal state. Defaults to unconstrained.
+  Future<HapticDeviceState> deviceState();
+
+  /// Start or stop watching whether the phone lies face down, so bloom can
+  /// switch to its desk-safe version with no delay at the moment it plays.
+  void watchFaceDown({required bool on});
+}
+
+/// The one the app uses. Swappable so tests can record instead of vibrate.
+HapticDriver hapticDriver = PlatformHapticDriver();
 
 /// Restores the real driver. For `addTearDown` in tests that replaced it.
-void resetHapticDriver() => hapticDriver = const PlatformHapticDriver();
+void resetHapticDriver() => hapticDriver = PlatformHapticDriver();
 
 /// Talks to the native side, and stops trying if nobody is listening.
 class PlatformHapticDriver implements HapticDriver {
-  const PlatformHapticDriver();
+  PlatformHapticDriver({TargetPlatform? platform}) : _platform = platform;
 
   static const MethodChannel channel = MethodChannel('aqademiq/haptics');
 
-  /// Set once the channel proves absent — a desktop embedder, a unit test, an
-  /// old build of the host app. After that every call goes straight to the
-  /// fallback rather than paying for a round trip and an exception per haptic,
-  /// of which there can be several per second during a scroll.
-  ///
-  /// Deliberately static: the driver is const, and the answer is a property of
-  /// the process, not of any one instance.
+  final TargetPlatform? _platform;
+  TargetPlatform get platform => _platform ?? defaultTargetPlatform;
+
+  /// Set once the channel proves absent. After that every call goes straight
+  /// to the fallback rather than paying for a round trip and an exception per
+  /// haptic. Static: the answer is a property of the process.
   static bool _nativeMissing = false;
 
   @visibleForTesting
   static void resetNativeProbe() => _nativeMissing = false;
 
   @override
-  Future<void> play(HapticPattern pattern) async {
-    if (pattern.beats.isEmpty) return;
-    if (!_nativeMissing) {
-      try {
-        await channel.invokeMethod<void>('play', {'beats': pattern.toWire()});
-        return;
-      } on MissingPluginException {
-        // No native side at all. Remember, and never ask again.
-        _nativeMissing = true;
-      } on Object {
-        // The native side exists but this pattern failed — a reset engine, a
-        // motor busy with a system haptic. Fall through for this one call;
-        // the next may well succeed, so the probe is left alone.
-      }
+  void play(AdmittedHaptic haptic) {
+    final spec = haptic.spec;
+    if (spec.ios.isEmpty && spec.android.isEmpty && spec.androidWave == null && spec.iosSystem == null) return;
+    if (_nativeMissing) {
+      _fallback(spec.fallback);
+      return;
     }
-    await const _FallbackHaptics().play(pattern);
+    unawaited(channel
+        .invokeMethod<void>('play', {
+          'id': haptic.id,
+          ...spec.toWire(platform: platform, faceDownAlt: haptic.faceDownAlt),
+        })
+        .catchError((Object e) {
+          if (e is MissingPluginException) _nativeMissing = true;
+          // A native side that exists but refused this pattern: one preset
+          // still beats nothing. The next pattern may well succeed.
+          _fallback(spec.fallback);
+        }));
   }
-}
-
-/// Rung 4 — the old five-effect behaviour, kept honest.
-///
-/// It cannot express a pattern, so it plays the *strongest* beat and drops the
-/// rest. That is the right lossy choice: the beat carrying the most energy is
-/// the one carrying the meaning, and firing five `HapticFeedback` calls on a
-/// timer would spend five platform round trips to produce a rattle.
-class _FallbackHaptics implements HapticDriver {
-  const _FallbackHaptics();
 
   @override
-  Future<void> play(HapticPattern pattern) async {
-    var peak = 0.0;
-    var sharpness = 0.0;
-    for (final beat in pattern.beats) {
-      if (beat.intensity > peak) {
-        peak = beat.intensity;
-        sharpness = beat.sharpness;
-      }
-    }
+  void stop(int id, {Duration fade = Duration.zero, double level = 0}) {
+    if (_nativeMissing) return;
+    unawaited(channel
+        .invokeMethod<void>('stop', {'id': id, 'fadeMs': fade.inMilliseconds, 'level': level})
+        .catchError((Object _) {}));
+  }
+
+  @override
+  Future<HapticDeviceState> deviceState() async {
+    if (_nativeMissing) return const HapticDeviceState();
     try {
-      // A long dull beat is an error buzz; everything else is an impact whose
-      // weight follows intensity. Sharpness only gets a vote at the bottom,
-      // where a crisp light beat is a selection tick and a soft one is not.
-      if (peak >= 0.6 && sharpness < 0.2) {
-        await HapticFeedback.vibrate();
-      } else if (peak >= 0.8) {
-        await HapticFeedback.heavyImpact();
-      } else if (peak >= 0.5) {
-        await HapticFeedback.mediumImpact();
-      } else if (sharpness >= 0.7) {
-        await HapticFeedback.selectionClick();
-      } else {
-        await HapticFeedback.lightImpact();
-      }
+      final m = await channel.invokeMapMethod<String, Object?>('deviceState');
+      return HapticDeviceState(lowPower: m?['lowPower'] == true, hot: m?['hot'] == true);
     } on Object {
-      // Nothing behind `flutter/platform` either. Enrichment, so: silence.
+      return const HapticDeviceState();
     }
+  }
+
+  @override
+  void watchFaceDown({required bool on}) {
+    if (_nativeMissing) return;
+    unawaited(channel.invokeMethod<void>('watchFaceDown', {'on': on}).catchError((Object _) {}));
+  }
+
+  /// The spec's "Fallback" row, through Flutter's five effects.
+  static void _fallback(Fallback f) {
+    final effect = switch (f) {
+      Fallback.none => null,
+      Fallback.selection => HapticFeedback.selectionClick,
+      Fallback.light => HapticFeedback.lightImpact,
+      Fallback.medium || Fallback.success => HapticFeedback.mediumImpact,
+      Fallback.heavy => HapticFeedback.heavyImpact,
+      Fallback.error => HapticFeedback.vibrate,
+    };
+    if (effect != null) unawaited(effect().catchError((Object _) {}));
   }
 }

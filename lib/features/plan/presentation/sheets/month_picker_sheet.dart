@@ -374,46 +374,60 @@ class _WheelState extends ConsumerState<_Wheel> {
       FixedExtentScrollController(initialItem: widget.initialIndex.clamp(0, widget.count - 1));
   late int _selected = widget.initialIndex.clamp(0, widget.count - 1);
 
+  /// The value moved during this scroll, so its settling earns a landing tick.
+  bool _moved = false;
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  /// The wheel has settled: the final value plays at full strength.
+  bool _onScrollEnd(ScrollEndNotification n) {
+    if (_moved) ref.read(hapticsProvider).play(HapticMoment.wheelStep, landed: true);
+    _moved = false;
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return ListWheelScrollView.useDelegate(
-      controller: _controller,
-      itemExtent: 42,
-      perspective: 0.002,
-      physics: const FixedExtentScrollPhysics(),
-      onSelectedItemChanged: (i) {
-        ref.read(hapticsProvider).wheelItem();
-        setState(() => _selected = i);
-        widget.onChanged(i);
-      },
-      childDelegate: ListWheelChildBuilderDelegate(
-        childCount: widget.count,
-        builder: (context, i) {
-          final distance = (i - _selected).abs();
-          final selected = distance == 0;
-          // v11: the centre row 28/800, then the text colour at 50% and 28%.
-          final opacity = selected ? 1.0 : (distance == 1 ? 0.5 : 0.28);
-          return Align(
-            alignment: widget.alignment,
-            child: Text(
-              widget.label(i),
-              maxLines: 1,
-              softWrap: false,
-              style: AppText.sans(
-                size: selected ? 28 : 22,
-                weight: selected ? FontWeight.w800 : FontWeight.w600,
-                color: colors.text.withValues(alpha: opacity),
-              ),
-            ),
-          );
+    return NotificationListener<ScrollEndNotification>(
+      onNotification: _onScrollEnd,
+      child: ListWheelScrollView.useDelegate(
+        controller: _controller,
+        itemExtent: 42,
+        perspective: 0.002,
+        physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: (i) {
+          ref.read(hapticsProvider).play(HapticMoment.wheelStep);
+          _moved = true;
+          setState(() => _selected = i);
+          widget.onChanged(i);
         },
+        childDelegate: ListWheelChildBuilderDelegate(
+          childCount: widget.count,
+          builder: (context, i) {
+            final distance = (i - _selected).abs();
+            final selected = distance == 0;
+            // v11: the centre row 28/800, then the text colour at 50% and 28%.
+            final opacity = selected ? 1.0 : (distance == 1 ? 0.5 : 0.28);
+            return Align(
+              alignment: widget.alignment,
+              child: Text(
+                widget.label(i),
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.sans(
+                  size: selected ? 28 : 22,
+                  weight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: colors.text.withValues(alpha: opacity),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

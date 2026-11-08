@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/subject.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../subjects/presentation/widgets/subject_form_sheet.dart';
@@ -56,7 +57,10 @@ class ObStudyScreen extends ConsumerWidget {
                 _Chip(
                   label: level,
                   active: draft.level == level,
-                  onTap: () => controller.setLevel(level),
+                  onTap: () {
+                    if (draft.level != level) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                    controller.setLevel(level);
+                  },
                 ),
             ],
           ),
@@ -78,7 +82,10 @@ class ObStudyScreen extends ConsumerWidget {
                 _Chip(
                   label: subject,
                   active: draft.subjects.contains(subject),
-                  onTap: () => controller.toggleSubject(subject),
+                  onTap: () {
+                    ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                    controller.toggleSubject(subject);
+                  },
                 ),
               _MoreChip(onTap: () => _openAddSubject(context, controller)),
             ],

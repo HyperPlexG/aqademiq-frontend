@@ -8,7 +8,7 @@ import '../../../../shared/widgets/mood_blob.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../widgets/plan_sheet.dart';
 
-/// Result of [showLogMoodSheet]. [note] is null when the optional reflection
+/// Result of [showLogMoodSheet]. `note` is null when the optional reflection
 /// field was not shown; otherwise it is the trimmed text (may be empty).
 typedef LogMoodResult = ({int mood, String? note});
 
@@ -73,7 +73,7 @@ class _LogMoodSheetState extends ConsumerState<_LogMoodSheet> {
   /// and its callers (Plan's menu, Stats' day editor) write the log and fire
   /// `moodLogged` once the write lands.
   void _select(int idx) {
-    if (idx != _selected) ref.read(hapticsProvider).moodRampStep(idx);
+    if (idx != _selected) ref.read(hapticsProvider).play(HapticMoment.moodMove, step: idx);
     setState(() => _selected = idx);
   }
 

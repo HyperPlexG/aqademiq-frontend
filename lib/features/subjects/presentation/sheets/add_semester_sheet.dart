@@ -8,6 +8,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -89,6 +90,8 @@ class _AddSemesterBodyState extends ConsumerState<_AddSemesterBody> {
   }
 
   void _onTermSelected(int idx) {
+    // Segmented: tick on a new term, nothing on the one already set.
+    if (idx != _termIdx) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
     setState(() {
       _termIdx = idx;
       _applyTermDefaults(idx, updateName: !_nameEdited);

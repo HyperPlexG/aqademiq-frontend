@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WatchKit
 
 /// One running session, as much of it as the wrist needs.
 ///
@@ -113,11 +114,18 @@ final class WatchLink: NSObject, ObservableObject {
         wc.activate()
         // The context that arrived while this app was not running is already
         // waiting — read it rather than sitting empty until the next change.
-        apply(wc.receivedApplicationContext)
+        apply(wc.receivedApplicationContext, live: false)
     }
 
     func send(_ action: String) {
         guard let wc else { return }
+        // The wrist's own vocabulary, played as the press lands.
+        switch action {
+        case "freeze": WKInterfaceDevice.current().play(.stop)
+        case "resume": WKInterfaceDevice.current().play(.start)
+        case "end": WKInterfaceDevice.current().play(.click)
+        default: break
+        }
         pending = action
         let payload = ["action": action]
         if wc.isReachable {
@@ -137,12 +145,32 @@ final class WatchLink: NSObject, ObservableObject {
         }
     }
 
-    private func apply(_ context: [String: Any]) {
+    /// [live] is a change arriving now; the stored context read at launch or
+    /// activation is only a starting point and plays nothing.
+    private func apply(_ context: [String: Any], live: Bool) {
         let raw = context["session"] as? [String: Any]
         let next = raw.flatMap(WatchSession.init)
         DispatchQueue.main.async { [weak self] in
-            self?.session = next
-            self?.pending = nil
+            guard let self else { return }
+            let previous = self.session
+            self.session = next
+            self.pending = nil
+            if live { self.feel(from: previous, to: next) }
+        }
+    }
+
+    /// What the watch learns rather than does. A session appearing (started
+    /// on the phone, a widget or the tile) plays .start; one that ran to its
+    /// end while shown plays .success. Ended early plays nothing here: if it
+    /// was ended on the wrist, End already clicked.
+    private func feel(from previous: WatchSession?, to next: WatchSession?) {
+        if previous == nil, let next, !next.frozen, next.endsAt > Date.now {
+            WKInterfaceDevice.current().play(.start)
+        } else if let previous, next == nil, !previous.frozen {
+            // Ran to its end: the end has just passed (a stale context
+            // delivered long after is not a completion to celebrate).
+            let since = -previous.endsAt.timeIntervalSinceNow
+            if since >= -2 && since < 60 { WKInterfaceDevice.current().play(.success) }
         }
     }
 }
@@ -154,10 +182,10 @@ extension WatchLink: WCSessionDelegate {
         error: Error?
     ) {
         guard error == nil else { return }
-        apply(session.receivedApplicationContext)
+        apply(session.receivedApplicationContext, live: false)
     }
 
     func session(_ session: WCSession, didReceiveApplicationContext context: [String: Any]) {
-        apply(context)
+        apply(context, live: true)
     }
 }

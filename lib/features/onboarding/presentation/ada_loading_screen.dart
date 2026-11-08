@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/onboarding_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -44,7 +45,10 @@ class _AdaLoadingScreenState extends ConsumerState<AdaLoadingScreen> {
   Future<void> _finish() async {
     try {
       await ref.read(onboardingProvider.notifier).finish();
-      if (mounted) context.go(Routes.plan);
+      if (!mounted) return;
+      // The plan appears: thud at 60%. The loader itself stays silent.
+      ref.read(hapticsProvider).play(HapticMoment.adaPlanReady);
+      context.go(Routes.plan);
     } on AgeRestrictedException {
       // Under 18 — the server refused; send the user to the block screen.
       if (mounted) context.go(Routes.obBlocked);
@@ -59,7 +63,9 @@ class _AdaLoadingScreenState extends ConsumerState<AdaLoadingScreen> {
       }
     } on OnboardingCompletionException catch (e) {
       // Validation (400) / network / unknown — recoverable in place.
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      ref.read(hapticsProvider).play(HapticMoment.failure);
+      setState(() => _error = e.message);
     }
   }
 

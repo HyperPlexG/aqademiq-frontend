@@ -13,6 +13,7 @@ import '../../../data/models/tag_resolve.dart';
 import '../../../data/repositories/focus_repository.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../data/repositories/tasks_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ice_timer.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -37,6 +38,36 @@ class TimerScreen extends ConsumerStatefulWidget {
 }
 
 class _TimerScreenState extends ConsumerState<TimerScreen> {
+  /// Whether this screen has asked the motor side to watch for face down.
+  bool _watchingFaceDown = false;
+
+  /// Kept for dispose, where `ref` can no longer be read.
+  late final HapticsService _haptics = ref.read(hapticsProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    // Face down only matters for the completion bloom, so the sensor runs
+    // while this screen holds a session — not for as long as the tab lives.
+    // Off at idle, not at completion: the bloom is sent just after the
+    // status flips, and must still see the phone face down.
+    _syncFaceDown(ref.read(focusControllerProvider).status);
+    ref.listenManual(focusControllerProvider, (prev, next) => _syncFaceDown(next.status));
+  }
+
+  @override
+  void dispose() {
+    if (_watchingFaceDown) _haptics.watchFaceDown(on: false);
+    super.dispose();
+  }
+
+  void _syncFaceDown(FocusStatus status) {
+    final want = status != FocusStatus.idle;
+    if (want == _watchingFaceDown) return;
+    _watchingFaceDown = want;
+    _haptics.watchFaceDown(on: want);
+  }
+
   String _clock(int seconds) {
     final s = seconds < 0 ? 0 : seconds;
     final m = (s ~/ 60).toString().padLeft(2, '0');
@@ -155,6 +186,8 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   Future<void> _setTime() async {
+    // The time itself is the control: a tap as the picker opens.
+    ref.read(hapticsProvider).play(HapticMoment.setTimeOpen);
     final mins = await showFocusDurationDialog(context, current: ref.read(focusControllerProvider).durationMin);
     if (mins != null) ref.read(focusControllerProvider.notifier).configure(durationMin: mins);
   }

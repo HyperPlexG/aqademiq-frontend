@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/onboarding_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 import 'widgets/onboarding_scaffold.dart';
@@ -64,7 +65,14 @@ class _ObSourceScreenState extends ConsumerState<ObSourceScreen> {
             runSpacing: 6,
             children: [
               for (final label in heardFromSlugs.keys)
-                ObChip(label: label, active: label == _pick, onTap: () => setState(() => _pick = label)),
+                ObChip(
+                  label: label,
+                  active: label == _pick,
+                  onTap: () {
+                    if (label != _pick) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                    setState(() => _pick = label);
+                  },
+                ),
             ],
           ),
           if (_pick == 'Other') ...[

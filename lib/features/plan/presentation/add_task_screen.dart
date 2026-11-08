@@ -215,7 +215,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
       }
       // Tier 2, and only for a creation. An edit is not a new task, and Plan's
       // budget of 4 (§7) has no room for "task edited" — nor should it.
-      if (existing == null) ref.read(hapticsProvider).taskCreated();
+      if (existing == null) ref.read(hapticsProvider).play(HapticMoment.quickAddSave);
       ref.invalidate(dayTasksProvider);
       // Arm the device's reminders for the task the user just saved, without
       // waiting for the next resume.
@@ -224,7 +224,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     } on Object {
       // Tier 4. The user explicitly submitted this and it did not land; the
       // snackbar is easy to miss and the form looks unchanged.
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(

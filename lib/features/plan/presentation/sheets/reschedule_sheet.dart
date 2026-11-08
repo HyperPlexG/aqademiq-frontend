@@ -12,6 +12,7 @@ import '../../../../data/models/tag.dart';
 import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 import '../../../../data/repositories/tags_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -79,6 +80,9 @@ class _RescheduleReviewState extends ConsumerState<_RescheduleReview> {
   Future<void> _move(List<Task> tasks, DateTime to) async {
     if (_moving || tasks.isEmpty) return;
     setState(() => _moving = true);
+    // One tick per moved task (up to five), then a latch: several things move,
+    // not just one button.
+    ref.read(hapticsProvider).play(HapticMoment.rescheduleRemaining, count: tasks.length);
     try {
       final ctrl = ref.read(dayTasksProvider.notifier);
       for (final t in tasks) {

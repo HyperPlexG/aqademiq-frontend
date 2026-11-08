@@ -1,230 +1,157 @@
 # Haptics
 
-Implementation of **Aqademiq · Haptic feedback specification · v1 ("The Melt
-Ramp")** and its companion guide, [`docs/HAPTICS_IMPLEMENTATION.md`](docs/HAPTICS_IMPLEMENTATION.md).
+This is the implementation of the **Aqademiq haptic architecture** (v2, November 2026,
+built on the Full Flow v11 frames).
 
-The spec says *what* and *why*; the guide says *where*. This file says **what
-was actually built**, which stage each file belongs to, and the six places the
-two documents disagreed or ran out of road. Read the guide first — nothing here
-repeats its reasoning either.
+Aqademiq's material is ice. Every vibration in the app is something ice does:
 
----
+- it sets (crystallise)
+- it softens (melt)
+- it holds (knock)
+- it breaks (crack)
+- it rings (bloom)
 
-## 1. The four pieces
+One rule limits all of it: the sanctuary is quiet.
+
+This replaces v1, "The Melt Ramp". `docs/HAPTICS_IMPLEMENTATION.md` and
+`docs/HAPTICS_TESTING.md` describe v1 and are kept for history only.
+
+## 1. The pieces
 
 ```
-widget / controller
-    │   asks semantically:  haptics.taskCompleted()
+screen / controller
+    │  names the moment:   ref.read(hapticsProvider).play(HapticMoment.taskChecked)
     ▼
-HapticsService  (interface)                lib/services/haptics/haptics_service.dart
-    │
-    ├── RealHapticsService ──► HapticGovernor ──► playHapticEvent
-    │                          haptic_governor.dart   haptic_patterns.dart
-    └── NoopHapticsService     suppression,           semantic → physical
-        (web, setting=off)     rate limit,            in ONE file
-                               coalescing
+HapticsService ─────────► HapticGovernor ─────────► HapticDriver ──► native
+haptics_service.dart      haptic_governor.dart      haptic_driver.dart
+    │                     the §3 budget rules
+    ▼
+haptic_moments.dart  ── spec §4: moment → feel + tier
+haptic_lexicon.dart  ── spec §2: the 22 patterns, each rendered three ways
 ```
 
-| File | Role |
+| File | What it is |
 |---|---|
-| `lib/services/haptics/haptic_patterns.dart` | The 23 events, their tiers, and the **only** place a physical haptic is named. |
-| `lib/services/haptics/haptic_governor.dart` | The five rules. A plain class taking setting / focus status / reduce-motion as inputs. |
-| `lib/services/haptics/haptics_service.dart` | The interface, the no-op, the real one, and `hapticsProvider`. |
-| `lib/services/haptics/haptic_settings_service.dart` | SharedPreferences, mirroring `sound_settings_service.dart`. |
-| `lib/features/settings/providers/haptic_settings_provider.dart` | Off / Essential / Full as a Riverpod notifier. |
-| `lib/features/stats/providers/streak_milestone_provider.dart` | The controller the guide said would be needed for the streak. |
+| `lib/services/haptics/haptic_lexicon.dart` | The 22 patterns (`Aq.tick` … `Aq.bloom`, the five Prism modes, `Aq.success`, `Aq.error`). Each pattern has a Core Haptics timeline, an Android rendering (primitives, a feedback constant, a waveform) and a fallback preset. This is the only file that says what a vibration physically is. |
+| `lib/services/haptics/haptic_moments.dart` | `HapticMoment`: one value per §4 touchpoint, with its tier (Essential, Full or preview). `specFor` maps each moment to its feel. Compare this file with the PDF's §4 tables. |
+| `lib/services/haptics/haptic_governor.dart` | The §3 budget rules, as a plain class with an injected clock. Also holds `HapticSetting` (Off / Essential / Full). |
+| `lib/services/haptics/haptics_service.dart` | `hapticsProvider`, plus `play`, `hold` and `watchFaceDown`. |
+| `lib/services/haptics/haptic_driver.dart` | The method channel, and the Flutter fallback used when native isn't there. |
+| `ios/Runner/HapticsPlugin.swift` | Core Haptics: transients, plus continuous events shaped by intensity curves. Uses the system generators for success, error and fallback. Also reports face-down, Low Power and thermal state. |
+| `android/.../HapticsBridge.kt` | The Android rendering ladder (§2 below), face-down, power-save and thermal state. |
+| `lib/shared/widgets/hold_to_confirm.dart` | The hold-to-confirm pill, used for Thaw everything (1.2 s) and Delete account (2 s). |
 
-**The rule for adding a haptic:** name the tier and the specific state change it
-confirms (§8.1). If you cannot, it does not ship. There is no `HapticFeedback`
-import anywhere outside `haptic_patterns.dart`, and there should never be one.
+### The rule for adding a haptic
 
----
+1. Find the row in the spec.
+2. Call `play` with its `HapticMoment`, in the same place the visual change happens.
 
-## 2. Stage map
+If no row fits, the answer is a spec change. Don't add a `HapticFeedback` call or a
+new pattern at a call site. Nothing outside `lib/services/haptics/` imports
+`HapticFeedback`.
 
-The guide asks for six PRs, one stage each. Everything below is in the working
-tree; this is how to cut it apart.
+## 2. How a pattern reaches the motor
 
-### Stage 1 — the long-press tick (Finding 04, ships alone)
-- `lib/features/plan/presentation/plan_screen.dart` — `_overflow`
+**iOS**
 
-Standalone version, if you want to land this before any infrastructure:
-```dart
-// at the top of _overflow, with `package:flutter/services.dart` imported
-HapticFeedback.selectionClick();
-```
+- Transients play on one player.
+- Each continuous event plays on its own player, started against the same engine
+  clock. A Core Haptics parameter curve applies to everything in its pattern and
+  holds its last value afterwards, so with a single player, melt's swell would
+  silence the two drips that follow it.
+- The engine stays running while the app is in the foreground and restarts as the
+  app comes back to the foreground. This keeps the first play free of start-up
+  delay (principle 5).
+- `aq.success` and `aq.error` use `UINotificationFeedbackGenerator`; the spec says
+  they are never restyled.
+- A phone without Core Haptics plays the pattern's fallback preset.
 
-### Stage 2 — service, vocabulary, governor, setting (no events)
-- all six files in the table above
-- `lib/main.dart` — `HapticSettingsService.instance.init()`
-- `lib/features/settings/presentation/settings_sounds_screen.dart` — the
-  `GroupLabel('Haptics')` group and its picker sheet
-- `test/haptics_governor_test.dart`
+**Android** uses the first rung that works on the phone:
 
-### Stage 3 — Tier 1 + Tier 2 (15 events)
-- `lib/features/plan/providers/plan_providers.dart` — completed, rescheduled
-- `lib/features/plan/presentation/add_task_screen.dart` — created
-- `lib/features/plan/presentation/plan_screen.dart` — quick-add created, mood logged
-- `lib/data/repositories/focus_repository.dart` — started, frozen, resumed, ended, completed
-- `lib/features/focus/presentation/timer_screen.dart` — comment only (the §4.1 guard)
-- `lib/features/mood/presentation/mood_*_screen.dart` — logged
-- `lib/features/stats/presentation/stats_screen.dart` — logged
-- `lib/data/repositories/subjects_repository.dart` — subject / semester created
-- `lib/features/feedback/providers/feedback_providers.dart` — posted, voted
-- `lib/features/auth/controllers/auth_controller.dart` — guest upgraded
-- `lib/features/onboarding/providers/onboarding_controller.dart` — finished
-- `lib/features/stats/providers/streak_milestone_provider.dart` + `lib/app.dart`
-- `lib/features/ada/presentation/ada_screen.dart` — plan applied
-- `test/haptics_focus_once_test.dart`
+1. The amplitude **waveform**, for patterns that are a shape over time (the breath,
+   the drill's rumble, wind-down), on motors with amplitude control.
+2. **Composition primitives**, if `areAllPrimitivesSupported` holds for every
+   primitive the pattern uses. A primitive the spec gives a stand-in for (e.g.
+   "LOW_TICK if THUD unsupported") is swapped first.
+3. The pattern's **`performHapticFeedback` constant** or predefined effect:
+   `SEGMENT_TICK`, `TOGGLE_ON`/`TOGGLE_OFF`, `DRAG_START`, `CONFIRM`/`REJECT`, the
+   gesture thresholds, or `EFFECT_HEAVY_CLICK`. These are tuned by the phone maker,
+   and on a budget phone with no primitives they feel better than a waveform.
+4. The waveform on any motor with amplitude control. If the pattern has no explicit
+   waveform, one is derived from the iOS timeline: transients become pulses of
+   30–60 ms (long enough for an LRA to spin up) and curves are sampled every 25 ms.
+5. A plain on/off rhythm. Patterns marked waveform-only, such as the breath, play
+   nothing here instead.
 
-### Stage 4 — Tier 3 detents (wheels first)
-- `lib/features/plan/presentation/pickers/time_picker.dart` — wheel
-- `lib/features/plan/presentation/sheets/month_picker_sheet.dart` — wheel
-- `lib/features/plan/presentation/pickers/duration_picker.dart` — slider
-- `lib/features/focus/presentation/sheets/focus_duration_dialog.dart` — slider
-- `lib/features/settings/presentation/settings_sounds_screen.dart` — volume sliders
-- `lib/features/shell/presentation/app_shell.dart` — tab change
-- `lib/features/mood/presentation/mood_*_screen.dart`,
-  `lib/features/plan/presentation/sheets/log_mood_sheet.dart` — ramp steps
-- `lib/features/plan/presentation/plan_screen.dart` — upgrade Stage 1's raw call
-  to `haptics.longPressTick()`
+Every vibration is tagged `USAGE_TOUCH`, so the phone's own touch-vibration setting
+applies.
 
-### Stage 5 — the melt ramp
-Contained entirely in `haptic_patterns.dart` (`_moodRamp`, `sessionFrozen`
-stepping above the light single, `sessionEndedEarly` staying soft).
+## 3. The budget rules (spec §3)
 
-### Stage 6 — Tier 4 warnings
-- `lib/features/plan/providers/plan_providers.dart` — delete, rollbacks
-- `lib/features/plan/presentation/add_task_screen.dart` — save failed
-- `lib/features/auth/controllers/auth_controller.dart` — `_run` failure
-- `lib/data/repositories/subjects_repository.dart` — deletes
-- `lib/features/settings/presentation/settings_home_screen.dart` — delete account
-- `lib/features/feedback/presentation/sheets/create_account_prompt.dart` — guest wall
+All of these live in `HapticGovernor` and are tested in
+`test/haptics_governor_test.dart`.
 
----
+| Rule | How |
+|---|---|
+| **Off / Essential / Full** | **Essential is the default** for anyone who never picked a level; an explicit Full or Off is kept. Essential admits only the moments marked `HapticTier.essential`, which a test pins to exactly §3's list. |
+| **Device state** | Low Power Mode, a phone running hot (iOS `.serious`+, Android `THERMAL_STATUS_SEVERE`+) or the OS reduce-motion switch drops Full to Essential, never lower. The device state is checked at most every 30 s and the check is never awaited. |
+| **Running session** | While a session runs, moments marked `ambient` (the student didn't trigger them) are dropped: Ada's proposals arriving, a refreeze, a plan finishing. What the student does, such as pausing or ending, still gets a response. |
+| **Wheels** | Stream moments (wheels, dials, typing) are limited to one tick per 40 ms and play at half strength when the steps are under 40 ms apart (over 25 a second). `play(..., landed: true)` plays the settled value at full strength. |
+| **One frame, one haptic** | Moments offered in the same microtask coalesce: an Essential moment beats a Full one, and on a tie the later one wins. |
+| **Signatures** | Crystallise, melt, bloom, drill and crack are kept 2 s apart. If two collide, the earlier one is stopped and the later one plays. |
+| **Repetition** | The same pattern within 10 minutes plays at 85% of its last strength, never below 50%. The count is per pattern name, so a toggle and a task check-off are both latches. Ten idle minutes reset it. Streams, previews and the system success and error are exempt. |
+| **Continuous vibration** | No longer than 1.4 s, except the breath (10 s, up to 3 in a row). The patterns are written that way, and a test enforces it. |
+| **Face down** | Bloom carries a desk-safe version (S ≤ .2, I × .7). The native side plays it if gravity says the phone is face down. The timer screen turns this watching on and off. |
+| **Background** | Nothing plays while Aqademiq isn't the app on screen ("we never vibrate inside another app"). The notification carries the moment instead. |
 
-## 3. Per-screen budgets (spec §7)
+## 4. Where the spec and Flutter part ways
 
-Copy into the PR description. Exceeding a budget means **removing** something.
+- **`haptics.json`.** The spec's engineering notes ask for a JSON registry consumed
+  by web code through Capacitor. Aqademiq is Flutter, so the registry is
+  `haptic_lexicon.dart`. It keeps the same "one name, three renderings" shape, but
+  the compiler catches a misspelt name or a missing platform.
+- **Rive events.** The app doesn't use Rive. "Touch and picture land together" is
+  kept by firing in the same `setState` or controller call that changes the screen.
+  For optimistic updates (checking a task off), the feel lands with the tick on
+  screen, and a rollback plays the system error.
+- **Prism on the audio clock.** The session start plays the thud, then the Prism
+  pattern 120 ms later, as one pattern on one clock. It is not yet scheduled
+  against Prism's audio clock.
+- **Patterns loaded per screen.** Instead, the engine is kept warm. A pattern is
+  built at play time, which takes well under a millisecond; the delay the spec
+  worries about is the engine starting.
 
-| Screen | Budget | Permitted | Explicitly zero |
-|---|---|---|---|
-| Focus | 4 | started · frozen · resumed · ended/completed | everything during the run |
-| Plan | 4 | completed · created · rescheduled · long-press detent | day nav, view switch, collapse, scroll |
-| Mood | 2 | ramp detent · logged | sheet open/close, note typing |
-| Onboarding | 2 | completion · consent confirm | all eleven step advances |
-| Subjects | 2 | created · destructive confirm | master-detail nav, file attach, sort |
-| Feedback | 2 | vote · posted | board scroll, filter, sort, open detail |
-| Auth | 2 | guest upgrade · auth failure | per-digit OTP, SSO button taps |
-| Settings | 2 | slider detent · destructive confirm | toggles, theme, panel nav |
-| Pickers | 1 | wheel or slider detent | confirm / cancel |
-| Stats / Profile | 1 | streak milestone crossed | everything else |
-| Ada | 1 | "Plan my week" applied | send, arrival, streaming, history |
-| Shell | 1 | tab change | re-tapping the active tab |
+## 5. Removed with v1
 
----
+These had haptics in v1 and have none in the spec:
 
-## 4. Decisions the documents left open
+- streak milestones (and `streakMilestoneProvider`)
+- subject and semester create and delete
+- task delete and move-to-another-day, which now feel only through the gesture
+  that did them: a swipe, a drop, or the reschedule review
+- the Prism volume sliders
+- the guest-upgrade "relief" pattern (the one-time code now ends on the system
+  success)
 
-Six places where the spec and the guide disagreed, or stopped short. Each is
-also commented at the code site.
-
-1. **Reduce-motion (spec §6.5 vs guide §0.1).** The spec claims the app already
-   respects `prefers-reduced-motion`; the audit proves it does not — zero
-   references to `disableAnimations` anywhere. Resolved by **honouring it**: the
-   governor takes `reducedMotion` and clamps Full down to Essential. Read from
-   `PlatformDispatcher.instance.accessibilityFeatures` rather than a
-   `MediaQuery`, because most events fire from controllers with no
-   `BuildContext` — and because the platform dispatcher is the OS's answer,
-   which is what "must sit **under** the OS setting" actually means.
-
-2. **A 23rd event.** Spec §3 lists 22 and its Tier 3 table has four detents, but
-   §7's Plan budget spends one of Plan's four on a "long-press overflow detent",
-   and Finding 04 calls the long-press tick the highest-priority fix in the
-   document. Added `HapticEvent.longPressTick` — physically the same uniform
-   Tier 3 tick, named separately so the call site can say what happened rather
-   than claim a segment changed.
-
-3. **Composites.** Spec §3 draws ascending pairs for the streak and onboarding
-   events and two even beats for a destructive confirm. Guide §1.2 says
-   `focusCompleted` is the *only* multi-part pattern in the app. Followed the
-   guide; spec §5 backs it — meaning must never depend on discriminating two
-   similar patterns, so those collapse to single impulses and lose nothing that
-   was carrying meaning.
-
-4. **Optimistic rollback (guide §4.2).** The guide offers two coherent policies
-   and demands consistency. Picked *fire after the repository succeeds*, applied
-   to all three of `toggleDone` / `move` / `delete`, with Tier 4 `saveFailed` on
-   the rollback. Never fire on entry and stay silent on rollback — that teaches
-   the hand a lie.
-
-5. **The guest wall.** Guide §3 points at `core/error/`. Nothing there maps a
-   403: `failure.dart` only declares types, and `core/network/api_error.dart`
-   collapses 401 and 403 into one `AuthFailure` for *every* failed request,
-   background refetches included. Firing there would break §4.3, so it fires in
-   `showCreateAccountPrompt` — reached only when a guest hits a wall on
-   something they deliberately tried.
-
-6. **The streak.** No controller existed, as the guide predicted. Built one with
-   a persisted watermark (so a milestone fires once per install, not once per
-   recompute) and a session baseline (so launching with an existing 30-day
-   streak does not buzz on the splash screen — §4.5). The ladder — 3, 7, 14, 30,
-   50, 100, 200, 365 — is chosen, not specified.
-
-### Deliberately not done
-
-- **SSO failures** stay silent. `_run` covers every email-based submission
-  (sign-in, sign-up, verify, reset), which is Auth's budgeted "auth failure".
-  The Apple/Google paths hand control to the platform's own sheet, §7 names
-  "SSO button taps" as explicitly zero, and adding three call sites inside the
-  method that fixed App Review 7d5244b9 is exactly the ride-along guide §4.3
-  warns about.
-- **The onboarding peak-time slider** gets no detent. The guide names three
-  slider families (focus duration, task duration, Prism volumes) and Onboarding's
-  budget of 2 is spent on completion and consent — §4.6 puts step-level feedback
-  at zero.
-- **170 → 17 `GestureDetector` → `InkWell` conversions.** A legitimate argument
-  and a different PR (§4.3).
-- **Sub-task ticks, day navigation, view switching, sheet open/close, typing,
-  toasts, app launch, stat views.** All §4.
-
----
-
-## 5. Testing
+## 6. Testing
 
 ```sh
-flutter test test/haptics_governor_test.dart
-flutter test test/haptics_focus_once_test.dart
-flutter test test/haptics_tab_change_test.dart
-flutter analyze
+flutter test test/haptic_lexicon_test.dart test/haptics_governor_test.dart \
+  test/haptics_focus_once_test.dart test/haptics_tab_change_test.dart
 ```
 
-Between them these cover every rule guide §5 lists.
+- `haptic_lexicon_test.dart` checks the patterns against the PDF's numbers.
+- `haptics_governor_test.dart` checks every §3 rule.
+- `haptics_focus_once_test.dart` checks that a session ends with exactly one feel.
+- `haptics_tab_change_test.dart` checks the tab bar.
 
-`haptics_governor_test.dart` asserts the rules that fail *silently*: the setting
-ladder, the reduce-motion clamp, focus-session suppression (including that
-`focusStarted` is **not** exempt), the 40–60 ms floor, burst coalescing, and
-fling suppression.
+To test on a device, use the spec's own list:
 
-`haptics_focus_once_test.dart` is the integration check guide §5 asks for:
-`FocusController.complete()` runs twice on the end-early path and not at all on
-the natural one, so a fake `HapticsService` proves exactly one event per
-session, never two and never none.
+- a recent iPhone
+- a Pixel (full Android support)
+- a budget Samsung (no advanced Android vibration)
+- an Apple Watch
+- each platform with system haptics turned off
 
-`haptics_tab_change_test.dart` covers the one §5 rule that is not a governor
-rule — re-tapping the active tab is a real interaction that simply is not a
-*change*, so the guard sits in `AppShell._onTap` and needs a widget test to
-pin it.
-
-Widget tests do not need an override — `playHapticEvent` swallows platform
-errors, which covers a device with no motor, a desktop embedder, and a test with
-nothing behind `flutter/platform` alike. Tests that want to *assert* on haptics
-should override `hapticsProvider` with a recorder, as those two files do.
-
-### Review protocol (spec §8.2, not optional)
-
-1. **Screen dimmed, sound off.** If you cannot tell what happened from the
-   haptic alone in context, it is noise you have grown used to.
-2. **Then a cheap Android handset**, never only an iPhone. Flutter's constants
-   collapse to near-identical output on weak motors — which is why nothing here
-   depends on telling two similar patterns apart.
+Try each with the screen dimmed and the sound off. If you can't tell what happened
+from the feel alone, it is noise.

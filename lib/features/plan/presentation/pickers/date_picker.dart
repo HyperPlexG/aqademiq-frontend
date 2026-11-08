@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/date_format.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../widgets/plan_sheet.dart';
@@ -103,14 +105,20 @@ class _DatePickerSheetState extends State<_DatePickerSheet> {
 
 /// Today / Tomorrow / the chosen day / Next week. The chosen day gets its own
 /// chip (v11 "18 May") when it is none of the other three.
-class _QuickChipsRow extends StatelessWidget {
+class _QuickChipsRow extends ConsumerWidget {
   const _QuickChipsRow({required this.selected, required this.onPick});
 
   final DateTime selected;
   final ValueChanged<DateTime> onPick;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Tick on a new day, nothing on the chip already chosen.
+    void pick(DateTime d) {
+      if (d != selected) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+      onPick(d);
+    }
+
     final today = AppDate.today();
     // Calendar days, not 24-hour steps: across a DST change those land an hour
     // off midnight and never equal the (date-only) selection.
@@ -121,15 +129,15 @@ class _QuickChipsRow extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          PlanQuickChip(label: 'Today', active: selected == today, onTap: () => onPick(today)),
+          PlanQuickChip(label: 'Today', active: selected == today, onTap: () => pick(today)),
           const SizedBox(width: 6),
-          PlanQuickChip(label: 'Tomorrow', active: selected == tomorrow, onTap: () => onPick(tomorrow)),
+          PlanQuickChip(label: 'Tomorrow', active: selected == tomorrow, onTap: () => pick(tomorrow)),
           if (other) ...[
             const SizedBox(width: 6),
-            PlanQuickChip(label: _chipLabel(selected), active: true, onTap: () => onPick(selected)),
+            PlanQuickChip(label: _chipLabel(selected), active: true, onTap: () => pick(selected)),
           ],
           const SizedBox(width: 6),
-          PlanQuickChip(label: 'Next week', active: selected == nextWeek, onTap: () => onPick(nextWeek)),
+          PlanQuickChip(label: 'Next week', active: selected == nextWeek, onTap: () => pick(nextWeek)),
         ],
       ),
     );

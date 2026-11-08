@@ -1,10 +1,9 @@
-// Re-tapping the tab you are already on must not tick.
+// The tab bar: a tick confirms a switch, Ada's tab clinks, and re-tapping the
+// tab you are already on is silent (haptic architecture §4, "Across the app").
 //
-// Guide §5 lists this among the rules to assert, and it is the one that does
-// NOT live in the governor: a re-tap is a real interaction that simply is not a
-// *change*, so the guard belongs at the call site in `AppShell._onTap`. Spec §7
-// gives the Shell a budget of exactly 1 — "tab change" — with "re-tapping the
-// tab already active" named as explicitly zero.
+// The re-tap rule does NOT live in the governor: a re-tap is a real
+// interaction that simply is not a *change*, so the guard belongs at the call
+// site in `AppShell._onTap`.
 //
 // Worth a real widget test rather than a unit one, because the thing that could
 // break it is someone dropping the `index != currentIndex` check while
@@ -14,7 +13,6 @@ import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/data/auth/auth_repository.dart';
 import 'package:aqademiq/features/shell/presentation/app_shell.dart';
-import 'package:aqademiq/services/haptics/haptic_patterns.dart';
 import 'package:aqademiq/services/haptics/haptics_service.dart';
 import 'package:aqademiq/shared/widgets/bottom_nav.dart';
 import 'package:flutter/material.dart';
@@ -24,12 +22,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class _RecordingHaptics extends NoopHapticsService {
-  final events = <HapticEvent>[];
+  final events = <HapticMoment>[];
 
   @override
-  void emit(HapticEvent event, {int? rampStep}) => events.add(event);
+  void play(HapticMoment moment, {int step = 0, int count = 1, String? mode, bool landed = false}) =>
+      events.add(moment);
 }
-
 /// The real shell, with the five branches stubbed down to a label each. The
 /// branch count and order matter — `NavTab` indices run 0–4 and `goBranch`
 /// needs every one of them to exist.
@@ -102,48 +100,50 @@ void main() {
     expect(
       haptics.events,
       isEmpty,
-      reason: 'never greet someone with a buzz on launch (§4.5)',
+      reason: 'no vibration before the first touch',
     );
 
     await _tapTab(tester, NavTab.planner);
     expect(find.text('PLAN'), findsOneWidget);
-    expect(haptics.events, [HapticEvent.segmentChange]);
+    expect(haptics.events, [HapticMoment.tabSwitch]);
 
     await _tapTab(tester, NavTab.planner);
     expect(
       haptics.events,
-      [HapticEvent.segmentChange],
-      reason: 're-tapping the active tab is explicitly zero (§7, Shell)',
+      [HapticMoment.tabSwitch],
+      reason: 're-tapping the active tab is not a switch',
     );
 
     await _tapTab(tester, NavTab.subjects);
     expect(find.text('SUBJECTS'), findsOneWidget);
     expect(
       haptics.events,
-      [HapticEvent.segmentChange, HapticEvent.segmentChange],
+      [HapticMoment.tabSwitch, HapticMoment.tabSwitch],
       reason: 'moving back is a change again',
     );
   });
 
-  testWidgets('the tick is the only thing the shell ever fires', (tester) async {
-    // Shell's budget is 1. Walking every tab must not surface a second event
-    // type from somewhere else in the tree.
+  testWidgets('walking the tabs ticks, and Ada clinks', (tester) async {
+    // Every switch is a tick, except Ada's centre tab: tapping her should feel
+    // like tapping a cube.
     final haptics = await _pumpShell(tester);
 
     for (final tab in [
       NavTab.planner,
       NavTab.timer,
+      NavTab.ada,
       NavTab.stats,
       NavTab.subjects,
     ]) {
       await _tapTab(tester, tab);
     }
 
-    expect(haptics.events, hasLength(4));
-    expect(
-      haptics.events.toSet(),
-      {HapticEvent.segmentChange},
-      reason: 'one event type reachable from the shell, and one only',
-    );
+    expect(haptics.events, [
+      HapticMoment.tabSwitch,
+      HapticMoment.tabSwitch,
+      HapticMoment.tabAda,
+      HapticMoment.tabSwitch,
+      HapticMoment.tabSwitch,
+    ]);
   });
 }

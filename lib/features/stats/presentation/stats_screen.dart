@@ -59,10 +59,9 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final name = ref.watch(profileControllerProvider).name;
-    // `streakProvider` is still read app-wide by `streakMilestoneProvider` for
-    // the Tier 1 haptic; it is simply no longer *shown*. A day count that can
-    // reset to zero overnight is a target by another name, and it sat directly
-    // above a report whose entire design forbids one.
+    // `streakProvider` is no longer *shown*. A day count that can reset to zero
+    // overnight is a target by another name, and it sat directly above a
+    // report whose entire design forbids one.
     // This week, not lifetime. A "16" sitting next to "10 done this week" reads
     // as a mistake, because on a weekly panel it is one — and 16 cannot be a
     // number of days in a seven-day week. `totalActiveDays` is still fetched
@@ -399,7 +398,7 @@ class _MoodCard extends ConsumerWidget {
           writeReflection: true,
         );
     // The sheet's own ramp detents already fired inside it; this is the commit.
-    ref.read(hapticsProvider).moodLogged();
+    ref.read(hapticsProvider).play(HapticMoment.moodSave);
     ref
       ..invalidate(moodWeekProvider)
       ..invalidate(streakProvider);

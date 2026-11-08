@@ -1,19 +1,21 @@
 import 'dart:async';
+import 'dart:math' as math;
 
-import 'haptic_patterns.dart';
+import 'haptic_lexicon.dart';
+import 'haptic_moments.dart';
 
-/// The user-facing setting — spec §6.5.
-///
-/// Sits **under** the OS accessibility setting and never overrides it; see
-/// [HapticGovernor.admits] for how reduce-motion clamps it.
+/// The user-facing setting — spec §3, "Tiers and budget".
 enum HapticSetting {
-  /// Nothing fires, ever.
+  /// Nothing in the app. Apple Watch and system surfaces keep their own
+  /// feedback.
   off,
 
-  /// Tiers 1 and 4 only — the earned moments and the warnings.
+  /// Sessions, freezing and thawing; deep freeze holding; system success and
+  /// error. About ten moments a day. **The default.**
   essential,
 
-  /// All four tiers.
+  /// Everything: ticks, toggles, wheels, swipes, Ada, the Core, Prism
+  /// previews.
   full;
 
   /// Stable key for SharedPreferences; a bare `name` would silently change
@@ -24,131 +26,134 @@ enum HapticSetting {
         HapticSetting.full => 'full',
       };
 
+  /// Unset means Essential (principle 6, "Essential by default"). A student
+  /// who picked Full or Off keeps their pick.
   static HapticSetting fromStorageKey(String? key) => switch (key) {
         'off' => HapticSetting.off,
-        'essential' => HapticSetting.essential,
-        _ => HapticSetting.full,
+        'full' => HapticSetting.full,
+        _ => HapticSetting.essential,
       };
 
-  /// Row label in Settings → Prism.
   String get label => switch (this) {
         HapticSetting.off => 'Off',
         HapticSetting.essential => 'Essential',
         HapticSetting.full => 'Full',
       };
 
+  /// The haptics sheet's subtitles. Essential now covers freezing too, so it
+  /// reads "Sessions, freezing and thawing" (§3).
   String get description => switch (this) {
-        HapticSetting.off => 'No haptics at all.',
-        HapticSetting.essential =>
-          'Only the moments you earned, and warnings.',
-        HapticSetting.full => 'Confirmations and selection ticks too.',
+        HapticSetting.off => 'No vibration anywhere',
+        HapticSetting.essential => 'Sessions, freezing and thawing',
+        HapticSetting.full => 'Every tap and toggle',
       };
 }
 
-/// What actually reaches the motor — guide §1.3.
+/// One pattern the governor let through.
+class AdmittedHaptic {
+  const AdmittedHaptic({required this.id, required this.spec, this.faceDownAlt});
+
+  /// Lets a later signature stop this one, and a hold be released.
+  final int id;
+  final HapticSpec spec;
+
+  /// Played instead of [spec] if the phone is lying face down (bloom).
+  final HapticSpec? faceDownAlt;
+}
+
+/// Everything between a moment and the motor (§3, "Budget rules").
 ///
-/// Everything routes through here. Without it haptics rots: every new feature
-/// adds a buzz and nobody ever sees the aggregate.
+/// A plain class that takes the setting, the focus status and the device
+/// state as inputs, so every rule is unit-tested with no widget tree and no
+/// platform channel (`test/haptics_governor_test.dart`). The rules:
 ///
-/// Deliberately a plain class that takes the current focus status and setting as
-/// **inputs** rather than reaching into providers itself, so the rules that fail
-/// silently can be unit-tested with no widget tree and no platform channel
-/// (`test/haptics_governor_test.dart`).
-///
-/// The rules, in the order the guide lists them:
-///
-///  1. the user setting — Off / Essential / Full, clamped by reduce-motion;
-///  2. focus-session suppression — the strictest rule in the document;
-///  3. a minimum interval floor between any two fires;
-///  4. fling suppression, so a fast scroll does not rattle;
-///  5. burst coalescing — one frame, one haptic, the highest tier.
+///  1. **Setting** — Off / Essential / Full. Low Power Mode, a phone running
+///     hot, or the OS reduce-motion switch drops Full to Essential.
+///  2. **Running session** — no vibration the student didn't trigger.
+///  3. **Wheels** — at most one tick per 40 ms; faster than 25 steps a second
+///     plays at half strength; the landing tick at full strength.
+///  4. **One frame, one haptic** — the higher tier wins; a tie, the later.
+///  5. **Signatures** — crystallise, melt, bloom, drill and crack are kept
+///     2 s apart: if two collide, the earlier is stopped and the later plays.
+///  6. **Repetition** — the same pattern again within 10 minutes plays at 85%
+///     of its last strength, never below 50%; 10 idle minutes reset it.
 class HapticGovernor {
   HapticGovernor({
     required this.play,
+    required this.stop,
     DateTime Function()? clock,
     void Function(void Function() flush)? schedule,
-    Duration Function(HapticEvent event, int? rampStep)? spanOf,
   })  : _clock = clock ?? DateTime.now,
-        _schedule = schedule ?? scheduleMicrotask,
-        _spanOf = spanOf ?? hapticSpanOf;
+        _schedule = schedule ?? scheduleMicrotask;
 
-  /// Hands an admitted event to the physical layer. Injected so tests can
-  /// record instead of vibrate.
-  final void Function(HapticEvent event, int? rampStep) play;
-
+  final void Function(AdmittedHaptic haptic) play;
+  final void Function(int id) stop;
   final DateTime Function() _clock;
-
-  /// Defers [flush] to the end of the current turn. Defaults to
-  /// [scheduleMicrotask] rather than a post-frame callback so the governor
-  /// stays free of Flutter bindings; tests pass a manual scheduler and drive
-  /// [flush] themselves.
   final void Function(void Function() flush) _schedule;
 
-  /// How long an event occupies the motor. Injected for the same reason [play]
-  /// is — so a governor test never reaches the pattern table.
-  final Duration Function(HapticEvent event, int? rampStep) _spanOf;
+  static const Duration wheelGap = Duration(milliseconds: 40);
+  static const Duration signatureGap = Duration(seconds: 2);
+  static const Duration repetitionWindow = Duration(minutes: 10);
+  static const double repetitionDecay = 0.85;
+  static const double repetitionFloor = 0.5;
 
-  /// §4.4 — "a 40–60 ms floor between ticks". The midpoint.
-  static const Duration minInterval = Duration(milliseconds: 50);
+  int _nextId = 1;
 
-  /// Detents arriving closer together than this are a fling, not a selection.
-  /// Deliberate wheel-turning lands well outside it.
-  static const Duration flingGap = Duration(milliseconds: 80);
+  DateTime? _lastStreamSubmit;
+  DateTime? _lastStreamPlay;
 
-  /// How many rapid detents in a row before we call it a fling. Two fast ticks
-  /// happen when someone flicks a wheel one stop; three is a scroll.
-  static const int flingRun = 3;
+  DateTime? _lastSignatureAt;
+  int? _lastSignatureId;
 
-  /// The only events allowed through while a session is running — spec §4.2:
-  /// "Only user-triggered freeze, resume and end may fire."
-  ///
-  /// [HapticEvent.focusStarted] is **not** here on purpose. It is a session
-  /// transition too, but by the time it fires the session has begun, and
-  /// allow-listing it would widen the strictest rule in the document to cover
-  /// the interior of a run. `FocusController.start` fires it in the window
-  /// before the status flips to running instead; see the note there.
-  static const Set<HapticEvent> sessionTransitions = {
-    HapticEvent.sessionFrozen,
-    HapticEvent.sessionResumed,
-    HapticEvent.sessionEndedEarly,
-    HapticEvent.focusCompleted,
-  };
+  final Map<String, (DateTime, double)> _repeats = {};
 
-  /// When the motor is free again: the end of the last pattern, or the
-  /// interval floor past its start, whichever is later.
-  DateTime? _quietUntil;
-  DateTime? _lastDetentAt;
-  int _rapidDetents = 0;
-
-  HapticEvent? _pending;
-  int? _pendingRamp;
+  _Pending? _pending;
   bool _flushScheduled = false;
 
-  /// Offer [event] to the motor. Silently drops it unless every rule passes.
+  /// Whether [tier] plays under [setting]. [constrained] is Low Power Mode, a
+  /// hot phone or reduce-motion: each drops Full to Essential, never lower.
+  static bool admits(HapticSetting setting, HapticTier tier, {bool constrained = false}) {
+    if (tier == HapticTier.preview) return true;
+    final effective = constrained && setting == HapticSetting.full ? HapticSetting.essential : setting;
+    return switch (effective) {
+      HapticSetting.off => false,
+      HapticSetting.essential => tier == HapticTier.essential,
+      HapticSetting.full => true,
+    };
+  }
+
+  /// Offer [moment] (already resolved to [spec]) to the motor.
   void submit(
-    HapticEvent event, {
+    HapticMoment moment,
+    HapticSpec spec, {
     required HapticSetting setting,
     required bool focusRunning,
-    required bool reducedMotion,
-    int? rampStep,
+    bool constrained = false,
+    bool landed = false,
+    HapticSpec? faceDownAlt,
   }) {
-    // 1 — the user setting (and the OS one above it).
-    if (!admits(setting, event.tier, reducedMotion: reducedMotion)) return;
+    if (!admits(setting, moment.tier, constrained: constrained)) return;
+    if (focusRunning && moment.ambient) return;
 
-    // 2 — focus-session suppression. The entire promise of /focus is
-    // undisturbed attention, and this is also how the haptic layer stays out of
-    // Prism's way.
-    if (focusRunning && !sessionTransitions.contains(event)) return;
+    var playSpec = spec;
+    if (moment.stream) {
+      final now = _clock();
+      final lastSubmit = _lastStreamSubmit;
+      _lastStreamSubmit = now;
+      if (!landed) {
+        final lastPlay = _lastStreamPlay;
+        if (lastPlay != null && now.difference(lastPlay) < wheelGap) return;
+        if (lastSubmit != null && now.difference(lastSubmit) < wheelGap) {
+          playSpec = playSpec.scaled(0.5);
+        }
+      }
+      _lastStreamPlay = now;
+    }
 
-    // 3 — fling suppression. During a fling the user is not reading positions,
-    // so the ticks convey nothing and merely blur into a rattle.
-    if (event.tier == HapticTier.detent && _consumeDetentAsFling()) return;
-
-    // 4 — burst coalescing: remember only the highest tier offered this frame.
+    final rank = moment.tier == HapticTier.full ? 1 : 0;
     final pending = _pending;
-    if (pending == null || event.tier.index < pending.tier.index) {
-      _pending = event;
-      _pendingRamp = rampStep;
+    if (pending == null || rank <= pending.rank) {
+      _pending = _Pending(moment, playSpec, rank, faceDownAlt);
     }
     if (!_flushScheduled) {
       _flushScheduled = true;
@@ -156,75 +161,66 @@ class HapticGovernor {
     }
   }
 
-  /// Play whatever won this frame, if the interval floor allows it.
-  ///
-  /// Public because the tests drive it directly; nothing in `lib/` calls it.
+  /// Play whatever won this frame. Public because the tests drive it.
   void flush() {
     _flushScheduled = false;
-    final event = _pending;
-    if (event == null) return;
-    final rampStep = _pendingRamp;
+    final pending = _pending;
     _pending = null;
-    _pendingRamp = null;
-
-    // 5 — the quiet window, measured against what actually fired rather than
-    // what was offered, so a burst of dropped events cannot starve the next
-    // real one.
-    //
-    // Events are patterns now, not instants, so the window is the longer of
-    // [minInterval] and the pattern's own span. Without that a 420 ms
-    // `focusCompleted` would still be playing its third beat when the next
-    // detent arrives 50 ms in, and the two would be felt as one mess. A single
-    // tap's span is well under the floor, so for almost everything this is
-    // exactly the old rule.
+    if (pending == null) return;
     final now = _clock();
-    final until = _quietUntil;
-    if (until != null && now.isBefore(until)) return;
+    final id = _nextId++;
 
-    final span = _spanOf(event, rampStep);
-    _quietUntil = now.add(span > minInterval ? span : minInterval);
-    play(event, rampStep);
-  }
-
-  /// Whether [tier] survives [setting] under the current OS accessibility
-  /// state.
-  ///
-  /// Spec §6.5 asks the setting to "honour the same contract as
-  /// prefers-reduced-motion". Reduce-motion is very often a statement about
-  /// sensory load rather than battery life, so it clamps Full down to
-  /// Essential: the earned moments and the warnings carry information and
-  /// survive; the confirmations and detents are texture and do not. Off stays
-  /// Off — the app setting may always be *stricter* than the OS, never looser.
-  static bool admits(
-    HapticSetting setting,
-    HapticTier tier, {
-    required bool reducedMotion,
-  }) {
-    final effective = reducedMotion && setting == HapticSetting.full
-        ? HapticSetting.essential
-        : setting;
-    return switch (effective) {
-      HapticSetting.off => false,
-      HapticSetting.essential =>
-        tier == HapticTier.earned || tier == HapticTier.warning,
-      HapticSetting.full => true,
-    };
-  }
-
-  /// Records this detent and reports whether we are mid-fling.
-  ///
-  /// Mutates on every detent, including suppressed ones, so the run keeps
-  /// counting for as long as the wheel is spinning and resets the moment it
-  /// slows below [flingGap].
-  bool _consumeDetentAsFling() {
-    final now = _clock();
-    final last = _lastDetentAt;
-    _lastDetentAt = now;
-    if (last != null && now.difference(last) < flingGap) {
-      _rapidDetents++;
-    } else {
-      _rapidDetents = 0;
+    if (pending.spec.signature) {
+      final last = _lastSignatureAt;
+      final lastId = _lastSignatureId;
+      if (last != null && lastId != null && now.difference(last) < signatureGap) stop(lastId);
+      _lastSignatureAt = now;
+      _lastSignatureId = id;
     }
-    return _rapidDetents >= flingRun;
+
+    var spec = pending.spec;
+    var alt = pending.faceDownAlt;
+    if (_repeatable(pending.moment, spec)) {
+      final k = _repeatFactor(spec.name, now);
+      spec = spec.scaled(k);
+      alt = alt?.scaled(k);
+    }
+    play(AdmittedHaptic(id: id, spec: spec, faceDownAlt: alt));
   }
+
+  /// A hold (the thaw breath, a ratchet): admitted now, outside the frame
+  /// coalescing, and never softened by repetition — its strength is the
+  /// spec's. Returns null when the setting or the session silences it.
+  AdmittedHaptic? admitHold(
+    HapticMoment moment,
+    HapticSpec spec, {
+    required HapticSetting setting,
+    required bool focusRunning,
+    bool constrained = false,
+  }) {
+    if (!admits(setting, moment.tier, constrained: constrained)) return null;
+    if (focusRunning && moment.ambient) return null;
+    return AdmittedHaptic(id: _nextId++, spec: spec);
+  }
+
+  bool _repeatable(HapticMoment moment, HapticSpec spec) =>
+      !moment.stream && moment.tier != HapticTier.preview && spec.iosSystem == null;
+
+  double _repeatFactor(String name, DateTime now) {
+    final last = _repeats[name];
+    final k = last == null || now.difference(last.$1) >= repetitionWindow
+        ? 1.0
+        : math.max(repetitionFloor, last.$2 * repetitionDecay);
+    _repeats[name] = (now, k);
+    return k;
+  }
+}
+
+class _Pending {
+  _Pending(this.moment, this.spec, this.rank, this.faceDownAlt);
+
+  final HapticMoment moment;
+  final HapticSpec spec;
+  final int rank;
+  final HapticSpec? faceDownAlt;
 }

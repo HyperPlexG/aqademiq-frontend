@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/circle_back_button.dart';
@@ -129,17 +130,20 @@ class IceBreakersHead extends StatelessWidget {
 
 /// The first visit. One video is singled out so the student has exactly one
 /// thing to do — the same argument the whole series makes about tasks.
-class _StartHereHero extends StatelessWidget {
+class _StartHereHero extends ConsumerWidget {
   const _StartHereHero({required this.breaker});
 
   final IceBreaker breaker;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     return AppCard(
       padding: const EdgeInsets.all(11),
-      onTap: () => unawaited(context.push(Routes.iceBreaker(breaker.id))),
+      onTap: () {
+        ref.read(hapticsProvider).play(HapticMoment.iceBreakerOpen);
+        unawaited(context.push(Routes.iceBreaker(breaker.id)));
+      },
       child: Row(
         children: [
           // The poster: a portrait still with the play badge, never a band.
@@ -297,7 +301,7 @@ class _Banner extends StatelessWidget {
 ///
 /// They collapse rather than disappear so the list's height is stable and the
 /// student can still find something they have already seen.
-class _WatchedDisclosure extends StatefulWidget {
+class _WatchedDisclosure extends ConsumerStatefulWidget {
   const _WatchedDisclosure({required this.state, this.first = false});
 
   final IceBreakersState state;
@@ -306,10 +310,10 @@ class _WatchedDisclosure extends StatefulWidget {
   final bool first;
 
   @override
-  State<_WatchedDisclosure> createState() => _WatchedDisclosureState();
+  ConsumerState<_WatchedDisclosure> createState() => _WatchedDisclosureState();
 }
 
-class _WatchedDisclosureState extends State<_WatchedDisclosure> {
+class _WatchedDisclosureState extends ConsumerState<_WatchedDisclosure> {
   bool _open = false;
 
   @override
@@ -322,7 +326,11 @@ class _WatchedDisclosureState extends State<_WatchedDisclosure> {
           button: true,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() => _open = !_open),
+            onTap: () {
+              // The watched pile folding away ticks; opening it is unmarked.
+              if (_open) ref.read(hapticsProvider).play(HapticMoment.iceBreakerCollapse);
+              setState(() => _open = !_open);
+            },
             child: Container(
               constraints: const BoxConstraints(minHeight: 52),
               padding: const EdgeInsets.symmetric(vertical: 9),

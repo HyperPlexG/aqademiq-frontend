@@ -136,7 +136,20 @@ class AppAlert extends StatelessWidget {
     this.cancelLabel = 'Cancel',
     this.danger = true,
     this.width = 252,
-  });
+  }) : confirm = null;
+
+  /// The same alert with its own confirm control in place of the text action
+  /// (a `HoldToConfirm` for Delete account), full width above Cancel. The
+  /// control pops the dialog itself.
+  const AppAlert.custom({
+    super.key,
+    required this.title,
+    required this.message,
+    required Widget this.confirm,
+    this.cancelLabel = 'Cancel',
+    this.width = 252,
+  })  : confirmLabel = '',
+        danger = true;
 
   final String title;
   final String message;
@@ -144,6 +157,7 @@ class AppAlert extends StatelessWidget {
   final String cancelLabel;
   final bool danger;
   final double width;
+  final Widget? confirm;
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +188,12 @@ class AppAlert extends StatelessWidget {
                 message,
                 style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.5, color: colors.textMed),
               ),
-              const SizedBox(height: 3),
+              if (confirm != null) ...[
+                const SizedBox(height: 14),
+                confirm!,
+                const SizedBox(height: 4),
+              ] else
+                const SizedBox(height: 3),
               // The 44 targets bleed past the padding, as the design's
               // `margin: -13px -8px -13px 0` does. Labels too long to sit side
               // by side wrap onto their own line rather than truncate.
@@ -192,12 +211,13 @@ class AppAlert extends StatelessWidget {
                         weight: FontWeight.w700,
                         onTap: () => Navigator.of(context).pop(false),
                       ),
-                      _AlertAction(
-                        label: confirmLabel,
-                        color: danger ? colors.danger : colors.accent,
-                        weight: FontWeight.w800,
-                        onTap: () => Navigator.of(context).pop(true),
-                      ),
+                      if (confirm == null)
+                        _AlertAction(
+                          label: confirmLabel,
+                          color: danger ? colors.danger : colors.accent,
+                          weight: FontWeight.w800,
+                          onTap: () => Navigator.of(context).pop(true),
+                        ),
                     ],
                   ),
                 ),

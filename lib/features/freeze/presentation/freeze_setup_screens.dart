@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/ic.dart';
 import '../data/app_freeze_channel.dart';
@@ -91,6 +92,9 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
   bool _asking = false;
   bool _done = false;
 
+  /// Android: a check found the grants missing, so authorised later is a grant.
+  bool _wasOff = false;
+
   @override
   void initState() {
     super.initState();
@@ -114,12 +118,15 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
     final access = await ref.read(appFreezeChannelProvider).status();
     if (!mounted) return;
     setState(() => _access = access);
-    if (!ref.read(freezeAppsProvider).ios && access.authorized) await _finish(access);
+    if (!access.authorized) _wasOff = true;
+    if (!ref.read(freezeAppsProvider).ios && access.authorized) await _finish(access, granted: _wasOff);
   }
 
-  Future<void> _finish(FreezeAccess access) async {
+  Future<void> _finish(FreezeAccess access, {required bool granted}) async {
     if (_done) return;
     _done = true;
+    // Granted, after the system screen closed. Nothing when it already was.
+    if (granted) ref.read(hapticsProvider).play(HapticMoment.freezePermissionGranted);
     final c = ref.read(freezeControllerProvider.notifier)..markSetUp();
     final floor = await ref.read(appFreezeChannelProvider).floorApps();
     c.seedFloor(floor);
@@ -138,7 +145,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
     if (!mounted) return;
     setState(() => _asking = false);
     if (ok) {
-      await _finish(await ref.read(appFreezeChannelProvider).status());
+      await _finish(await ref.read(appFreezeChannelProvider).status(), granted: true);
     } else {
       context.pushReplacement(Routes.freezeDenied);
     }
@@ -353,6 +360,7 @@ class FreezeDeniedScreen extends ConsumerWidget {
           onTap: () async {
             final channel = ref.read(appFreezeChannelProvider);
             if (ios && await channel.requestAuthorization()) {
+              ref.read(hapticsProvider).play(HapticMoment.freezePermissionGranted);
               ref.read(freezeControllerProvider.notifier).markSetUp();
               if (context.mounted) context.pushReplacement(Routes.freeze);
               return;

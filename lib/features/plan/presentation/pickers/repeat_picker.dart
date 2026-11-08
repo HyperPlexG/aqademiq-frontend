@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/models/task.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../widgets/plan_sheet.dart';
 
@@ -143,14 +145,14 @@ Future<RepeatRule?> _showCustomRepeatDialog(BuildContext context) {
 }
 
 /// The centered Custom repeat dialog (v11 `PICK_REPEAT_CUSTOM`).
-class _CustomRepeatDialog extends StatefulWidget {
+class _CustomRepeatDialog extends ConsumerStatefulWidget {
   const _CustomRepeatDialog();
 
   @override
-  State<_CustomRepeatDialog> createState() => _CustomRepeatDialogState();
+  ConsumerState<_CustomRepeatDialog> createState() => _CustomRepeatDialogState();
 }
 
-class _CustomRepeatDialogState extends State<_CustomRepeatDialog> {
+class _CustomRepeatDialogState extends ConsumerState<_CustomRepeatDialog> {
   static const _units = ['Days', 'Weeks', 'Months'];
   static const _dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -198,7 +200,11 @@ class _CustomRepeatDialogState extends State<_CustomRepeatDialog> {
           _UnitSegmented(
             units: _units,
             selected: _unitIndex,
-            onSelect: (i) => setState(() => _unitIndex = i),
+            onSelect: (i) {
+              // Segmented: tick on a new unit, nothing on the one already set.
+              if (i != _unitIndex) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+              setState(() => _unitIndex = i);
+            },
           ),
           const SizedBox(height: 16),
           Padding(
@@ -228,9 +234,13 @@ class _CustomRepeatDialogState extends State<_CustomRepeatDialog> {
                         letter: _dayLetters[i],
                         side: side,
                         active: _activeDays.contains(i),
-                        onTap: () => setState(() {
-                          if (!_activeDays.add(i)) _activeDays.remove(i);
-                        }),
+                        onTap: () {
+                          // Multi-select chips: every tap changes the set.
+                          ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                          setState(() {
+                            if (!_activeDays.add(i)) _activeDays.remove(i);
+                          });
+                        },
                       ),
                   ],
                 );

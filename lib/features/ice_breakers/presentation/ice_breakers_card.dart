@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/ic.dart';
 import '../ice_breaker.dart';
@@ -133,7 +134,11 @@ class IceBreakerRow extends ConsumerWidget {
     final watched = ref.watch(
       iceBreakersProvider.select((s) => s.watchedIds.contains(breaker.id)),
     );
-    void open() => unawaited(context.push(Routes.iceBreaker(breaker.id)));
+    void open() {
+      // A tap as the video opens. Nothing while it plays.
+      ref.read(hapticsProvider).play(HapticMoment.iceBreakerOpen);
+      unawaited(context.push(Routes.iceBreaker(breaker.id)));
+    }
 
     return Semantics(
       button: true,

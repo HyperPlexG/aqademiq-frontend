@@ -40,13 +40,13 @@ class MainActivity : FlutterActivity() {
         // is already on the launch intent and would otherwise be missed.
         AmbientBridge.routeFrom(intent)
 
-        // The 23 haptic patterns. Flutter's own HapticFeedback takes no
-        // parameters, so intensity, duration and multi-beat timing all arrive
-        // through here (lib/services/haptics/haptic_driver.dart).
+        // The haptic lexicon (lib/services/haptics/haptic_lexicon.dart). The
+        // window's view is how the patterns that use Android's own feedback
+        // constants (toggle on/off, gesture thresholds) reach the motor.
         HapticsBridge.attach(
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, HapticsBridge.CHANNEL),
             applicationContext,
-        )
+        ) { window?.decorView }
 
         // Settings → Calendar import: reads the phone's calendars (read-only).
         // A plugin rather than an attached object because the permission

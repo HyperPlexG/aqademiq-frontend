@@ -8,7 +8,6 @@ import 'data/auth/session_reset.dart';
 import 'data/realtime/revision_sync.dart';
 import 'features/focus/providers/prism_audio_provider.dart';
 import 'features/freeze/providers/freeze_events.dart';
-import 'features/stats/providers/streak_milestone_provider.dart';
 import 'services/ambient/ambient_service.dart';
 import 'services/push_service.dart';
 import 'services/reminder_scheduler.dart';
@@ -43,7 +42,6 @@ class AqademiqApp extends ConsumerWidget {
       ..watch(prismAudioControllerProvider)
       ..watch(pushServiceProvider)
       ..watch(reminderSchedulerProvider)
-      ..watch(streakMilestoneProvider)
       ..watch(ambientServiceProvider)
       // App freeze: the shield's Thaw opens the breath, and every resume
       // re-applies the policy in case the native side was killed.

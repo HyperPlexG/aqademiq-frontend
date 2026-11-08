@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/repositories/settings_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -35,6 +36,7 @@ class _RateBodyState extends ConsumerState<_RateBody> {
 
   Future<void> _submit() async {
     if (_rating < 1 || _submitting) return;
+    ref.read(hapticsProvider).play(HapticMoment.rateSubmit);
     setState(() => _submitting = true);
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -75,7 +77,11 @@ class _RateBodyState extends ConsumerState<_RateBody> {
                 label: '$i star${i == 1 ? '' : 's'}',
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: () => setState(() => _rating = i),
+                  onTap: () {
+                    if (i == _rating) return;
+                    ref.read(hapticsProvider).play(HapticMoment.rateStar);
+                    setState(() => _rating = i);
+                  },
                   child: AppIcon(
                     i <= _rating ? Icons.star : Icons.star_outline,
                     size: 30,

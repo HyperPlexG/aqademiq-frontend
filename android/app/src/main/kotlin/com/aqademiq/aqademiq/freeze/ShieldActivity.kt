@@ -24,6 +24,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import com.aqademiq.aqademiq.HapticsBridge
 import com.aqademiq.aqademiq.MainActivity
 import com.aqademiq.aqademiq.R
 import kotlin.math.abs
@@ -56,6 +57,9 @@ class ShieldActivity : Activity() {
 
         /** 1–3: how many times today the shield has covered this app (§4). */
         const val EXTRA_STAGE = "stage"
+
+        /** A new open, counted — not the same open shown again. */
+        const val EXTRA_FRESH = "fresh"
         const val EXTRA_LINE = "line"
         const val EXTRA_BREATH = "breath"
         const val EXTRA_DEEP = "deep"
@@ -88,11 +92,13 @@ class ShieldActivity : Activity() {
         )
         val backButton = findViewById<Button>(R.id.shield_back)
         val thawButton = findViewById<View>(R.id.shield_thaw)
-        backButton.setOnClickListener { goHome() }
+        backButton.setOnClickListener { goHome(chosen = true) }
         thawButton.setOnClickListener { requestThaw() }
         announceAsButton(thawButton)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerBack()
         render(intent)
+        // Not again when the activity is only being recreated.
+        if (savedInstanceState == null) knock(intent)
     }
 
     /** singleInstance: a second frozen app reuses this one with new words. */
@@ -100,6 +106,20 @@ class ShieldActivity : Activity() {
         super.onNewIntent(intent)
         setIntent(intent)
         render(intent)
+        knock(intent)
+    }
+
+    /**
+     * Fades out the way the copy does (spec §4-A): two knocks on the first
+     * open today, one at 60% on the second, nothing after. Only for a new
+     * open; the monitor re-showing the same one stays silent.
+     */
+    private fun knock(intent: Intent) {
+        if (!intent.getBooleanExtra(EXTRA_FRESH, false)) return
+        when (intent.getIntExtra(EXTRA_STAGE, 1)) {
+            1 -> HapticsBridge.playShieldKnock(this, 1f, times = 2)
+            2 -> HapticsBridge.playShieldKnock(this, 0.6f)
+        }
     }
 
     /**
@@ -146,8 +166,13 @@ class ShieldActivity : Activity() {
         }
     }
 
-    /** Back to focus: the home screen, never the app underneath. */
-    private fun goHome() {
+    /**
+     * Back to focus: the home screen, never the app underneath. [chosen] is
+     * the button: the ice held and it was the student's choice, so it sets
+     * (crystallise at 50%). Back and the no-target fallback stay silent.
+     */
+    private fun goHome(chosen: Boolean = false) {
+        if (chosen) HapticsBridge.playShieldCrystallise(this, 0.5f)
         val home = Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_HOME)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

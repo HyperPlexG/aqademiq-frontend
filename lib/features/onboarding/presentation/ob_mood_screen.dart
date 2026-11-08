@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/mood_blob.dart';
@@ -52,9 +53,11 @@ class ObMoodScreen extends ConsumerWidget {
               subject: subjects[s],
               active: moods[subjects[s]] ?? 2,
               moodColors: _moodColors,
-              onSelect: (i) => ref
-                  .read(onboardingProvider.notifier)
-                  .setSubjectMood(subjects[s], i),
+              onSelect: (i) {
+                // texture[i]: crisp cube crisp, melted cube soft.
+                if (i != (moods[subjects[s]] ?? 2)) ref.read(hapticsProvider).play(HapticMoment.feelingPick, step: i);
+                ref.read(onboardingProvider.notifier).setSubjectMood(subjects[s], i);
+              },
             ),
             if (s < subjects.length - 1) const SizedBox(height: 8),
           ],

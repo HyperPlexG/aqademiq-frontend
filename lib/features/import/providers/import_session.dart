@@ -516,7 +516,7 @@ class ImportSession extends Notifier<ImportSessionState> {
         selected: const <String>{},
         firstAdded: firstAdded ?? today,
       );
-      ref.read(hapticsProvider).taskCreated();
+      ref.read(hapticsProvider).play(HapticMoment.quickAddSave);
     } on ImportInterrupted catch (e) {
       _refreshPlan();
       if (generation != _generation) return;
@@ -525,11 +525,11 @@ class ImportSession extends Notifier<ImportSessionState> {
         message: 'Added ${e.imported} before the connection dropped. '
             'Tap Add again for the rest — nothing will be added twice.',
       );
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     } on Object catch (e) {
       if (generation != _generation) return;
       state = state.copyWith(phase: ImportPhase.ready, message: _messageFor(e));
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     }
   }
 

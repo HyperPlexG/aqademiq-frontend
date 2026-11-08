@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../data/models/enums.dart';
 import '../../../../data/repositories/focus_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../domain/freeze_engine.dart';
 import '../../domain/freeze_models.dart';
@@ -132,6 +133,8 @@ class _FreezeNowState extends ConsumerState<_FreezeNow> {
           label: label,
           enabled: count > 0 || _apps.keepOnly,
           onTap: () {
+            // The apps set into ice; Keep only these takes a little longer.
+            ref.read(hapticsProvider).play(_apps.keepOnly ? HapticMoment.keepOnlyThese : HapticMoment.freezeNow);
             ref.read(freezeControllerProvider.notifier).freezeNow(
                   apps: _apps,
                   endsAt: endsAt,
@@ -157,6 +160,7 @@ class _FreezeNowState extends ConsumerState<_FreezeNow> {
                     _Length.twoHours => 120,
                     _Length.untilStop => null,
                   };
+                  ref.read(hapticsProvider).play(HapticMoment.frostSaved);
                   ref.read(freezeControllerProvider.notifier).saveAsFrost(
                         name: name,
                         apps: _apps,

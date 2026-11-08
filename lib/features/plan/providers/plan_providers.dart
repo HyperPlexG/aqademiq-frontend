@@ -50,29 +50,32 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
   /// Optimistically flip a task's done state, rolling back on failure
   /// (README §7: "optimistic updates for toggles").
   ///
-  /// The haptic confirms the **outcome**, not the tap (spec §2.1). These three
-  /// mutations are optimistic with rollback, and guide §4.2 gives two coherent
-  /// choices for that: fire after the repository succeeds, or fire optimistically
-  /// and follow a rollback with `saveFailed`. This file picks the first —
-  /// consistently, in all three — because it is the one that cannot teach the
-  /// hand a lie. The rollback still speaks, in Tier 4.
+  /// The feel lands with the tick on screen, not after the round trip
+  /// (haptic architecture principle 5, "Touch and picture land together"). A
+  /// rollback is a real failure, so it gets the system error.
   Future<void> toggleDone(Task task) async {
     final previous = state.value ?? const <Task>[];
     final next = task.copyWith(done: !task.done);
-    state = AsyncData([
+    final updated = [
       for (final t in previous) if (t.id == task.id) next else t,
-    ]);
+    ];
+    state = AsyncData(updated);
+    // The last task of the day sets the day: crystallise at 60%, a quiet close
+    // without confetti. Any other check-off is a latch; unchecking, an unlatch.
+    ref.read(hapticsProvider).play(
+          !next.done
+              ? HapticMoment.taskUnchecked
+              : updated.every((t) => t.done)
+                  ? HapticMoment.lastTaskOfDay
+                  : HapticMoment.taskChecked,
+        );
     try {
       await ref.read(tasksRepositoryProvider).update(next);
-      // Only a completion is an earned moment. Un-ticking a task is a correction,
-      // and rewarding it would make the signature haptic of the product mean
-      // "you touched a checkbox".
-      if (next.done) ref.read(hapticsProvider).taskCompleted();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     }
   }
 
@@ -93,10 +96,14 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     state = AsyncData([
       for (final t in previous) if (t.id == task.id) next else t,
     ]);
+    // Lighter than a task, so the hierarchy can be felt. Unticking a step is
+    // not in the spec, and stays silent.
+    if (done) ref.read(hapticsProvider).play(HapticMoment.microtaskChecked);
     try {
       await ref.read(tasksRepositoryProvider).setStepDone(task.id, step.id, done: done);
     } on Object catch (_) {
       state = AsyncData(previous);
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     }
   }
 
@@ -105,15 +112,14 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     final previous = state.value ?? const <Task>[];
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
+      // No feel of its own: the gesture that moved it (a swipe, a drop, the
+      // reschedule review) already gave one.
       await ref.read(tasksRepositoryProvider).move(task, newDate);
-      // Light single. Must never feel like a penalty — pushing a task is a
-      // legitimate way to use the app, not a failure to finish it.
-      ref.read(hapticsProvider).taskRescheduled();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     }
   }
 
@@ -123,12 +129,11 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
       await ref.read(tasksRepositoryProvider).delete(task.id);
-      ref.read(hapticsProvider).destructiveConfirmed();
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
       state = AsyncData(previous);
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
     }
   }
 

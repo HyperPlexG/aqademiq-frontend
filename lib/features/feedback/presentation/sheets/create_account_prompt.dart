@@ -30,7 +30,7 @@ Future<void> showCreateAccountPrompt(
   required String reason,
 }) {
   // Soft, not sharp. The user hit a wall; do not also slap them.
-  ref.read(hapticsProvider).guestWallHit();
+  ref.read(hapticsProvider).play(HapticMoment.tabLocked);
   return showAppBottomSheet<void>(
     context,
     title: 'Create an account',

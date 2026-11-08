@@ -16,6 +16,7 @@ import '../../../data/repositories/subjects_repository.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
+import '../../plan/presentation/widgets/swipe_haptics.dart';
 import 'sheets/add_file_sheet.dart';
 import 'widgets/subject_bits.dart';
 import 'widgets/subject_form_sheet.dart';
@@ -453,6 +454,8 @@ class _FileRow extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
+  static const _extentRatio = 0.28;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -463,7 +466,7 @@ class _FileRow extends StatelessWidget {
       key: ValueKey('file-$name'),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.28,
+        extentRatio: _extentRatio,
         children: [
           SlidableAction(
             onPressed: (_) => onDelete(),
@@ -475,48 +478,51 @@ class _FileRow extends StatelessWidget {
           ),
         ],
       ),
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(12), boxShadow: colors.cardShadow),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(color: color.alpha8(0x18), borderRadius: BorderRadius.circular(9)),
-                child: Ic(icon, size: 20, color: color),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
-                    Text(size, style: AppText.sans(size: 12, color: colors.textDim)),
-                  ],
+      child: SwipeHaptics(
+        extentRatio: _extentRatio,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            decoration: BoxDecoration(color: colors.surface, borderRadius: BorderRadius.circular(12), boxShadow: colors.cardShadow),
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: color.alpha8(0x18), borderRadius: BorderRadius.circular(9)),
+                  child: Ic(icon, size: 20, color: color),
                 ),
-              ),
-              // Explicit delete affordance next to swipe-to-delete, so the
-              // action is discoverable without knowing to swipe.
-              Semantics(
-                button: true,
-                label: 'Delete file',
-                excludeSemantics: true,
-                onTap: onDelete,
-                child: GestureDetector(
-                  onTap: onDelete,
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Ic('delete', size: 18, color: colors.textDim),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                      Text(size, style: AppText.sans(size: 12, color: colors.textDim)),
+                    ],
                   ),
                 ),
-              ),
-            ],
+                // Explicit delete affordance next to swipe-to-delete, so the
+                // action is discoverable without knowing to swipe.
+                Semantics(
+                  button: true,
+                  label: 'Delete file',
+                  excludeSemantics: true,
+                  onTap: onDelete,
+                  child: GestureDetector(
+                    onTap: onDelete,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Ic('delete', size: 18, color: colors.textDim),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

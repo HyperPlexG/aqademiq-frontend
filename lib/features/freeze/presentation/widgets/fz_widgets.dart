@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/mascot/ada_mascot.dart';
 import '../../../../shared/widgets/app_toggle.dart';
 import '../../../../shared/widgets/ic.dart';
@@ -733,6 +734,9 @@ class FzTimeRow extends StatelessWidget {
 }
 
 /// The M T W T F S S circles (On these days).
+///
+/// Silent by itself: each caller plays its own moment in [onChanged] (the
+/// frost editor's frost days, onboarding's study days).
 class FzDayPicker extends StatelessWidget {
   const FzDayPicker({super.key, required this.days, required this.onChanged, required this.label});
 
@@ -802,8 +806,16 @@ class FzDayPicker extends StatelessWidget {
 }
 
 /// A chip that is either ink (on) or a well (FzChoice).
-class FzChoice extends StatelessWidget {
-  const FzChoice({super.key, required this.label, required this.on, this.onTap, this.frost = false});
+class FzChoice extends ConsumerWidget {
+  const FzChoice({
+    super.key,
+    required this.label,
+    required this.on,
+    this.onTap,
+    this.frost = false,
+    this.haptic = HapticMoment.chipSelect,
+    this.hapticStep = 0,
+  });
 
   final String label;
   final bool on;
@@ -812,16 +824,26 @@ class FzChoice extends StatelessWidget {
   /// On the frost ground: off chips are translucent white, text frost ink.
   final bool frost;
 
+  /// Played when an off chip is picked; re-tapping the chosen one is silent.
+  final HapticMoment haptic;
+  final int hapticStep;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final bg = on ? (frost ? const Color(0xFF111111) : colors.ink) : (frost ? const Color(0xE0FFFFFF) : colors.bg);
     final fg = on ? Colors.white : (frost ? kFrostInk : colors.text);
+    final tap = onTap;
     return Semantics(
       button: true,
       selected: on,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: tap == null
+            ? null
+            : () {
+                if (!on) ref.read(hapticsProvider).play(haptic, step: hapticStep);
+                tap();
+              },
         child: Container(
           height: 36,
           constraints: BoxConstraints(minWidth: frost ? 58 : 0),
@@ -876,7 +898,7 @@ class FzToggleRow extends StatelessWidget {
 }
 
 /// The two-way segmented control (FzSeg): Freeze these / Keep only these.
-class FzSeg extends StatelessWidget {
+class FzSeg extends ConsumerWidget {
   const FzSeg({super.key, required this.options, required this.index, required this.onChanged});
 
   final List<String> options;
@@ -884,7 +906,7 @@ class FzSeg extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     return Container(
       padding: const EdgeInsets.all(3),
@@ -897,7 +919,11 @@ class FzSeg extends StatelessWidget {
                 button: true,
                 selected: i == index,
                 child: GestureDetector(
-                  onTap: () => onChanged(i),
+                  onTap: () {
+                    // A tick on change; the chosen side is silent.
+                    if (i != index) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                    onChanged(i);
+                  },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     height: 32,
@@ -922,8 +948,16 @@ class FzSeg extends StatelessWidget {
 }
 
 /// An option card with a check when chosen (FzPick — the Haptics language).
-class FzPick extends StatelessWidget {
-  const FzPick({super.key, required this.icon, required this.label, required this.sub, required this.selected, this.onTap});
+class FzPick extends ConsumerWidget {
+  const FzPick({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.sub,
+    required this.selected,
+    this.onTap,
+    this.haptic,
+  });
 
   final String icon;
   final String label;
@@ -931,14 +965,25 @@ class FzPick extends StatelessWidget {
   final bool selected;
   final VoidCallback? onTap;
 
+  /// Played when an unchosen option is picked. Opt-in, because the Haptics
+  /// sheet (settings) plays its own preview on the same tap.
+  final HapticMoment? haptic;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final tap = onTap;
+    final moment = haptic;
     return Semantics(
       button: true,
       selected: selected,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: tap == null
+            ? null
+            : () {
+                if (!selected && moment != null) ref.read(hapticsProvider).play(moment);
+                tap();
+              },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(

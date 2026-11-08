@@ -12,6 +12,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/auth/auth_repository.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/feedback_post.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/circle_back_button.dart';
@@ -197,7 +198,10 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _ViewToggle(
                     view: view,
-                    onSelect: (v) => ref.read(feedbackViewProvider.notifier).set(v),
+                    onSelect: (v) {
+                      if (v != view) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                      ref.read(feedbackViewProvider.notifier).set(v);
+                    },
                   ),
                 ),
                 const SizedBox(height: 11),
@@ -230,16 +234,22 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
                         _StatusChip(
                           label: 'All',
                           selected: statusFilter == null,
-                          onTap: () => ref.read(feedbackStatusFilterProvider.notifier).set(null),
+                          onTap: () {
+                            if (statusFilter != null) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                            ref.read(feedbackStatusFilterProvider.notifier).set(null);
+                          },
                         ),
                         for (final status in _statusPills())
                           _StatusChip(
                             label: status.label,
                             dot: status.value.color(colors),
                             selected: statusFilter == status.value,
-                            onTap: () => ref
-                                .read(feedbackStatusFilterProvider.notifier)
-                                .set(statusFilter == status.value ? null : status.value),
+                            onTap: () {
+                              ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                              ref
+                                  .read(feedbackStatusFilterProvider.notifier)
+                                  .set(statusFilter == status.value ? null : status.value);
+                            },
                           ),
                       ],
                     ),

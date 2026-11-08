@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/launch_external.dart';
 import '../../../../data/models/enums.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
@@ -33,16 +35,16 @@ Future<FeedbackDraft?> showNewSuggestionSheet(
   );
 }
 
-class _SuggestionBody extends StatefulWidget {
+class _SuggestionBody extends ConsumerStatefulWidget {
   const _SuggestionBody({this.initial});
 
   final FeedbackDraft? initial;
 
   @override
-  State<_SuggestionBody> createState() => _SuggestionBodyState();
+  ConsumerState<_SuggestionBody> createState() => _SuggestionBodyState();
 }
 
-class _SuggestionBodyState extends State<_SuggestionBody> {
+class _SuggestionBodyState extends ConsumerState<_SuggestionBody> {
   final TextEditingController _title = TextEditingController();
   final TextEditingController _body = TextEditingController();
   FeedbackCategory _category = FeedbackCategory.feature;
@@ -95,7 +97,10 @@ class _SuggestionBodyState extends State<_SuggestionBody> {
                 child: _CategoryOption(
                   category: category,
                   selected: category == _category,
-                  onTap: () => setState(() => _category = category),
+                  onTap: () {
+                    if (category != _category) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                    setState(() => _category = category);
+                  },
                 ),
               ),
             ],

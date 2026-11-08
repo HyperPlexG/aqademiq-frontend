@@ -376,7 +376,7 @@ class FreezeMonitorService : Service() {
                     shieldedAt = now
                     leftSinceShield = false
                     shieldedStage = count.coerceIn(1, 3)
-                    showShield(policy, pkg, shieldedStage, now, running)
+                    showShield(policy, pkg, shieldedStage, now, running, fresh = true)
                     lastShieldAt = now
                 }
             } else if (now - lastShieldAt >= RESHIELD_MS || now < lastShieldAt) {
@@ -487,7 +487,14 @@ class FreezeMonitorService : Service() {
      * Copy per APP_FREEZE.md §4, worked out here so the shield only draws.
      * [running] is this poll's [FreezeRules.active].
      */
-    private fun showShield(policy: FreezePolicy, pkg: String, stage: Int, now: Long, running: List<FreezeRules.Active>) {
+    private fun showShield(
+        policy: FreezePolicy,
+        pkg: String,
+        stage: Int,
+        now: Long,
+        running: List<FreezeRules.Active>,
+        fresh: Boolean = false,
+    ) {
         // Display over other apps is what lets the shield start from the
         // background. Taken away, every start fails; asking again every
         // three seconds would only fail every three seconds. The next poll
@@ -518,6 +525,7 @@ class FreezeMonitorService : Service() {
             .putExtra(ShieldActivity.EXTRA_PACKAGE, pkg)
             .putExtra(ShieldActivity.EXTRA_LABEL, label(pkg))
             .putExtra(ShieldActivity.EXTRA_STAGE, stage)
+            .putExtra(ShieldActivity.EXTRA_FRESH, fresh)
             .putExtra(ShieldActivity.EXTRA_LINE, line)
             .putExtra(ShieldActivity.EXTRA_BREATH, FreezeRules.breathFor(policy, now))
             .putExtra(ShieldActivity.EXTRA_DEEP, deep)

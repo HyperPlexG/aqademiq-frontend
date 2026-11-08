@@ -34,7 +34,7 @@ import UIKit
   /// the app because a focus session outlives any screen.
   private var ambient: AmbientPlugin?
 
-  /// The 23 haptic patterns. Held for the life of the app because it owns a
+  /// The haptic lexicon. Held for the life of the app because it owns a
   /// `CHHapticEngine`, and starting one per haptic would add latency to the
   /// very thing that has to feel immediate.
   private var haptics: HapticsPlugin?

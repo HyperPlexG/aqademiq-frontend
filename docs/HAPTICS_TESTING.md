@@ -1,5 +1,8 @@
 # Testing the haptics
 
+> **Superseded.** This describes haptics v1 ("The Melt Ramp"). v2 implements the
+> Aqademiq haptic architecture (Nov 2026) — see [`HAPTICS.md`](../HAPTICS.md).
+
 Companion to [`docs/HAPTICS_IMPLEMENTATION.md`](HAPTICS_IMPLEMENTATION.md) (the
 *where*) and `HAPTICS.md` on the implementation branch (the *what was built*).
 This file is the *how do I know it works*.

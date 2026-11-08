@@ -12,6 +12,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/referral_repository.dart';
 import '../../../services/deep_link_service.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -91,12 +92,20 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
     try {
       await ref.read(referralRepositoryProvider).validateCode(code);
       if (!mounted) return;
+      // Both halves click into place as the next step slides in.
+      ref.read(hapticsProvider).play(HapticMoment.referralValid);
       unawaited(context.push(Routes.obSource));
     } on Failure catch (e) {
       if (!mounted) return;
+      // The server said no (4xx): a knock, a miss feels solid. Anything else,
+      // offline or a server fault, is a real failure.
+      final status = e is ServerFailure ? e.statusCode ?? 0 : 0;
+      final miss = e is NotFoundFailure || (status >= 400 && status < 500);
+      ref.read(hapticsProvider).play(miss ? HapticMoment.referralNotFound : HapticMoment.failure);
       setState(() => _error = e.message);
     } on Object {
       if (!mounted) return;
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       setState(() => _error = "Couldn't check that code. Try again.");
     } finally {
       if (mounted) setState(() => _validating = false);
@@ -143,6 +152,9 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
               const _UpperCaseTextFormatter(),
             ],
             onChanged: (v) {
+              // A tick per character typed; the 4th (index 3) is firmer.
+              final before = ref.read(onboardingProvider).referral.length;
+              if (v.length > before) ref.read(hapticsProvider).play(HapticMoment.referralChar, step: v.length - 1);
               ref.read(onboardingProvider.notifier).setReferral(v);
               if (_error != null) setState(() => _error = null);
             },

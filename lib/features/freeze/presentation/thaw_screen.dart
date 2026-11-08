@@ -49,6 +49,9 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
   late int _minutes;
   bool _increasing = false;
 
+  /// The breath felt in the hand for as long as the wait is on screen.
+  HapticHold? _breath;
+
   @override
   void initState() {
     super.initState();
@@ -71,30 +74,53 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
     if (deep != null && deep.end != null && !widget.request.standDown) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
+        // Ice holding, not an error.
+        ref.read(hapticsProvider).play(HapticMoment.deepFreezeHolds);
         final root = fzRootContext(context);
         Navigator.of(context).pop();
         await showDeepHoldSheet(root, name: deep.name, until: deep.end!);
       });
       return;
     }
+    // 10 s: one breath. Increasing resistance: three, calmer as they go.
+    _breath = ref.read(hapticsProvider).hold(_increasing ? HapticMoment.thawBreathLong : HapticMoment.thawBreath);
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
       setState(() => _left = _left > 0 ? _left - 1 : 0);
-      if (_left == 0) t.cancel();
+      if (_left == 0) {
+        t.cancel();
+        _breath?.finish();
+      }
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    // Leaving the wait early: the breath fades out over 150 ms.
+    _breath?.cancel();
     super.dispose();
+  }
+
+  /// Keep it frozen. Nothing announces leaving; the breath just fades.
+  void _keepFrozen() {
+    _breath?.cancel();
+    Navigator.of(context).pop();
+  }
+
+  /// Thaw · how long: friction, stiffer for longer thaws. Silent when the
+  /// value does not move (already at an end).
+  void _setMinutes(int m) {
+    if (m == _minutes) return;
+    ref.read(hapticsProvider).play(HapticMoment.thawLength, step: m);
+    setState(() => _minutes = m);
   }
 
   String get _who => widget.request.label ?? (widget.request.target == ThawGrant.allApps ? 'your apps' : 'this app');
 
   void _done() {
     final c = ref.read(freezeControllerProvider.notifier);
-    ref.read(hapticsProvider).sessionResumed();
+    ref.read(hapticsProvider).play(HapticMoment.thawConfirmed);
     if (widget.request.standDown) {
       c.standDown(widget.request.standDownUntil);
       Navigator.of(context).pop();
@@ -209,7 +235,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        FzLink('Keep it frozen', color: kFrostInk, weight: FontWeight.w700, onTap: () => Navigator.of(context).pop()),
+        FzLink('Keep it frozen', color: kFrostInk, weight: FontWeight.w700, onTap: _keepFrozen),
       ],
     );
   }
@@ -256,7 +282,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  step('remove', () => setState(() => _minutes = lengths[i <= 0 ? 0 : i - 1])),
+                  step('remove', () => _setMinutes(lengths[i <= 0 ? 0 : i - 1])),
                   const SizedBox(width: 24),
                   SizedBox(
                     width: 112,
@@ -275,7 +301,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                     ),
                   ),
                   const SizedBox(width: 24),
-                  step('add', () => setState(() => _minutes = lengths[i < 0 || i >= lengths.length - 1 ? lengths.length - 1 : i + 1])),
+                  step('add', () => _setMinutes(lengths[i < 0 || i >= lengths.length - 1 ? lengths.length - 1 : i + 1])),
                 ],
               ),
               const SizedBox(height: 24),
@@ -283,7 +309,14 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                 spacing: 8,
                 children: [
                   for (final m in lengths)
-                    FzChoice(label: '$m min', on: m == _minutes, frost: true, onTap: () => setState(() => _minutes = m)),
+                    FzChoice(
+                      label: '$m min',
+                      on: m == _minutes,
+                      frost: true,
+                      haptic: HapticMoment.thawLength,
+                      hapticStep: m,
+                      onTap: () => setState(() => _minutes = m),
+                    ),
                 ],
               ),
             ],
