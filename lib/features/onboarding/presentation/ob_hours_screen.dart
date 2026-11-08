@@ -113,7 +113,9 @@ class _ObHoursScreenState extends ConsumerState<ObHoursScreen> {
             enabled: valid,
             onPressed: () {
               ref.read(onboardingProvider.notifier).setStudyHours(days: _days, fromMin: _from, untilMin: _until);
-              unawaited(context.push(Routes.obFreeze));
+              // No App freeze on this phone (an iOS build without Apple's
+              // Family Controls approval): straight on to Prism.
+              unawaited(context.push(ref.read(appFreezeAvailableProvider) ? Routes.obFreeze : Routes.obPrism));
             },
           ),
           ObLink(

@@ -55,6 +55,18 @@ final class AppFreezePlugin: NSObject {
         }
     }
 
+    /// Whether this build carries the Family Controls entitlement.
+    ///
+    /// iOS gives an app no way to read its own entitlements, so the build says
+    /// it in Info.plist: `AQAppFreezeEnabled` is false in the checked-in file
+    /// and `ios/add_freeze_targets.rb` sets it true when it adds the
+    /// entitlement. Without it Screen Time refuses every call, so `status`
+    /// answers `supported: false` and the app hides App freeze rather than
+    /// walking a student into a setup that cannot finish.
+    static var entitled: Bool {
+        Bundle.main.object(forInfoDictionaryKey: "AQAppFreezeEnabled") as? Bool ?? false
+    }
+
     // MARK: - Channel
 
     private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -95,7 +107,7 @@ final class AppFreezePlugin: NSObject {
     private func status(_ result: @escaping FlutterResult) {
         let supported: Bool
         let authorized: Bool
-        if #available(iOS 16.0, *) {
+        if #available(iOS 16.0, *), Self.entitled {
             supported = true
             authorized = AuthorizationCenter.shared.authorizationStatus == .approved
         } else {
@@ -120,7 +132,7 @@ final class AppFreezePlugin: NSObject {
     /// The one Screen Time ask, for this phone's own user (`.individual`), not
     /// a child in a Family Sharing group.
     private func requestAuthorization(_ result: @escaping FlutterResult) {
-        guard #available(iOS 16.0, *) else { return result(false) }
+        guard #available(iOS 16.0, *), Self.entitled else { return result(false) }
         Task { @MainActor in
             do {
                 try await AuthorizationCenter.shared.requestAuthorization(for: .individual)

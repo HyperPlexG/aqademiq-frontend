@@ -178,13 +178,14 @@ class SettingsHomeScreen extends ConsumerWidget {
               onTap: () => unawaited(_showHapticsSheet(context, ref)),
             ),
             SettingsRow(label: 'Prism', icon: Icons.graphic_eq, value: ref.watch(prismDefaultModeProvider), showChevron: true, onTap: () => unawaited(context.push(Routes.settingsSounds))),
-            SettingsRow(
-              label: 'App freeze',
-              icon: Icons.ac_unit,
-              value: _freezeValue(ref),
-              showChevron: true,
-              onTap: () => unawaited(context.push(Routes.settingsAppFreeze)),
-            ),
+            if (ref.watch(appFreezeAvailableProvider))
+              SettingsRow(
+                label: 'App freeze',
+                icon: Icons.ac_unit,
+                value: _freezeValue(ref),
+                showChevron: true,
+                onTap: () => unawaited(context.push(Routes.settingsAppFreeze)),
+              ),
             SettingsRow(label: 'What Ada remembers', icon: Icons.psychology_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsMemories))),
             // A row to its own screen rather than a bare toggle here: the off
             // switch ships with the three promises that make leaving it on
