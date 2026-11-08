@@ -17,6 +17,8 @@
 /// Flutter's five effects.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -84,7 +86,7 @@ class PlatformHapticDriver implements HapticDriver {
       _fallback(spec.fallback);
       return;
     }
-    channel
+    unawaited(channel
         .invokeMethod<void>('play', {
           'id': haptic.id,
           ...spec.toWire(platform: platform, faceDownAlt: haptic.faceDownAlt),
@@ -94,15 +96,15 @@ class PlatformHapticDriver implements HapticDriver {
           // A native side that exists but refused this pattern: one preset
           // still beats nothing. The next pattern may well succeed.
           _fallback(spec.fallback);
-        });
+        }));
   }
 
   @override
   void stop(int id, {Duration fade = Duration.zero, double level = 0}) {
     if (_nativeMissing) return;
-    channel
+    unawaited(channel
         .invokeMethod<void>('stop', {'id': id, 'fadeMs': fade.inMilliseconds, 'level': level})
-        .catchError((Object _) {});
+        .catchError((Object _) {}));
   }
 
   @override
@@ -119,12 +121,12 @@ class PlatformHapticDriver implements HapticDriver {
   @override
   void watchFaceDown({required bool on}) {
     if (_nativeMissing) return;
-    channel.invokeMethod<void>('watchFaceDown', {'on': on}).catchError((Object _) {});
+    unawaited(channel.invokeMethod<void>('watchFaceDown', {'on': on}).catchError((Object _) {}));
   }
 
   /// The spec's "Fallback" row, through Flutter's five effects.
   static void _fallback(Fallback f) {
-    final Future<void> Function()? effect = switch (f) {
+    final effect = switch (f) {
       Fallback.none => null,
       Fallback.selection => HapticFeedback.selectionClick,
       Fallback.light => HapticFeedback.lightImpact,
@@ -132,6 +134,6 @@ class PlatformHapticDriver implements HapticDriver {
       Fallback.heavy => HapticFeedback.heavyImpact,
       Fallback.error => HapticFeedback.vibrate,
     };
-    effect?.call().catchError((Object _) {});
+    if (effect != null) unawaited(effect().catchError((Object _) {}));
   }
 }

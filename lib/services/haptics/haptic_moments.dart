@@ -91,7 +91,7 @@ enum HapticMoment {
   /// Referral code not found → knock. A miss feels solid, not wrong.
   referralNotFound(HapticTier.full),
 
-  /// Feelings per subject: pick a melt cube → texture[step].
+  /// Feelings per subject: pick a melt cube → `Aq.texture(step)`.
   feelingPick(HapticTier.full, stream: true),
 
   /// Study hours: a day chip on → latch.
@@ -215,7 +215,7 @@ enum HapticMoment {
   chooseAppOff(HapticTier.full),
 
   /// Thaw · a breath first: the 10-second wait → breath. Start with
-  /// [HapticsService.hold]; leaving the wait fades it out over 150 ms.
+  /// `HapticsService.hold`; leaving the wait fades it out over 150 ms.
   thawBreath(HapticTier.essential),
 
   /// Thaw · increasing resistance: the 30-second wait → three breaths at
@@ -251,7 +251,7 @@ enum HapticMoment {
   frostEndEarly(HapticTier.essential),
 
   /// Thaw everything: the 1.2-second hold → ratchet. Start with
-  /// [HapticsService.hold].
+  /// `HapticsService.hold`.
   thawEverythingHold(HapticTier.essential),
 
   /// Thaw everything: the hold completes → crack, then melt.
@@ -287,7 +287,7 @@ enum HapticMoment {
   undo(HapticTier.full),
 
   // ── 06 Profile · 07 Mood · 12 Feedback · 14 Ice Breakers ───────────────
-  /// Mood check-in: moving across moods → texture[step].
+  /// Mood check-in: moving across moods → `Aq.texture(step)`.
   moodMove(HapticTier.full, stream: true),
 
   /// Mood check-in saved → thud at 50%. Logged; calm, not celebratory.
@@ -347,7 +347,7 @@ enum HapticMoment {
   rateSubmit(HapticTier.full),
 
   /// Delete account: the 2-second hold → ratchet. Start with
-  /// [HapticsService.hold].
+  /// `HapticsService.hold`.
   deleteAccountHold(HapticTier.essential),
 
   /// Delete account: the hold completes → knock. The only action that cannot

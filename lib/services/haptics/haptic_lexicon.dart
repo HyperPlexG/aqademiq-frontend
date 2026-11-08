@@ -2,8 +2,8 @@
 /// "Aqademiq haptic architecture" §2). **The only file in the app that says
 /// what a vibration physically is.**
 ///
-/// Every pattern is something ice does: it sets ([crystallise]), softens
-/// ([melt]), holds ([knock]), breaks ([crack]) and rings ([bloom]). Nothing
+/// Every pattern is something ice does: it sets (`Aq.crystallise`), softens
+/// (`Aq.melt`), holds (`Aq.knock`), breaks (`Aq.crack`) and rings (`Aq.bloom`). Nothing
 /// here is a generic motor buzz.
 ///
 /// Each pattern carries three renderings, as the spec's cards do:
@@ -138,7 +138,7 @@ class IosCurve extends IosEvent {
         'at': at.inMilliseconds,
         'ms': duration.inMilliseconds,
         's': sharpness,
-        if (sharpnessTo != null) 's2': sharpnessTo!,
+        's2': ?sharpnessTo,
         'pts': [
           for (final (t, v) in points) [t, v],
         ],
@@ -299,7 +299,7 @@ class HapticSpec {
         signature: signature,
       );
 
-  /// [this], then [next] starting [gap] after this one's span.
+  /// This pattern, then [next] starting [gap] after this one's span.
   HapticSpec then(HapticSpec next, {Duration gap = Duration.zero, String? name}) {
     final offset = span + gap;
     return HapticSpec(
@@ -317,7 +317,7 @@ class HapticSpec {
     );
   }
 
-  /// [this] repeated [count] times, [gap] between starts.
+  /// This pattern repeated [count] times, [gap] between starts.
   HapticSpec repeated(int count, Duration gap, {List<double>? strengths}) {
     final events = <IosEvent>[];
     final prims = <APrim>[];
@@ -602,7 +602,7 @@ abstract final class Aq {
       }
       if (k < n - 1) at += gaps[k];
     }
-    ios.add(IosCurve(at: Duration(milliseconds: at), duration: Duration(milliseconds: 80), sharpness: 0.2, points: const [(0, 0.3), (1, 0.3)]));
+    ios.add(IosCurve(at: Duration(milliseconds: at), duration: const Duration(milliseconds: 80), sharpness: 0.2, points: const [(0, 0.3), (1, 0.3)]));
     return HapticSpec(name: 'aq.crystallise', ios: ios, android: prims, fallback: Fallback.medium, signature: true);
   }
 
@@ -681,7 +681,7 @@ abstract final class Aq {
   }
 
   /// A core drilled out of ice: a grainy rumble, then a lock (a [latch]).
-  static final drill = () {
+  static final HapticSpec drill = () {
     const rumble = 1200;
     final ios = <IosEvent>[
       const IosCurve(duration: Duration(milliseconds: rumble), sharpness: 0.3, points: [(0, 0.2), (1, 0.5)]),
@@ -702,7 +702,7 @@ abstract final class Aq {
     final amps = <int>[];
     for (var t = 0; t < rumble; t += 30) {
       final base = (0.2 + 0.3 * t / rumble) * 255;
-      final grain = (t ~/ 30) % 2 == 0 && t % 90 < 30;
+      final grain = (t ~/ 30).isEven && t % 90 < 30;
       timings.add(30);
       amps.add((grain ? base + 50 : base).round().clamp(0, 255));
     }

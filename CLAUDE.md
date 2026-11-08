@@ -318,6 +318,19 @@ distracting apps now or with a frost; thawing takes a breath. Things to preserve
   `AQAppFreezeEnabled` in Info.plist; while it is false, iOS reports App freeze
   unsupported and `appFreezeAvailableProvider` hides it everywhere.
 
+**Haptics** (`lib/services/haptics/`, full map in `HAPTICS.md`) implement the
+Aqademiq haptic architecture: 22 ice patterns, one rule — the sanctuary is quiet.
+- Screens name the **moment** (`ref.read(hapticsProvider).play(HapticMoment.taskChecked)`),
+  never a pattern or a platform. `haptic_moments.dart` is spec §4 in code; a
+  touchpoint the spec doesn't list gets nothing. No `HapticFeedback` outside
+  `lib/services/haptics/`.
+- The governor owns every budget rule (Essential default, silent running session,
+  wheel limits, 2 s signatures, repetition decay, Low Power → Essential). Never
+  throttle or check the setting at a call site.
+- Fire where the screen changes, not after an await that follows it.
+- A pattern's numbers live in `haptic_lexicon.dart` and are pinned to the PDF by
+  `test/haptic_lexicon_test.dart`; retune both or neither.
+
 **Icons** — screens draw the Aqademiq icon pack (`lib/shared/icons/`,
 `docs/ICONS.md`). Use `AppIcon(Icons.x)` (drop-in for `Icon`) or
 `Ic('design_name')`. Both generated files come from Node scripts:

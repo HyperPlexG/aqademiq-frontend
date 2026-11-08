@@ -1,5 +1,8 @@
 # Haptics — implementation guide
 
+> **Superseded.** This describes haptics v1 ("The Melt Ramp"). v2 implements the
+> Aqademiq haptic architecture (Nov 2026) — see [`HAPTICS.md`](../HAPTICS.md).
+
 Companion to **Aqademiq · Haptic feedback specification · v1** ("The Melt Ramp").
 The spec says *what* and *why*; this says *where in this repo* and *in what
 order*. Read the spec first — nothing here repeats its reasoning.
