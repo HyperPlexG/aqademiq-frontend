@@ -53,22 +53,23 @@ class AppShell extends ConsumerWidget {
   void _onTap(WidgetRef ref, BuildContext context, int index, {required bool guest}) {
     // Guest gating: Ada / Stats open a full-screen setup prompt (README §5).
     //
-    // Silent on purpose. Shell's budget is 1 (§7) and it is spent on the tab
-    // change; this branch only navigates, which §4.1 puts firmly at zero. It is
-    // also not the Tier 4 "guest-locked wall" — that one is a 403 coming back
-    // from a write the user actually attempted, not a pre-emptive gate.
+    // A locked tab knocks at 60%: something solid is there, it just isn't open
+    // yet. Gentler than an error.
     if (guest && index == NavTab.ada) {
+      ref.read(hapticsProvider).play(HapticMoment.tabLocked);
       unawaited(context.push(Routes.guestAda));
       return;
     }
     if (guest && index == NavTab.stats) {
+      ref.read(hapticsProvider).play(HapticMoment.tabLocked);
       unawaited(context.push(Routes.guestStats));
       return;
     }
-    // The faintest tick in the system, and only on an actual change —
-    // re-tapping the active tab pops its branch to root and is explicitly zero.
+    // A tick confirms the switch without looking down; Ada's centre tab is a
+    // clink, because she is a cube. Only on an actual change — re-tapping the
+    // active tab pops its branch to root and stays silent.
     if (index != navigationShell.currentIndex) {
-      ref.read(hapticsProvider).segmentChange();
+      ref.read(hapticsProvider).play(index == NavTab.ada ? HapticMoment.tabAda : HapticMoment.tabSwitch);
     }
     navigationShell.goBranch(
       index,

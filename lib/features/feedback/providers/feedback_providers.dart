@@ -178,9 +178,9 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
       // so does reading a provider off a disposed ref, which is why the haptic
       // sits below this guard rather than above it.
       if (!ref.mounted) return;
-      // Lightest thing in Tier 2 — it is a small commitment. On the server's
-      // answer rather than the tap, so a vote that did not stick stays silent.
-      ref.read(hapticsProvider).voteCast();
+      // A vote feels like a vote: latch on, unlatch off. On the server's answer,
+      // which is also when the count on screen changes.
+      ref.read(hapticsProvider).play(result.voted ? HapticMoment.feedbackUpvote : HapticMoment.feedbackUnvote);
       state = AsyncData([
         for (final p in state.value ?? previous)
           if (p.id == post.id)
@@ -221,7 +221,7 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
     // handled by the caller with a prompt or a message — a failed post is not
     // one of Feedback's two budgeted events (§7).
     if (ref.mounted) {
-      ref.read(hapticsProvider).suggestionPosted();
+      ref.read(hapticsProvider).play(HapticMoment.feedbackSubmit);
       ref.invalidateSelf();
     }
     return created;

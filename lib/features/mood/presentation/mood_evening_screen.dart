@@ -54,7 +54,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
 
   /// Tier 3 detent on an actual move — the melt ramp made tactile (§5.1).
   void _select(int idx) {
-    if (idx != _sel) ref.read(hapticsProvider).moodRampStep(idx);
+    if (idx != _sel) ref.read(hapticsProvider).play(HapticMoment.moodMove, step: idx);
     setState(() => _sel = idx);
   }
 
@@ -75,7 +75,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
     } on Object {
       _saving = false;
       if (!mounted) return;
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't save. Try again.")),
       );
@@ -84,7 +84,7 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
     if (!mounted) return;
     // On commit. The note field itself is explicitly zero (§7, Mood) — the
     // keyboard owns typing.
-    ref.read(hapticsProvider).moodLogged();
+    ref.read(hapticsProvider).play(HapticMoment.moodSave);
     ref.invalidate(moodWeekProvider);
     ref.invalidate(streakProvider);
     context.go(Routes.plan);

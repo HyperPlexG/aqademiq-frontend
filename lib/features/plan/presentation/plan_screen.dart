@@ -111,7 +111,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       await ref.read(tasksRepositoryProvider).create(task);
     } on Object {
       if (!mounted) return;
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't add task. Try again.")),
       );
@@ -121,7 +121,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     // Tier 2 event, not a new one — the state change is identical, so it costs
     // nothing against Plan's budget of 4.
     if (!mounted) return;
-    ref.read(hapticsProvider).taskCreated();
+    ref.read(hapticsProvider).play(HapticMoment.quickAddSave);
     ref.invalidate(dayTasksProvider);
   }
 
@@ -156,7 +156,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 );
           } on Object {
             if (!mounted) return;
-            ref.read(hapticsProvider).saveFailed();
+            ref.read(hapticsProvider).play(HapticMoment.failure);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Couldn't save. Try again.")),
             );
@@ -165,7 +165,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           if (!mounted) return;
           // On commit, and only after it lands — distinct from the ramp detents
           // that preceded it inside the sheet.
-          ref.read(hapticsProvider).moodLogged();
+          ref.read(hapticsProvider).play(HapticMoment.moodSave);
           ref.invalidate(moodWeekProvider);
           ref.invalidate(streakProvider);
         }
@@ -392,7 +392,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     // functionally broken: nothing told the user the gesture had registered.
     // First thing in the handler, before any await, so the tick lands with the
     // press rather than with the sheet.
-    ref.read(hapticsProvider).longPressTick();
+    ref.read(hapticsProvider).play(HapticMoment.taskLift);
     final tag = resolveStudyTag(ref.read(tagsByIdProvider).values, t.tagId);
     final color = tag != null ? hexColor(tag.color) : context.colors.accent;
     final action = await showTaskOverflowSheet(

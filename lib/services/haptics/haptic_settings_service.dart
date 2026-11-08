@@ -8,19 +8,16 @@ import 'haptic_governor.dart';
 ///
 /// | Key                       | Meaning                          | Default |
 /// |---------------------------|----------------------------------|---------|
-/// | `haptics_level`           | Off / Essential / Full           | Full    |
-/// | `haptics_streak_mark`     | Highest streak already accounted | 0       |
+/// | `haptics_level`           | Off / Essential / Full           | Essential |
 ///
-/// Full is the default because restraint is built into the vocabulary rather
-/// than the setting: there are only 22 events in the whole app, and the two
-/// that matter most are the reason the other ~148 taps stay inert.
+/// Essential is the default (haptic architecture principle 6): the sessions,
+/// freezing and thawing, about ten moments a day. Full is opt-in.
 class HapticSettingsService {
   HapticSettingsService._();
 
   static final HapticSettingsService instance = HapticSettingsService._();
 
   static const _kLevel = 'haptics_level';
-  static const _kStreakMark = 'haptics_streak_mark';
 
   SharedPreferences? _prefs;
 
@@ -33,15 +30,4 @@ class HapticSettingsService {
 
   Future<void> setSetting(HapticSetting value) async =>
       _prefs?.setString(_kLevel, value.storageKey);
-
-  /// Highest day-streak the milestone haptic has already accounted for.
-  ///
-  /// Persisted because spec §4.5 says a streak fires "the instant it is
-  /// crossed, never each time it is displayed" — and `streakProvider` is a
-  /// derived read that recomputes on every mood log and every cold start, so
-  /// without a watermark on disk the crossing would repeat forever.
-  int get streakMark => _prefs?.getInt(_kStreakMark) ?? 0;
-
-  Future<void> setStreakMark(int value) async =>
-      _prefs?.setInt(_kStreakMark, value);
 }

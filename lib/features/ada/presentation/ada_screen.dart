@@ -136,16 +136,9 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     // Checked outside the try: `ref` after dispose throws, and inside it that
     // throw would land in the catch and report a plan that DID apply as failed.
     if (!mounted) return;
-    // Ada's entire budget is 1 (§7): "'Plan my week' applied to the plan".
-    // Message send, message arrival and streaming tokens are all zero — none
-    // of them is a state change the user caused, and a chat that buzzes as it
-    // types is the fastest way to lose the channel.
-    //
-    // Reuses `taskCreated` rather than minting a 23rd Tier 2 event: what just
-    // happened is that tasks appeared on the plan, which is the same state
-    // change the Plan screen confirms with the same light single. Spec §3
-    // caps the vocabulary at the events it lists, and this needs no new one.
-    ref.read(hapticsProvider).taskCreated();
+    // A whole plan landing on the plan reads as "approve all": each change
+    // lands separately, then the set settles. Streaming stays silent, ever.
+    ref.read(hapticsProvider).play(HapticMoment.approveAll, count: 3);
     ref.invalidate(dayTasksProvider);
     messenger.showSnackBar(
       const SnackBar(content: Text('Added to your plan ✓')),

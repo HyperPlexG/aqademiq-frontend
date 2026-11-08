@@ -2,213 +2,239 @@ import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState, WidgetsBinding;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/enums.dart';
 import '../../data/repositories/focus_repository.dart';
 import '../../features/settings/providers/haptic_settings_provider.dart';
+import 'haptic_driver.dart';
 import 'haptic_governor.dart';
-import 'haptic_patterns.dart';
+import 'haptic_lexicon.dart';
+import 'haptic_moments.dart';
 
-/// What the rest of the app talks to — spec §6.1, guide §1.1.
+export 'haptic_moments.dart' show HapticMoment, deleteAccountHoldTime, thawEverythingHoldTime;
+
+/// What the rest of the app talks to.
 ///
-/// An `abstract interface class` with two implementations, mirroring the
-/// `MockXxxSource` / `ApiXxxSource` pairing the repo uses everywhere
-/// (README §7, seam 3) and provided by [hapticsProvider], exactly as
-/// `tasksRepositoryProvider` picks its source.
+/// Screens and controllers say which moment happened — never which pattern,
+/// never a platform. `haptic_moments.dart` says how each moment feels, the
+/// governor decides whether it plays, and the driver gets it to the motor.
 ///
-/// Every method names a **state change**, never a feel. That is the admission
-/// rule (§8.1) encoded in the type: you cannot call this API without saying
-/// which of the 22 sanctioned transitions just happened. If a proposed haptic
-/// has no method here, the answer is a spec review, not a `HapticFeedback` call.
+/// ```dart
+/// ref.read(hapticsProvider).play(HapticMoment.taskChecked);
+/// ref.read(hapticsProvider).play(HapticMoment.moodMove, step: index);
+/// final breath = ref.read(hapticsProvider).hold(HapticMoment.thawBreath);
+/// ...
+/// breath.cancel(); // fades out over 150 ms
+/// ```
+///
+/// **Touch and picture land together** (principle 5): call this in the same
+/// place the visual change is made — the `setState`, the controller method —
+/// not after an await that follows it.
 abstract interface class HapticsService {
-  // ── Tier 1 — earned moments ────────────────────────────────────────────
-  void taskCompleted();
-  void focusCompleted();
-  void streakMilestone();
-  void guestUpgraded();
-  void onboardingFinished();
+  /// Play [moment]. [step], [count] and [mode] are read only by the moments
+  /// that document them. [landed] marks a wheel's final, full-strength tick.
+  void play(HapticMoment moment, {int step = 0, int count = 1, String? mode, bool landed = false});
 
-  // ── Tier 2 — state confirmations ───────────────────────────────────────
-  void taskCreated();
-  void taskRescheduled();
-  void focusStarted();
-  void sessionFrozen();
-  void sessionResumed();
-  void sessionEndedEarly();
-  void moodLogged();
-  void subjectCreated();
-  void suggestionPosted();
-  void voteCast();
+  /// Start a pattern that lasts as long as something on screen does — the
+  /// thaw breath, a hold-to-confirm ratchet — and return a handle to end it.
+  HapticHold hold(HapticMoment moment);
 
-  // ── Tier 3 — selection detents ─────────────────────────────────────────
-  /// [index] is the 0–4 melt position, so the tick can follow the ramp (§5.1).
-  void moodRampStep(int index);
-  void wheelItem();
-  void sliderStop();
-  void segmentChange();
-
-  /// The task-card long-press (spec Finding 04). Fires as the gesture is
-  /// recognised, not after the sheet opens — the tick *is* the confirmation
-  /// that the long-press worked.
-  void longPressTick();
-
-  // ── Tier 4 — warnings ──────────────────────────────────────────────────
-  void destructiveConfirmed();
-  void saveFailed();
-  void guestWallHit();
+  /// Watch whether the phone lies face down, so a completed session's bloom
+  /// can hum instead of rattling on a desk. On while the timer is on screen.
+  void watchFaceDown({required bool on});
 }
 
-/// The 22 semantic names, funnelled to a single [emit] so neither
-/// implementation repeats them.
-abstract class _HapticsBase implements HapticsService {
-  const _HapticsBase();
+/// A running hold. Ending it twice is harmless.
+abstract interface class HapticHold {
+  /// Let it go: fade out from wherever it is over [fade] (§4: "The breath
+  /// fades out over 150 ms"; a ratchet lifted early "ends with a soft fall").
+  void cancel({Duration fade = const Duration(milliseconds: 150)});
 
-  void emit(HapticEvent event, {int? rampStep});
-
-  @override
-  void taskCompleted() => emit(HapticEvent.taskCompleted);
-
-  @override
-  void focusCompleted() => emit(HapticEvent.focusCompleted);
-
-  @override
-  void streakMilestone() => emit(HapticEvent.streakMilestone);
-
-  @override
-  void guestUpgraded() => emit(HapticEvent.guestUpgraded);
-
-  @override
-  void onboardingFinished() => emit(HapticEvent.onboardingFinished);
-
-  @override
-  void taskCreated() => emit(HapticEvent.taskCreated);
-
-  @override
-  void taskRescheduled() => emit(HapticEvent.taskRescheduled);
-
-  @override
-  void focusStarted() => emit(HapticEvent.focusStarted);
-
-  @override
-  void sessionFrozen() => emit(HapticEvent.sessionFrozen);
-
-  @override
-  void sessionResumed() => emit(HapticEvent.sessionResumed);
-
-  @override
-  void sessionEndedEarly() => emit(HapticEvent.sessionEndedEarly);
-
-  @override
-  void moodLogged() => emit(HapticEvent.moodLogged);
-
-  @override
-  void subjectCreated() => emit(HapticEvent.subjectCreated);
-
-  @override
-  void suggestionPosted() => emit(HapticEvent.suggestionPosted);
-
-  @override
-  void voteCast() => emit(HapticEvent.voteCast);
-
-  @override
-  void moodRampStep(int index) =>
-      emit(HapticEvent.moodRampStep, rampStep: index);
-
-  @override
-  void wheelItem() => emit(HapticEvent.wheelItem);
-
-  @override
-  void sliderStop() => emit(HapticEvent.sliderStop);
-
-  @override
-  void segmentChange() => emit(HapticEvent.segmentChange);
-
-  @override
-  void longPressTick() => emit(HapticEvent.longPressTick);
-
-  @override
-  void destructiveConfirmed() => emit(HapticEvent.destructiveConfirmed);
-
-  @override
-  void saveFailed() => emit(HapticEvent.saveFailed);
-
-  @override
-  void guestWallHit() => emit(HapticEvent.guestWallHit);
+  /// It ran to its end on screen; stop it without a fade.
+  void finish();
 }
 
-/// Silence. Covers three cases at once (guide §1.1):
-///
-///  * **Web** — iOS Safari has no Vibration API. Ship silence, not a degraded
-///    approximation. The app is run in Chrome for testing, so this path is
-///    exercised constantly.
-///  * **Tests** — widget tests must never depend on a platform channel.
-///  * **Setting = Off** — belt and braces; the governor already drops
-///    everything, but a caller holding this instance cannot buzz by accident.
-class NoopHapticsService extends _HapticsBase {
+class _NoHold implements HapticHold {
+  const _NoHold();
+
+  @override
+  void cancel({Duration fade = const Duration(milliseconds: 150)}) {}
+
+  @override
+  void finish() {}
+}
+
+/// Silence: the web (iOS Safari has no vibration), widget tests, and a
+/// caller holding this cannot buzz by accident.
+class NoopHapticsService implements HapticsService {
   const NoopHapticsService();
 
   @override
-  void emit(HapticEvent event, {int? rampStep}) {}
+  void play(HapticMoment moment, {int step = 0, int count = 1, String? mode, bool landed = false}) {}
+
+  @override
+  HapticHold hold(HapticMoment moment) => const _NoHold();
+
+  @override
+  void watchFaceDown({required bool on}) {}
 }
 
-/// The real thing. Every call goes through a [HapticGovernor]; nothing reaches
-/// [playHapticEvent] without passing all five rules.
-///
-/// The setting, focus status and reduce-motion flag are supplied as closures
-/// rather than read here, so the governor stays a plain unit-testable class and
-/// this class stays a thin adapter over it (guide §1.3).
-class RealHapticsService extends _HapticsBase {
+/// The real thing. Every play goes through a [HapticGovernor].
+class RealHapticsService implements HapticsService {
   RealHapticsService({
     required HapticSetting Function() setting,
     required bool Function() focusRunning,
     required bool Function() reducedMotion,
+    bool Function()? foreground,
+    HapticDriver? driver,
     HapticGovernor? governor,
+    DateTime Function()? clock,
   })  : _setting = setting,
         _focusRunning = focusRunning,
         _reducedMotion = reducedMotion,
-        _governor = governor ??
-            HapticGovernor(
-              play: (event, rampStep) =>
-                  unawaited(playHapticEvent(event, rampStep: rampStep)),
-            );
+        _foreground = foreground ?? appInForeground,
+        _driverOverride = driver,
+        _clock = clock ?? DateTime.now {
+    _governor = governor ??
+        HapticGovernor(
+          play: (h) => _driver.play(h),
+          stop: (id) => _driver.stop(id),
+          clock: _clock,
+        );
+    _refreshDeviceState();
+  }
 
   final HapticSetting Function() _setting;
   final bool Function() _focusRunning;
   final bool Function() _reducedMotion;
-  final HapticGovernor _governor;
+  final bool Function() _foreground;
+  final HapticDriver? _driverOverride;
+  final DateTime Function() _clock;
+  late final HapticGovernor _governor;
+
+  HapticDriver get _driver => _driverOverride ?? hapticDriver;
+
+  HapticDeviceState _device = const HapticDeviceState();
+  DateTime? _deviceCheckedAt;
+
+  /// Low Power Mode and heat change slowly; asking every 30 s at most, and
+  /// never waiting for the answer, keeps every haptic instant.
+  void _refreshDeviceState() {
+    final now = _clock();
+    final last = _deviceCheckedAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 30)) return;
+    _deviceCheckedAt = now;
+    unawaited(_driver.deviceState().then((s) => _device = s));
+  }
+
+  /// Low Power Mode, a hot phone, or the OS reduce-motion switch: each drops
+  /// Full to Essential. Reduce-motion is very often a statement about sensory
+  /// load, and the app setting may be stricter than the OS, never looser.
+  bool get _constrained {
+    _refreshDeviceState();
+    return _device.constrained || _reducedMotion();
+  }
 
   @override
-  void emit(HapticEvent event, {int? rampStep}) => _governor.submit(
-        event,
-        setting: _setting(),
-        focusRunning: _focusRunning(),
-        reducedMotion: _reducedMotion(),
-        rampStep: rampStep,
-      );
+  void play(HapticMoment moment, {int step = 0, int count = 1, String? mode, bool landed = false}) {
+    // We never vibrate from inside another app: a session completing or a
+    // thaw ending with Aqademiq in the background is the notification's job.
+    if (!_foreground()) return;
+    final spec = specFor(moment, step: step, count: count, mode: mode);
+    _governor.submit(
+      moment,
+      spec,
+      setting: _setting(),
+      focusRunning: _focusRunning(),
+      constrained: _constrained,
+      landed: landed,
+      faceDownAlt: moment == HapticMoment.sessionComplete ? spec.deskSafe() : null,
+    );
+  }
+
+  @override
+  HapticHold hold(HapticMoment moment) {
+    if (!_foreground()) return const _NoHold();
+    final spec = specFor(moment);
+    final admitted = _governor.admitHold(
+      moment,
+      spec,
+      setting: _setting(),
+      focusRunning: _focusRunning(),
+      constrained: _constrained,
+    );
+    if (admitted == null) return const _NoHold();
+    _driver.play(admitted);
+    return _RunningHold(_driver, admitted, _clock(), _clock);
+  }
+
+  @override
+  void watchFaceDown({required bool on}) => _driver.watchFaceDown(on: on);
 }
 
-/// The OS "reduce motion" flag.
-///
-/// This is the same signal `MediaQuery.of(context).disableAnimations` exposes,
-/// read one layer down — which matters because most of the 22 events fire from
-/// controllers that have no `BuildContext`. It is also the honest source for
-/// spec §6.5's "must sit **under** the OS accessibility setting": the platform
-/// dispatcher is the OS's answer, whereas a `MediaQuery` can be overridden by
-/// any widget above the reader.
-bool osReducedMotion() =>
-    PlatformDispatcher.instance.accessibilityFeatures.disableAnimations;
+class _RunningHold implements HapticHold {
+  _RunningHold(this._driver, this._haptic, this._startedAt, this._clock);
+
+  final HapticDriver _driver;
+  final AdmittedHaptic _haptic;
+  final DateTime _startedAt;
+  final DateTime Function() _clock;
+  bool _done = false;
+
+  @override
+  void cancel({Duration fade = const Duration(milliseconds: 150)}) {
+    if (_done) return;
+    _done = true;
+    _driver.stop(_haptic.id, fade: fade, level: levelAt(_haptic.spec, _clock().difference(_startedAt)));
+  }
+
+  @override
+  void finish() {
+    if (_done) return;
+    _done = true;
+    _driver.stop(_haptic.id);
+  }
+}
+
+/// How strong [spec]'s continuous layer is [elapsed] into it — where a fade
+/// starts from when a hold is let go.
+@visibleForTesting
+double levelAt(HapticSpec spec, Duration elapsed) {
+  var level = 0.0;
+  for (final e in spec.ios) {
+    if (e is IosCurve && elapsed >= e.at && elapsed <= e.end) {
+      final t = (elapsed - e.at).inMicroseconds / e.duration.inMicroseconds;
+      final v = e.intensityAt(t);
+      if (v > level) level = v;
+    }
+  }
+  return level;
+}
+
+/// Whether Aqademiq is the app on screen. Unknown (no binding yet, a unit
+/// test) counts as yes.
+bool appInForeground() {
+  try {
+    final state = WidgetsBinding.instance.lifecycleState;
+    return state == null || state == AppLifecycleState.resumed;
+  } on Object {
+    return true;
+  }
+}
+
+/// The OS reduce-motion flag, read from the platform dispatcher because most
+/// moments fire from controllers with no `BuildContext`.
+bool osReducedMotion() => PlatformDispatcher.instance.accessibilityFeatures.disableAnimations;
 
 /// Picks the implementation, exactly like `tasksRepositoryProvider` does.
 final hapticsProvider = Provider<HapticsService>((ref) {
   if (kIsWeb) return const NoopHapticsService();
   return RealHapticsService(
     setting: () => ref.read(hapticSettingProvider),
-    // Read, never watch: this is sampled at the instant an event is offered, so
-    // the governor sees the status as it is *now* rather than as it was when
-    // the service was built.
-    focusRunning: () =>
-        ref.read(focusControllerProvider).status == FocusStatus.running,
+    // Read, never watch: sampled at the instant a moment is offered.
+    focusRunning: () => ref.read(focusControllerProvider).status == FocusStatus.running,
     reducedMotion: osReducedMotion,
   );
 });

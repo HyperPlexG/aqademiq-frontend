@@ -389,7 +389,7 @@ class _WheelState extends ConsumerState<_Wheel> {
       perspective: 0.002,
       physics: const FixedExtentScrollPhysics(),
       onSelectedItemChanged: (i) {
-        ref.read(hapticsProvider).wheelItem();
+        ref.read(hapticsProvider).play(HapticMoment.wheelStep);
         setState(() => _selected = i);
         widget.onChanged(i);
       },

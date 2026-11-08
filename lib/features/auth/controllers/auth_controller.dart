@@ -95,16 +95,12 @@ class AuthController extends AsyncNotifier<void> {
 
   /// Confirm the pending OTP.
   ///
-  /// Tier 1 `guestUpgraded` fires only on the signup / link-guest branch — this
-  /// is the moment a guest's anxiety about losing their data resolves. A
-  /// *recovery* OTP is the same call and the same code path but a different
-  /// event entirely (someone resetting a password), so it earns nothing. The
-  /// pending type has to be read **before** the call: `verifyOtp` deliberately
-  /// leaves it alone so the verify screen can still tell which flow it finished.
+  /// A verified code ends on the system success — the rhythm of typing digits,
+  /// then a clear finish. A wrong code is a real failure, and `_run` gives it
+  /// the system error.
   Future<bool> verify(String code) async {
-    final recovery = ref.read(authRepositoryProvider).isRecoveryPending;
     final ok = await _run(() => ref.read(authRepositoryProvider).verifyOtp(code));
-    if (ok && !recovery) ref.read(hapticsProvider).guestUpgraded();
+    if (ok) ref.read(hapticsProvider).play(HapticMoment.otpVerified);
     return ok;
   }
 
@@ -286,7 +282,7 @@ class AuthController extends AsyncNotifier<void> {
       // something the user explicitly submitted, which is exactly the line
       // spec §3 draws for `saveFailed`. Nothing on this screen refetches in the
       // background, so there is no way for it to fire unbidden.
-      if (state.hasError) ref.read(hapticsProvider).saveFailed();
+      if (state.hasError) ref.read(hapticsProvider).play(HapticMoment.failure);
       return !state.hasError;
     } finally {
       // AsyncValue.guard catches errors, but not a call that never returns.

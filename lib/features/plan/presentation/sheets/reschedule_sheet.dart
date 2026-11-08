@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
@@ -79,6 +80,9 @@ class _RescheduleReviewState extends ConsumerState<_RescheduleReview> {
   Future<void> _move(List<Task> tasks, DateTime to) async {
     if (_moving || tasks.isEmpty) return;
     setState(() => _moving = true);
+    // One tick per moved task (up to five), then a latch: several things move,
+    // not just one button.
+    ref.read(hapticsProvider).play(HapticMoment.rescheduleRemaining, count: tasks.length);
     try {
       final ctrl = ref.read(dayTasksProvider.notifier);
       for (final t in tasks) {

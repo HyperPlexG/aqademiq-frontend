@@ -44,7 +44,7 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
   /// selected, and passes the index so the tick can follow the melt ramp:
   /// softer at "Rough", sharper at "Great" (§5.1).
   void _selectMood(int idx) {
-    if (idx != _selectedMood) ref.read(hapticsProvider).moodRampStep(idx);
+    if (idx != _selectedMood) ref.read(hapticsProvider).play(HapticMoment.moodMove, step: idx);
     setState(() => _selectedMood = idx);
   }
 
@@ -60,7 +60,7 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
     } on Object {
       _saving = false;
       if (!mounted) return;
-      ref.read(hapticsProvider).saveFailed();
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't save. Try again.")),
       );
@@ -68,7 +68,7 @@ class _MoodMorningScreenState extends ConsumerState<MoodMorningScreen> {
     }
     if (!mounted) return;
     // On commit, distinct from the ramp detents that preceded it.
-    ref.read(hapticsProvider).moodLogged();
+    ref.read(hapticsProvider).play(HapticMoment.moodSave);
     ref.invalidate(moodWeekProvider);
     context.go(Routes.plan);
   }

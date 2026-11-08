@@ -47,7 +47,7 @@ class _FocusDurationDialogState extends ConsumerState<_FocusDurationDialog> {
   /// slider, which is the one continuous control here, silent.
   void _setMinutes(int value, {bool detent = false}) {
     final next = value.clamp(_min, _max);
-    if (detent && next != _minutes) ref.read(hapticsProvider).sliderStop();
+    if (detent && next != _minutes) ref.read(hapticsProvider).play(HapticMoment.setTimeStep);
     setState(() => _minutes = next);
   }
 

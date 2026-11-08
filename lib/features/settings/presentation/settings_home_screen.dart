@@ -248,9 +248,7 @@ class SettingsHomeScreen extends ConsumerWidget {
                   final confirmed = await showDeleteAccountDialog(context);
                   if (confirmed != true) return;
                   await ref.read(authRepositoryProvider).deleteAccount();
-                  // Tier 4, on the confirm rather than the tap that opened the
-                  // dialog. Deliberately unpleasant — this one is irreversible.
-                  ref.read(hapticsProvider).destructiveConfirmed();
+                  ref.read(hapticsProvider).play(HapticMoment.deleteAccountDone);
                   if (context.mounted) context.go(Routes.welcome);
                 },
               ),

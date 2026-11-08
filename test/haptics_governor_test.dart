@@ -1,326 +1,280 @@
-// The governor is the part of the haptics layer worth testing, and it is
-// testable precisely because it takes the setting and the focus status as
-// inputs instead of reaching into providers.
+// The budget rules (haptic architecture §3) — the ones that fail silently.
 //
-// Every rule below fails SILENTLY in production. A haptic that should have been
-// suppressed is a buzz nobody files a bug about; a haptic that should have
-// fired is an absence nobody notices until the feature feels cheap. So these
-// are not "does the class work" tests — they are the only place the rules are
-// written down as behaviour rather than prose.
-//
-// Spec §4 and §6.5; guide §1.3 and §5.
+// A plain class with injected clock and scheduler, so every rule is checked
+// with no widget tree and no platform channel.
 
 import 'package:aqademiq/services/haptics/haptic_governor.dart';
-import 'package:aqademiq/services/haptics/haptic_patterns.dart';
+import 'package:aqademiq/services/haptics/haptic_lexicon.dart';
+import 'package:aqademiq/services/haptics/haptic_moments.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// A hand-cranked clock, so a 40–60 ms rule is not tested with a real 40 ms.
-class _Clock {
-  DateTime _now = DateTime(2026, 8, 27, 9);
-
-  DateTime call() => _now;
-
-  void advance(Duration d) => _now = _now.add(d);
-}
-
-/// Drives a governor with no bindings, no widget tree and no platform channel.
-class _Harness {
-  _Harness() {
+class _Rig {
+  _Rig() {
     governor = HapticGovernor(
-      play: (event, _) => played.add(event),
-      clock: clock.call,
-      schedule: _pendingFlushes.add,
+      play: played.add,
+      stop: stopped.add,
+      clock: () => now,
+      schedule: (flush) => pending = flush,
     );
   }
 
-  final clock = _Clock();
-  final played = <HapticEvent>[];
-  final _pendingFlushes = <void Function()>[];
   late final HapticGovernor governor;
+  final played = <AdmittedHaptic>[];
+  final stopped = <int>[];
+  DateTime now = DateTime(2026, 11, 8, 9);
+  void Function()? pending;
 
-  /// End the current coalescing frame.
-  void endFrame() {
-    final due = List<void Function()>.of(_pendingFlushes);
-    _pendingFlushes.clear();
-    for (final flush in due) {
-      flush();
-    }
-  }
-
-  void submit(
-    HapticEvent event, {
+  void offer(
+    HapticMoment m, {
     HapticSetting setting = HapticSetting.full,
-    bool focusRunning = false,
-    bool reducedMotion = false,
-  }) =>
-      governor.submit(
-        event,
-        setting: setting,
-        focusRunning: focusRunning,
-        reducedMotion: reducedMotion,
-      );
-
-  /// Submit one event in a frame of its own, well clear of the interval floor.
-  void fireAlone(
-    HapticEvent event, {
-    HapticSetting setting = HapticSetting.full,
-    bool focusRunning = false,
-    bool reducedMotion = false,
+    bool running = false,
+    bool constrained = false,
+    bool landed = false,
+    int step = 0,
   }) {
-    clock.advance(const Duration(seconds: 1));
-    submit(
-      event,
+    governor.submit(
+      m,
+      specFor(m, step: step),
       setting: setting,
-      focusRunning: focusRunning,
-      reducedMotion: reducedMotion,
+      focusRunning: running,
+      constrained: constrained,
+      landed: landed,
     );
-    endFrame();
+    flush();
   }
-}
 
-/// One event per tier, for the setting tests.
-const _oneOfEach = [
-  HapticEvent.taskCompleted, // Tier 1
-  HapticEvent.taskCreated, // Tier 2
-  HapticEvent.wheelItem, // Tier 3
-  HapticEvent.saveFailed, // Tier 4
-];
+  void flush() {
+    final f = pending;
+    pending = null;
+    f?.call();
+  }
+
+  void advance(Duration d) => now = now.add(d);
+
+  double peak(AdmittedHaptic h) => h.spec.ios.whereType<IosTap>().fold(0, (m, e) => e.intensity > m ? e.intensity : m);
+}
 
 void main() {
-  group('the user setting', () {
-    test('Off fires nothing, ever', () {
-      final h = _Harness();
-      for (final event in _oneOfEach) {
-        h.fireAlone(event, setting: HapticSetting.off);
-      }
-      expect(h.played, isEmpty);
+  group('setting', () {
+    test('Essential is the default for a student who never picked', () {
+      expect(HapticSetting.fromStorageKey(null), HapticSetting.essential);
+      expect(HapticSetting.fromStorageKey('full'), HapticSetting.full);
+      expect(HapticSetting.fromStorageKey('off'), HapticSetting.off);
     });
 
-    test('Essential keeps Tiers 1 and 4 and drops Tiers 2 and 3', () {
-      final h = _Harness();
-      for (final event in _oneOfEach) {
-        h.fireAlone(event, setting: HapticSetting.essential);
-      }
-      expect(h.played, [HapticEvent.taskCompleted, HapticEvent.saveFailed]);
+    test('Off plays nothing; Essential only the essential moments; Full all', () {
+      final r = _Rig()
+        ..offer(HapticMoment.sessionPause, setting: HapticSetting.off)
+        ..offer(HapticMoment.taskChecked, setting: HapticSetting.essential);
+      expect(r.played, isEmpty);
+      r.offer(HapticMoment.sessionPause, setting: HapticSetting.essential);
+      expect(r.played.single.spec.name, 'aq.crystallise');
+      r.offer(HapticMoment.taskChecked);
+      expect(r.played.last.spec.name, 'aq.latch');
     });
 
-    test('Full lets every tier through', () {
-      final h = _Harness();
-      for (final event in _oneOfEach) {
-        h.fireAlone(event);
-      }
-      expect(h.played, _oneOfEach);
-    });
-  });
-
-  group('the OS reduce-motion setting sits above the app one', () {
-    test('it clamps Full down to Essential', () {
-      final h = _Harness();
-      for (final event in _oneOfEach) {
-        h.fireAlone(event, reducedMotion: true);
-      }
-      expect(h.played, [HapticEvent.taskCompleted, HapticEvent.saveFailed]);
+    test('Low Power, heat or reduce-motion drop Full to Essential, never further', () {
+      final r = _Rig()..offer(HapticMoment.tabSwitch, constrained: true);
+      expect(r.played, isEmpty);
+      r.offer(HapticMoment.freezeNow, constrained: true);
+      expect(r.played, hasLength(1));
+      expect(HapticGovernor.admits(HapticSetting.off, HapticTier.essential, constrained: true), isFalse);
     });
 
-    test('it can never loosen Off', () {
-      // The app setting may be stricter than the OS, never the reverse.
-      final h = _Harness();
-      for (final event in _oneOfEach) {
-        h.fireAlone(event, setting: HapticSetting.off, reducedMotion: true);
-      }
-      expect(h.played, isEmpty);
-    });
-  });
-
-  group('focus-session suppression', () {
-    // The strictest rule in the spec (§4.2). The entire promise of /focus is
-    // undisturbed attention, and it is also how haptics stays out of Prism's
-    // way.
-    test('nothing fires while a session runs, except freeze / resume / end', () {
-      final h = _Harness();
-      for (final event in HapticEvent.values) {
-        h.fireAlone(event, focusRunning: true);
-      }
-      expect(
-        h.played.toSet(),
-        HapticGovernor.sessionTransitions,
-      );
+    test("the haptics sheet's preview plays whatever the setting was", () {
+      final r = _Rig()..offer(HapticMoment.previewOff, setting: HapticSetting.off);
+      expect(r.played.single.spec.name, 'aq.unlatch');
     });
 
-    test('focusStarted is NOT exempt', () {
-      // Deliberate, and the reason `FocusController.start` fires its haptic in
-      // the window before the status flips to running. If someone moves that
-      // call below the state assignment, the event silently disappears and this
-      // is the test that explains why.
-      final h = _Harness()..fireAlone(HapticEvent.focusStarted, focusRunning: true);
-      expect(h.played, isEmpty);
-
-      h.fireAlone(HapticEvent.focusStarted);
-      expect(h.played, [HapticEvent.focusStarted]);
-    });
-
-    test('an idle app is unaffected', () {
-      final h = _Harness()..fireAlone(HapticEvent.taskCompleted);
-      expect(h.played, [HapticEvent.taskCompleted]);
+    test('Essential holds exactly the moments §3 lists', () {
+      final essential = {
+        for (final m in HapticMoment.values)
+          if (m.tier == HapticTier.essential) m,
+      };
+      expect(essential, {
+        HapticMoment.failure,
+        HapticMoment.sessionStart,
+        HapticMoment.sessionPause,
+        HapticMoment.sessionResume,
+        HapticMoment.sessionEndEarly,
+        HapticMoment.sessionComplete,
+        HapticMoment.freezeNow,
+        HapticMoment.keepOnlyThese,
+        HapticMoment.thawBreath,
+        HapticMoment.thawBreathLong,
+        HapticMoment.thawConfirmed,
+        HapticMoment.deepFreezeHolds,
+        HapticMoment.frostEndEarly,
+        HapticMoment.thawEverythingHold,
+        HapticMoment.thawEverythingDone,
+        HapticMoment.deleteAccountHold,
+        HapticMoment.deleteAccountDone,
+      });
     });
   });
 
-  group('the minimum interval floor', () {
-    test('two events 10 ms apart fire once', () {
-      final h = _Harness()..fireAlone(HapticEvent.taskCompleted);
-      h.clock.advance(const Duration(milliseconds: 10));
-      h
-        ..submit(HapticEvent.taskCreated)
-        ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted]);
+  group('running session', () {
+    test('nothing the student did not trigger', () {
+      final r = _Rig()
+        ..offer(HapticMoment.proposalsArrived, running: true)
+        ..offer(HapticMoment.refreeze, running: true);
+      expect(r.played, isEmpty);
     });
 
-    // These two use `wheelItem` rather than a Tier 1 event because they are
-    // about the floor itself, and the floor is only the whole story for an
-    // event that fits inside it. A multi-beat pattern keeps the motor busy for
-    // its own span instead — see "a long celebration blocks a tick that lands
-    // inside it" in haptic_patterns_test.dart.
-    test('the second fires once the floor has passed', () {
-      final h = _Harness()..fireAlone(HapticEvent.wheelItem);
-      h.clock.advance(HapticGovernor.minInterval);
-      h
-        ..submit(HapticEvent.taskCreated)
-        ..endFrame();
-      expect(h.played, [HapticEvent.wheelItem, HapticEvent.taskCreated]);
-    });
-
-    test('a suppressed event does not restart the floor', () {
-      // The floor is measured against what actually fired, so a burst of
-      // dropped events cannot starve the next real one.
-      final h = _Harness()..fireAlone(HapticEvent.wheelItem);
-      h.clock.advance(const Duration(milliseconds: 30));
-      // Dropped by the floor.
-      h
-        ..submit(HapticEvent.taskCreated)
-        ..endFrame();
-      h.clock.advance(const Duration(milliseconds: 30)); // 60 ms since the fire
-      h
-        ..submit(HapticEvent.moodLogged)
-        ..endFrame();
-      expect(h.played, [HapticEvent.wheelItem, HapticEvent.moodLogged]);
+    test('what the student does still answers — pausing, ending', () {
+      final r = _Rig()
+        ..offer(HapticMoment.sessionPause, running: true)
+        ..advance(const Duration(seconds: 5))
+        ..offer(HapticMoment.sessionEndEarly, running: true);
+      expect(r.played.map((h) => h.spec.name), ['aq.crystallise', 'aq.melt']);
     });
   });
 
-  group('burst coalescing', () {
-    test('three events in one frame fire only the highest tier', () {
-      final h = _Harness()
-        ..submit(HapticEvent.wheelItem) // Tier 3
-        ..submit(HapticEvent.taskCompleted) // Tier 1
-        ..submit(HapticEvent.taskCreated) // Tier 2
-        ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted]);
+  group('wheels', () {
+    test('at most one tick per 40 ms', () {
+      final r = _Rig()..offer(HapticMoment.wheelStep);
+      r
+        ..advance(const Duration(milliseconds: 20))
+        ..offer(HapticMoment.wheelStep);
+      expect(r.played, hasLength(1));
+      r
+        ..advance(const Duration(milliseconds: 25))
+        ..offer(HapticMoment.wheelStep);
+      expect(r.played, hasLength(2));
     });
 
-    test('order within the frame does not matter', () {
-      final h = _Harness()
-        ..submit(HapticEvent.taskCompleted)
-        ..submit(HapticEvent.wheelItem)
-        ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted]);
-    });
-
-    test('the next frame is a fresh contest', () {
-      final h = _Harness()
-        ..submit(HapticEvent.taskCompleted)
-        ..submit(HapticEvent.wheelItem)
-        ..endFrame();
-      h.clock.advance(const Duration(seconds: 1));
-      h
-        ..submit(HapticEvent.moodLogged)
-        ..endFrame();
-      expect(h.played, [HapticEvent.taskCompleted, HapticEvent.moodLogged]);
-    });
-  });
-
-  group('fling suppression', () {
-    // During a fling the user is not reading positions, so the ticks convey
-    // nothing and merely blur into a rattle (§4.4).
-    test('a fast wheel stops ticking and stays stopped', () {
-      final h = _Harness();
-      // 20 ms per item — a flick, not a selection.
-      for (var i = 0; i < 12; i++) {
-        h
-          ..submit(HapticEvent.wheelItem)
-          ..endFrame();
-        h.clock.advance(const Duration(milliseconds: 20));
-      }
-      // Only the first tick, before the run was recognised as a fling. Note the
-      // total elapsed time is well past the interval floor, so nothing but the
-      // fling rule can explain the silence.
-      expect(h.played, [HapticEvent.wheelItem]);
-    });
-
-    test('a deliberately turned wheel ticks every item', () {
-      final h = _Harness();
+    test('faster than 25 steps a second plays at half strength; the landing at full', () {
+      final r = _Rig()..offer(HapticMoment.wheelStep);
+      final full = r.peak(r.played.single);
+      // 30 ms between steps is >25 a second. Every other one clears the 40 ms
+      // limiter and plays — at half strength.
       for (var i = 0; i < 4; i++) {
-        h.clock.advance(const Duration(milliseconds: 150));
-        h
-          ..submit(HapticEvent.wheelItem)
-          ..endFrame();
+        r
+          ..advance(const Duration(milliseconds: 30))
+          ..offer(HapticMoment.wheelStep);
       }
-      expect(h.played, List.filled(4, HapticEvent.wheelItem));
+      expect(r.played.length, greaterThan(1));
+      expect(r.peak(r.played.last), closeTo(full / 2, 1e-9));
+
+      r
+        ..advance(const Duration(milliseconds: 10))
+        ..offer(HapticMoment.wheelStep, landed: true);
+      expect(r.peak(r.played.last), closeTo(full, 1e-9));
     });
 
-    test('a fling that slows down starts ticking again', () {
-      final h = _Harness();
-      for (var i = 0; i < 8; i++) {
-        h
-          ..submit(HapticEvent.wheelItem)
-          ..endFrame();
-        h.clock.advance(const Duration(milliseconds: 20));
+    test('a slow, deliberate turn is full strength and never decays', () {
+      final r = _Rig();
+      for (var i = 0; i < 10; i++) {
+        r
+          ..offer(HapticMoment.wheelStep)
+          ..advance(const Duration(milliseconds: 200));
       }
-      expect(h.played, hasLength(1));
-      // The wheel settles.
-      h.clock.advance(const Duration(milliseconds: 300));
-      h
-        ..submit(HapticEvent.wheelItem)
-        ..endFrame();
-      expect(h.played, hasLength(2));
-    });
-
-    test('only detents are flung — a burst of Tier 1 is not', () {
-      // Fling suppression is about continuous input. It must not become a
-      // general rate limiter; that is what the interval floor is for.
-      final h = _Harness();
-      for (var i = 0; i < 6; i++) {
-        h.clock.advance(const Duration(milliseconds: 20));
-        h
-          ..submit(HapticEvent.taskCompleted)
-          ..endFrame();
-      }
-      // Thinned by the 50 ms floor, but never by the fling rule.
-      expect(h.played, isNotEmpty);
-      expect(h.played.every((e) => e == HapticEvent.taskCompleted), isTrue);
+      expect(r.played, hasLength(10));
+      expect(r.played.map(r.peak).toSet(), hasLength(1));
     });
   });
 
-  group('the vocabulary', () {
-    test('every event resolves to a tier', () {
-      // Cheap, but it is the guard on §8.1: a new event cannot be added without
-      // naming its tier, because the enum will not compile without one.
-      for (final event in HapticEvent.values) {
-        expect(HapticTier.values, contains(event.tier));
-      }
+  group('one frame, one haptic', () {
+    test('the essential moment wins a collision; a tie goes to the later', () {
+      final r = _Rig();
+      r.governor
+        ..submit(HapticMoment.taskChecked, specFor(HapticMoment.taskChecked), setting: HapticSetting.full, focusRunning: false)
+        ..submit(HapticMoment.freezeNow, specFor(HapticMoment.freezeNow), setting: HapticSetting.full, focusRunning: false)
+        ..submit(HapticMoment.chipSelect, specFor(HapticMoment.chipSelect), setting: HapticSetting.full, focusRunning: false);
+      r.flush();
+      expect(r.played.single.spec.name, 'aq.crystallise');
+
+      r.governor
+        ..submit(HapticMoment.taskChecked, specFor(HapticMoment.taskChecked), setting: HapticSetting.full, focusRunning: false)
+        ..submit(HapticMoment.chipSelect, specFor(HapticMoment.chipSelect), setting: HapticSetting.full, focusRunning: false);
+      r.flush();
+      expect(r.played.last.spec.name, 'aq.tick');
+    });
+  });
+
+  group('signatures', () {
+    test('two within 2 s: the earlier is stopped and the later plays', () {
+      final r = _Rig()..offer(HapticMoment.sessionPause);
+      final first = r.played.single.id;
+      r
+        ..advance(const Duration(milliseconds: 800))
+        ..offer(HapticMoment.sessionResume);
+      expect(r.played, hasLength(2));
+      expect(r.stopped, [first]);
     });
 
-    test('the tier counts match spec §3', () {
-      int count(HapticTier tier) =>
-          HapticEvent.values.where((e) => e.tier == tier).length;
-      expect(count(HapticTier.earned), 5, reason: 'Tier 1 — earned moments');
-      expect(count(HapticTier.confirmation), 10, reason: 'Tier 2');
+    test('2 s apart, nothing is stopped', () {
+      final r = _Rig()
+        ..offer(HapticMoment.sessionPause)
+        ..advance(const Duration(seconds: 2))
+        ..offer(HapticMoment.sessionResume);
+      expect(r.stopped, isEmpty);
+    });
+
+    test('a tick is not a signature', () {
+      final r = _Rig()
+        ..offer(HapticMoment.sessionPause)
+        ..advance(const Duration(milliseconds: 300))
+        ..offer(HapticMoment.chipSelect);
+      expect(r.stopped, isEmpty);
+    });
+  });
+
+  group('repetition', () {
+    test('85% of the last strength per repeat within 10 minutes, never below 50%', () {
+      final r = _Rig();
+      for (var i = 0; i < 8; i++) {
+        r
+          ..offer(HapticMoment.taskChecked)
+          ..advance(const Duration(seconds: 30));
+      }
+      final peaks = r.played.map(r.peak).toList();
+      final base = peaks.first;
+      expect(peaks[1], closeTo(base * 0.85, 1e-9));
+      expect(peaks[2], closeTo(base * 0.85 * 0.85, 1e-9));
+      expect(peaks.last, closeTo(base * 0.5, 1e-9));
+    });
+
+    test('10 idle minutes reset it', () {
+      final r = _Rig()
+        ..offer(HapticMoment.taskChecked)
+        ..advance(const Duration(seconds: 30))
+        ..offer(HapticMoment.taskChecked)
+        ..advance(const Duration(minutes: 10))
+        ..offer(HapticMoment.taskChecked);
+      expect(r.peak(r.played.last), closeTo(r.peak(r.played.first), 1e-9));
+    });
+
+    test('counted per pattern, not per moment: a toggle on then a task check-off are both latches', () {
+      final r = _Rig()
+        ..offer(HapticMoment.toggleOn)
+        ..advance(const Duration(seconds: 5))
+        ..offer(HapticMoment.taskChecked);
+      expect(r.peak(r.played.last), closeTo(r.peak(r.played.first) * 0.85, 1e-9));
+    });
+
+    test('the system success and error are never softened', () {
+      final r = _Rig();
+      for (var i = 0; i < 3; i++) {
+        r
+          ..offer(HapticMoment.failure)
+          ..advance(const Duration(seconds: 3));
+      }
+      expect(r.played.map((h) => h.spec).toSet(), hasLength(1));
+    });
+  });
+
+  group('holds', () {
+    test('a hold is admitted under its tier and silenced by Off', () {
+      final r = _Rig();
       expect(
-        count(HapticTier.detent),
-        5,
-        reason: 'Tier 3 — the spec lists four, plus the long-press tick that '
-            "§7's Plan budget names and §3 omits",
+        r.governor.admitHold(HapticMoment.thawBreath, Aq.breath, setting: HapticSetting.essential, focusRunning: false),
+        isNotNull,
       );
-      expect(count(HapticTier.warning), 3, reason: 'Tier 4 — warnings');
-      expect(HapticEvent.values, hasLength(23));
+      expect(
+        r.governor.admitHold(HapticMoment.thawBreath, Aq.breath, setting: HapticSetting.off, focusRunning: false),
+        isNull,
+      );
     });
   });
 }

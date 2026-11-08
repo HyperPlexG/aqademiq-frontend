@@ -161,7 +161,7 @@ class _CustomDurationDialogState extends ConsumerState<_CustomDurationDialog> {
   /// `focus_duration_dialog.dart`; Pickers get one event (§7) and this is it.
   void _setMinutes(int value, {bool detent = false}) {
     final next = value.clamp(_min, _max);
-    if (detent && next != _minutes) ref.read(hapticsProvider).sliderStop();
+    if (detent && next != _minutes) ref.read(hapticsProvider).play(HapticMoment.wheelStep);
     setState(() => _minutes = next);
   }
 

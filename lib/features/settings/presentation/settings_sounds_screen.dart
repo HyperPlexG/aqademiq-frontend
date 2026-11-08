@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../services/haptics/haptics_service.dart';
 import '../../../services/sound_settings_service.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
@@ -171,11 +170,6 @@ class _VolumeRow extends ConsumerWidget {
     this.last = false,
   });
 
-  /// The volume sliders are continuous, so "detent" has to be invented: quantise
-  /// the 0–1 travel into twenty stops and tick only when one is crossed
-  /// (spec §4.4 — "a slider crossing sixty values must not tick sixty times").
-  static int _detent(double v) => (v * 20).round();
-
   final String label;
   final String? sub;
   final double value;
@@ -225,12 +219,9 @@ class _VolumeRow extends ConsumerWidget {
               ),
               child: Slider(
                 value: value.clamp(0.0, 1.0),
-                onChanged: (v) {
-                  if (_detent(v) != _detent(value)) {
-                    ref.read(hapticsProvider).sliderStop();
-                  }
-                  onChanged(v);
-                },
+                // Volume sliders have no feel in the haptic architecture:
+                // the sound itself is the feedback.
+                onChanged: onChanged,
               ),
             ),
           ),

@@ -73,7 +73,7 @@ class _LogMoodSheetState extends ConsumerState<_LogMoodSheet> {
   /// and its callers (Plan's menu, Stats' day editor) write the log and fire
   /// `moodLogged` once the write lands.
   void _select(int idx) {
-    if (idx != _selected) ref.read(hapticsProvider).moodRampStep(idx);
+    if (idx != _selected) ref.read(hapticsProvider).play(HapticMoment.moodMove, step: idx);
     setState(() => _selected = idx);
   }
 

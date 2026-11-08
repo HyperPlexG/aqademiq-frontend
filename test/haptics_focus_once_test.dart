@@ -11,28 +11,24 @@
 //   * A session that runs to its end never calls complete() at all — the
 //     periodic tick flips the status, and the summary screen submits later.
 //
-// A naive `haptics.focusCompleted()` at the top of complete() gets both wrong:
+// A naive `play(HapticMoment.sessionComplete)` at the top of complete() gets both wrong:
 // two buzzes for one abandoned session, and none at all for a finished one.
 
 import 'package:aqademiq/data/models/focus_session.dart';
 import 'package:aqademiq/data/repositories/focus_repository.dart';
 import 'package:aqademiq/data/sources/focus_source.dart';
-import 'package:aqademiq/services/haptics/haptic_patterns.dart';
 import 'package:aqademiq/services/haptics/haptics_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Records semantic events instead of vibrating.
-///
-/// Extends the no-op rather than implementing the 23-method interface: `emit`
-/// is the funnel both real implementations use, so this stays honest about the
-/// path a production call actually takes.
+/// Records moments instead of vibrating.
 class _RecordingHaptics extends NoopHapticsService {
-  final events = <HapticEvent>[];
+  final events = <HapticMoment>[];
 
   @override
-  void emit(HapticEvent event, {int? rampStep}) => events.add(event);
+  void play(HapticMoment moment, {int step = 0, int count = 1, String? mode, bool landed = false}) =>
+      events.add(moment);
 }
 
 class _StubFocusRepo extends FocusRepository {
@@ -94,7 +90,7 @@ void main() {
     final focus = env.container.read(focusControllerProvider.notifier)
       ..configure(durationMin: 1);
     await focus.start();
-    expect(env.haptics.events, [HapticEvent.focusStarted]);
+    expect(env.haptics.events, [HapticMoment.sessionStart]);
 
     // The End button.
     await focus.complete();
@@ -108,7 +104,7 @@ void main() {
     );
     expect(
       env.haptics.events,
-      [HapticEvent.focusStarted, HapticEvent.sessionEndedEarly],
+      [HapticMoment.sessionStart, HapticMoment.sessionEndEarly],
       reason: 'two complete() calls, one resolution, one haptic',
     );
   });
@@ -127,15 +123,15 @@ void main() {
     await tester.pump(const Duration(seconds: 61));
 
     expect(env.haptics.events, [
-      HapticEvent.focusStarted,
-      HapticEvent.focusCompleted,
+      HapticMoment.sessionStart,
+      HapticMoment.sessionComplete,
     ]);
 
     // The summary screen still submits afterwards, and must stay silent.
     await focus.complete(mood: 3, rating: 5);
     expect(env.haptics.events, [
-      HapticEvent.focusStarted,
-      HapticEvent.focusCompleted,
+      HapticMoment.sessionStart,
+      HapticMoment.sessionComplete,
     ]);
   });
 
@@ -151,9 +147,9 @@ void main() {
       ..resume();
 
     expect(env.haptics.events, [
-      HapticEvent.focusStarted,
-      HapticEvent.sessionFrozen,
-      HapticEvent.sessionResumed,
+      HapticMoment.sessionStart,
+      HapticMoment.sessionPause,
+      HapticMoment.sessionResume,
     ]);
 
     // Leave no periodic timer pending at teardown.
@@ -173,6 +169,6 @@ void main() {
     await focus.complete();
 
     expect(env.repo.completeCalls, 0);
-    expect(env.haptics.events, [HapticEvent.sessionEndedEarly]);
+    expect(env.haptics.events, [HapticMoment.sessionEndEarly]);
   });
 }

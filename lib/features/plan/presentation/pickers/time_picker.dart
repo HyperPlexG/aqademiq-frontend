@@ -244,7 +244,7 @@ class _TimeWheelState extends ConsumerState<_TimeWheel> {
           // Uniform tick per item. A fast fling would rattle, so the governor
           // suppresses runs of rapid detents (§4.4) rather than this widget
           // trying to guess at scroll velocity.
-          ref.read(hapticsProvider).wheelItem();
+          ref.read(hapticsProvider).play(HapticMoment.wheelStep);
           setState(() => _selected = i);
           widget.onChanged(i);
         },

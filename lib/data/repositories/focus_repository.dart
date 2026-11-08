@@ -87,16 +87,9 @@ class FocusController extends Notifier<FocusSession> {
           taskId: state.taskId,
           prismMode: state.prismMode,
         );
-    // Deliberately ABOVE the state assignment, in the window where the
-    // repository has confirmed the session but the status is not yet running.
-    //
-    // `HapticGovernor.sessionTransitions` does not allow-list focusStarted:
-    // spec §4.2 permits only freeze, resume and end during a run, and widening
-    // the strictest rule in the document to cover the interior of a session is
-    // a worse trade than depending on this ordering. Moving the haptic below
-    // the assignment silently deletes it — that is what the governor test
-    // "nothing fires while running, except freeze / resume / end" is pinning.
-    ref.read(hapticsProvider).focusStarted();
+    // Thud, then the Prism pattern 120 ms later: the session is set down and
+    // Prism comes in underneath. The last vibration until the session ends.
+    ref.read(hapticsProvider).play(HapticMoment.sessionStart, mode: state.prismMode);
     // `endsAt` is anchored to the local clock rather than the server's
     // `startedAt`: the 1s timer below also starts now, and the ambient surfaces
     // count down from `endsAt` while the app counts `elapsedSec` up. Anchoring
@@ -117,9 +110,8 @@ class FocusController extends Notifier<FocusSession> {
     // Stamping the freeze instant is what lets `resume` tell held time from
     // spent time; `endsAt` is deliberately left stale until then.
     state = state.copyWith(status: FocusStatus.paused, frozenAt: DateTime.now());
-    // §5.3 — Freeze is the product's most characteristic interaction and the
-    // sharpest thing in Tier 2: a lock engaging.
-    ref.read(hapticsProvider).sessionFrozen();
+    // The screen frosts over and the hand feels it set.
+    ref.read(hapticsProvider).play(HapticMoment.sessionPause);
     _persistCheckpoint(paused: true);
   }
 
@@ -135,8 +127,8 @@ class FocusController extends Notifier<FocusSession> {
           : endsAt,
       frozenAt: null,
     );
-    // The release of the freeze, softer than the lock that preceded it.
-    ref.read(hapticsProvider).sessionResumed();
+    // The exact opposite of pausing, so the two never get confused.
+    ref.read(hapticsProvider).play(HapticMoment.sessionResume);
     _startTimer();
     _persistCheckpoint(paused: false);
   }
@@ -152,7 +144,7 @@ class FocusController extends Notifier<FocusSession> {
     );
   }
 
-  /// The one haptic a session's ending earns — fired at most once per session.
+  /// The one feel a session's ending earns — fired at most once per session.
   ///
   /// Guide §4.1 / spec §4.3: one user action, one haptic, even when it causes
   /// several state changes internally. Two things make that non-trivial here:
@@ -169,13 +161,11 @@ class FocusController extends Notifier<FocusSession> {
   void _resolveOnce({required bool naturally}) {
     if (state.status == FocusStatus.completed) return;
     final haptics = ref.read(hapticsProvider);
-    if (naturally) {
-      // Tier 1, and the only composite in the app: two beats, second stronger.
-      haptics.focusCompleted();
-    } else {
-      // §5.2 — the melted end. Not punishing; simply not a reward.
-      haptics.sessionEndedEarly();
-    }
+    // Bloom — the one celebration in the system, desk-safe when the phone lies
+    // face down — or the rest of the ice just melting away at 60%. Nothing
+    // breaks and nothing is judged. With the app in the background the
+    // notification carries it instead; the service never vibrates there.
+    haptics.play(naturally ? HapticMoment.sessionComplete : HapticMoment.sessionEndEarly);
   }
 
   Future<void> complete({int? mood, int? rating}) async {

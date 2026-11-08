@@ -94,7 +94,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
 
   void _done() {
     final c = ref.read(freezeControllerProvider.notifier);
-    ref.read(hapticsProvider).sessionResumed();
+    ref.read(hapticsProvider).play(HapticMoment.thawConfirmed);
     if (widget.request.standDown) {
       c.standDown(widget.request.standDownUntil);
       Navigator.of(context).pop();
