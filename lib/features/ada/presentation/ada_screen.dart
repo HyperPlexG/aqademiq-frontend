@@ -54,6 +54,14 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   /// `ref` while the widget is being torn down.
   late final VoiceInputController _voice;
 
+  /// This tab is the one showing (an inactive shell branch has tickers off).
+  /// Proposals that land while it is hidden have no picture, so no feel.
+  bool _onScreen = true;
+
+  /// The mic-open latch already played for this dictation. A platform restart
+  /// flips back to "starting" and must not latch again.
+  bool _voiceFelt = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,12 +88,18 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     // would otherwise write the words back into an empty box.
     unawaited(_voice.cancel(owner: this));
     _input.clear();
+    // The message leaves: a tap, as the bubble lands in the thread.
+    ref.read(hapticsProvider).play(HapticMoment.adaSend);
     unawaited(ref.read(adaChatProvider.notifier).send(value));
   }
 
   /// Send became Stop (`ada-thinking`): stop waiting for this reply. There is
   /// no server cancel; the controller just drops the answer when it lands.
-  void _stop() => ref.read(adaChatProvider.notifier).stop();
+  void _stop() {
+    if (!ref.read(adaChatProvider).awaitingReply) return;
+    ref.read(hapticsProvider).play(HapticMoment.stopGenerating);
+    ref.read(adaChatProvider.notifier).stop();
+  }
 
   /// Opens the mic. While it is open the input bar becomes the recording pill,
   /// whose buttons are the three handlers below. The words still land in the
@@ -108,12 +122,18 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   /// ✕ — throw away what was said. Cancelled first so no late word can land
   /// after the field is put back.
   void _discardVoice() {
+    // Unlatch only if the open was felt.
+    if (_voiceFelt) ref.read(hapticsProvider).play(HapticMoment.voiceStop);
     unawaited(_voice.cancel(owner: this));
     _dictation.restore();
   }
 
   /// ■ — stop, and leave the words in the box to review.
-  void _stopVoice() => unawaited(_voice.stop(owner: this));
+  void _stopVoice() {
+    // Unlatch only if the open was felt.
+    if (_voiceFelt) ref.read(hapticsProvider).play(HapticMoment.voiceStop);
+    unawaited(_voice.stop(owner: this));
+  }
 
   /// ↑ — stop and send. Waits for the recognizer's last words so the message
   /// is what was actually said, not the partial result a moment before it.
@@ -148,26 +168,44 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   /// Approve one of Ada's proposed changes. Nothing was written until now — the
   /// server executes it here, then lets the agent carry on from the result.
   Future<void> _approve(AdaAction action) async {
+    if (ref.read(adaChatProvider).decidingActionIds.contains(action.id)) return;
     final messenger = ScaffoldMessenger.of(context);
+    // Felt with the tap, as the card turns to its decision; a rollback below
+    // plays the system error.
+    ref.read(hapticsProvider).play(HapticMoment.approveOne);
     final applied = await ref.read(adaChatProvider.notifier).approveAction(action.id);
     if (!mounted) return;
     if (applied) {
       _refreshAffected(action.resource);
     } else {
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       messenger.showSnackBar(
         SnackBar(content: Text("Couldn't apply “${proposalHeadline(action)}”.")),
       );
     }
   }
 
-  Future<void> _reject(AdaAction action) =>
-      ref.read(adaChatProvider.notifier).rejectAction(action.id);
+  Future<void> _reject(AdaAction action) async {
+    if (ref.read(adaChatProvider).decidingActionIds.contains(action.id)) return;
+    ref.read(hapticsProvider).play(HapticMoment.decline);
+    await ref.read(adaChatProvider.notifier).rejectAction(action.id);
+  }
 
   Future<void> _decideAll({required bool approve}) async {
     final messenger = ScaffoldMessenger.of(context);
+    final chat = ref.read(adaChatProvider);
+    final waiting = chat.outstandingActions.where((a) => !chat.decidingActionIds.contains(a.id)).length;
+    if (waiting == 0) return;
+    // One latch per proposal, then the thud; declining all is one unlatch.
+    if (approve) {
+      ref.read(hapticsProvider).play(HapticMoment.approveAll, count: waiting);
+    } else {
+      ref.read(hapticsProvider).play(HapticMoment.decline);
+    }
     final applied = await ref.read(adaChatProvider.notifier).decideAll(approve: approve);
     if (!mounted) return;
     if (approve) {
+      if (applied == 0) ref.read(hapticsProvider).play(HapticMoment.failure);
       _refreshAffected('task');
       messenger.showSnackBar(
         SnackBar(
@@ -185,7 +223,9 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
   /// created — only offered when the app knows exactly which one — then
   /// refreshes what the Plan's own Delete refreshes.
   Future<void> _undo(AdaAction action) async {
+    if (ref.read(adaChatProvider).decidingActionIds.contains(action.id)) return;
     final messenger = ScaffoldMessenger.of(context);
+    ref.read(hapticsProvider).play(HapticMoment.undo);
     final undone = await ref.read(adaChatProvider.notifier).undoAction(action.id);
     if (!mounted) return;
     if (undone) {
@@ -194,6 +234,7 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
         ..invalidate(weeklyCompletedProvider);
       unawaited(ref.read(reminderSchedulerProvider).reconcile(force: true));
     } else {
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       messenger.showSnackBar(
         const SnackBar(content: Text("Couldn't undo that. It's still on your plan.")),
       );
@@ -246,8 +287,29 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     if (mounted) _focus.requestFocus();
   }
 
+  /// Proposals arrive: one tick per arrival, only while this tab shows.
+  void _onChat(AdaChatState? prev, AdaChatState next) {
+    if (_onScreen && proposalsArrivedBetween(prev, next)) {
+      ref.read(hapticsProvider).play(HapticMoment.proposalsArrived);
+    }
+  }
+
+  /// Start listening latches once the mic is really open.
+  void _onVoice(VoiceInputState? prev, VoiceInputState next) {
+    if (!next.isActiveFor(this)) {
+      _voiceFelt = false;
+    } else if (next.isListeningFor(this) && !_voiceFelt) {
+      _voiceFelt = true;
+      ref.read(hapticsProvider).play(HapticMoment.voiceStart);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    _onScreen = TickerMode.valuesOf(context).enabled;
+    ref
+      ..listen(adaChatProvider, _onChat)
+      ..listen(voiceInputProvider, _onVoice);
     final chat = ref.watch(adaChatProvider);
     final voice = ref.watch(voiceInputProvider);
     final look = AdaLook.of(context);
@@ -405,6 +467,17 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
       ),
     );
   }
+}
+
+/// Whether [next] brings a card awaiting approval that [prev] did not have:
+/// a reply or a decision's follow-up with new proposals. Once per arrival,
+/// however many cards. A past chat opened from history starts from an empty
+/// thread, so its waiting cards are not an arrival.
+@visibleForTesting
+bool proposalsArrivedBetween(AdaChatState? prev, AdaChatState next) {
+  if (prev == null || prev.messages.isEmpty) return false;
+  final before = {for (final a in prev.outstandingActions) a.id};
+  return next.outstandingActions.any((a) => !before.contains(a.id));
 }
 
 /// `ada-empty`: Ada and her line centred in the space above four suggestions,

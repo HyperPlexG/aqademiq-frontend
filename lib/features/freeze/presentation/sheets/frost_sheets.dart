@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../domain/freeze_engine.dart';
 import '../../domain/freeze_models.dart';
@@ -171,6 +172,7 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
       title: start ? 'Starts at' : 'Ends at',
       sub: start ? '${_f.name} freezes from here' : '${_f.name} thaws here',
       minute: start ? _f.startMinute : (_f.endMinute % 1440),
+      step: HapticMoment.frostTimeStep,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -216,6 +218,8 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
             label: 'Save',
             enabled: canSave,
             onTap: () {
+              // A frost is a freeze for later: saving it sets like one.
+              ref.read(hapticsProvider).play(HapticMoment.frostSaved);
               controller.saveFrost(_f);
               Navigator.of(context).pop();
             },
@@ -322,7 +326,10 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
                   FzDayPicker(
                     days: _f.days,
                     label: FreezeText.days(_f.days),
-                    onChanged: (d) => setState(() => _f = _f.copyWith(days: d)),
+                    onChanged: (d) {
+                      ref.read(hapticsProvider).play(d.length > _f.days.length ? HapticMoment.frostDayOn : HapticMoment.frostDayOff);
+                      setState(() => _f = _f.copyWith(days: d));
+                    },
                   ),
                   if (_f.fromDay != null || _f.untilDay != null) ...[
                     const SizedBox(height: 8),
@@ -376,26 +383,35 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
 }
 
 /// The time dialog (fz-edit-time): hour and minute wheels, AM/PM, "Set ·".
-Future<int?> showFrostTimeDialog(BuildContext context, {required String title, required String sub, required int minute}) {
+/// [step] is what each wheel step feels like: a generic wheel tick unless the
+/// caller names its own (the frost editor's start time).
+Future<int?> showFrostTimeDialog(
+  BuildContext context, {
+  required String title,
+  required String sub,
+  required int minute,
+  HapticMoment step = HapticMoment.wheelStep,
+}) {
   return showDialog<int>(
     context: context,
     barrierColor: const Color(0x5C140F1C),
-    builder: (_) => _TimeDialog(title: title, sub: sub, minute: minute),
+    builder: (_) => _TimeDialog(title: title, sub: sub, minute: minute, step: step),
   );
 }
 
-class _TimeDialog extends StatefulWidget {
-  const _TimeDialog({required this.title, required this.sub, required this.minute});
+class _TimeDialog extends ConsumerStatefulWidget {
+  const _TimeDialog({required this.title, required this.sub, required this.minute, required this.step});
 
   final String title;
   final String sub;
   final int minute;
+  final HapticMoment step;
 
   @override
-  State<_TimeDialog> createState() => _TimeDialogState();
+  ConsumerState<_TimeDialog> createState() => _TimeDialogState();
 }
 
-class _TimeDialogState extends State<_TimeDialog> {
+class _TimeDialogState extends ConsumerState<_TimeDialog> {
   static const _step = 5;
   late int _h12 = (widget.minute ~/ 60) % 12 == 0 ? 12 : (widget.minute ~/ 60) % 12;
   late int _m = ((widget.minute % 60) ~/ _step) * _step;
@@ -421,7 +437,11 @@ class _TimeDialogState extends State<_TimeDialog> {
         controller: c,
         itemExtent: 36,
         physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: onChanged,
+        onSelectedItemChanged: (i) {
+          // One tick per step, under the governor's wheel rules.
+          ref.read(hapticsProvider).play(widget.step);
+          onChanged(i);
+        },
         childDelegate: ListWheelChildLoopingListDelegate(
           children: [
             for (var i = 0; i < count; i++)
@@ -632,6 +652,8 @@ class _ActiveFrost extends ConsumerWidget {
           onTap: () async {
             final hold = ref.read(freezeControllerProvider.notifier).lockedUntil(frost);
             if (hold != null) {
+              // The ice holds: the same knock as tapping Thaw in a deep freeze.
+              ref.read(hapticsProvider).play(HapticMoment.deepFreezeHolds);
               final root = fzRootContext(context);
               Navigator.of(context).pop();
               await showDeepHoldSheet(root, name: frost.name, until: hold);
@@ -714,6 +736,7 @@ class _EndFrost extends ConsumerWidget {
         FzBtn(
           label: session ? 'End it' : 'End for today',
           onTap: () {
+            ref.read(hapticsProvider).play(HapticMoment.frostEndEarly);
             ref.read(freezeControllerProvider.notifier).endEarly(frost.id);
             Navigator.of(context).pop(true);
           },

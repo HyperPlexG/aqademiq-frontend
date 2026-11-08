@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/enums.dart';
 import '../../../data/models/focus_session.dart';
 import '../../../data/repositories/focus_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../data/app_freeze_channel.dart';
 import '../data/freeze_store.dart';
 import '../domain/freeze_engine.dart';
@@ -104,6 +105,9 @@ class FreezeController extends Notifier<FreezeData> {
     if (wait > const Duration(hours: 6)) wait = const Duration(hours: 6);
     _refresh = Timer(wait, () {
       final pruned = FreezeEngine.prune(state, clock());
+      // A thaw ran out while Aqademiq is open: the ice sets again. The
+      // service stays silent in the background and during a session.
+      if (pruned.grants.length < state.grants.length) ref.read(hapticsProvider).play(HapticMoment.refreeze);
       state = pruned;
       unawaited(FreezeStore.instance.write(pruned));
       _schedule(pruned);

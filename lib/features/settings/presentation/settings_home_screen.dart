@@ -58,14 +58,17 @@ class SettingsHomeScreen extends ConsumerWidget {
     final picked = await showFzSheet<HapticSetting>(
       context,
       builder: (sheet) {
-        Widget option(HapticSetting level, String icon, String sub) => Padding(
+        Widget option(HapticSetting level, String icon) => Padding(
               padding: const EdgeInsets.only(bottom: 9),
               child: FzPick(
                 icon: icon,
                 label: level.label,
-                sub: sub,
+                sub: level.description,
                 selected: level == current,
-                onTap: () => Navigator.of(sheet).pop(level),
+                onTap: () {
+                  _playPreview(ref, level);
+                  Navigator.of(sheet).pop(level);
+                },
               ),
             );
         return Column(
@@ -73,14 +76,28 @@ class SettingsHomeScreen extends ConsumerWidget {
           children: [
             const FzSheetTitle('Haptics'),
             const SizedBox(height: 10),
-            option(HapticSetting.off, 'do_not_disturb_on', 'No vibration anywhere'),
-            option(HapticSetting.essential, 'vibration', 'Session start, end, and a thaw'),
-            option(HapticSetting.full, 'mi:graphic_eq', 'Every tap and toggle'),
+            option(HapticSetting.off, 'do_not_disturb_on'),
+            option(HapticSetting.essential, 'vibration'),
+            option(HapticSetting.full, 'mi:graphic_eq'),
           ],
         );
       },
     );
     if (picked != null) ref.read(hapticSettingProvider.notifier).set(picked);
+  }
+
+  /// Users choose by feel: each pick plays what that level feels like, whatever
+  /// the current setting (the preview tier always plays).
+  static void _playPreview(WidgetRef ref, HapticSetting level) {
+    final haptics = ref.read(hapticsProvider);
+    switch (level) {
+      case HapticSetting.off:
+        haptics.play(HapticMoment.previewOff);
+      case HapticSetting.essential:
+        haptics.play(HapticMoment.previewEssential, mode: ref.read(prismDefaultModeProvider));
+      case HapticSetting.full:
+        haptics.play(HapticMoment.previewFull);
+    }
   }
 
   static String _modeLabel(ThemeMode mode) => switch (mode) {
@@ -247,8 +264,8 @@ class SettingsHomeScreen extends ConsumerWidget {
                 onTap: () async {
                   final confirmed = await showDeleteAccountDialog(context);
                   if (confirmed != true) return;
+                  // The knock already played when the hold completed.
                   await ref.read(authRepositoryProvider).deleteAccount();
-                  ref.read(hapticsProvider).play(HapticMoment.deleteAccountDone);
                   if (context.mounted) context.go(Routes.welcome);
                 },
               ),

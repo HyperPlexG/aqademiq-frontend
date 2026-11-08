@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_toggle.dart';
 import '../../../settings/providers/prism_settings_provider.dart';
@@ -103,7 +104,7 @@ class _PrismPickerOverlay extends StatelessWidget {
 }
 
 /// A single selectable mode row inside the dropdown.
-class _ModeRow extends StatelessWidget {
+class _ModeRow extends ConsumerWidget {
   const _ModeRow({required this.mode, required this.active, required this.last});
 
   final _PrismMode mode;
@@ -111,11 +112,15 @@ class _ModeRow extends StatelessWidget {
   final bool last;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => Navigator.of(context).pop(mode.label),
+      onTap: () {
+        // Choosing a mode is choosing a feel. The active one changes nothing.
+        if (!active) ref.read(hapticsProvider).play(HapticMoment.prismPicked, mode: mode.label);
+        Navigator.of(context).pop(mode.label);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
         decoration: BoxDecoration(

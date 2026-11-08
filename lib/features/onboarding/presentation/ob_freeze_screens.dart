@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/data/app_freeze_channel.dart';
@@ -40,6 +41,10 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
   bool _asking = false;
   bool _moved = false;
 
+  /// Android: sent to Settings for a grant, so a return with both grants is
+  /// the student's own yes and gets the latch.
+  bool _sentToSettings = false;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +66,11 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
   Future<void> _refresh() async {
     final access = await ref.read(appFreezeChannelProvider).status();
     if (!mounted) return;
+    // Granted: latch once the system screen has closed. Nothing on decline.
+    if (_sentToSettings && access.authorized && !_access.authorized) {
+      _sentToSettings = false;
+      ref.read(hapticsProvider).play(HapticMoment.freezePermissionGranted);
+    }
     setState(() => _access = access);
     // Android: back from Settings with both grants — straight on to the apps.
     // Only while this step is on top: a resume while Prism or the loading
@@ -80,6 +90,8 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
     setState(() => _asking = true);
     final ok = await ref.read(appFreezeChannelProvider).requestAuthorization();
     if (!mounted) return;
+    // The system dialog has closed. Granted latches; declined is silent.
+    if (ok) ref.read(hapticsProvider).play(HapticMoment.freezePermissionGranted);
     setState(() => _asking = false);
     // Declined: no nagging — onboarding simply carries on without it.
     unawaited(context.push(ok ? Routes.obApps : Routes.obPrism));
@@ -93,6 +105,10 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
     final frosts = _draftFrosts(draft);
     final ready = frosts.length > 1 ? 'Two frosts are ready.' : 'One frost is ready.';
     final channel = ref.read(appFreezeChannelProvider);
+    void openSettings(String target) {
+      _sentToSettings = true;
+      unawaited(channel.openSettings(target));
+    }
 
     return OnboardingScaffold(
       activeStep: 8,
@@ -142,7 +158,7 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
             const SizedBox(height: 16),
             const FzClaim(icon: 'schedule', title: 'Runs without us', body: 'Frosts start even when Aqademiq is closed.'),
           ] else ...[
-            FreezeGrants(access: _access, onGrant: (t) => unawaited(channel.openSettings(t))),
+            FreezeGrants(access: _access, onGrant: openSettings),
             const SizedBox(height: 14),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -172,7 +188,7 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
               } else if (_access.authorized) {
                 _toApps();
               } else {
-                unawaited(channel.openSettings(_access.usageAccess ? 'overlay' : 'usage'));
+                openSettings(_access.usageAccess ? 'overlay' : 'usage');
               }
             },
           ),
@@ -340,13 +356,18 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
               mainAxisSpacing: 18,
               childAspectRatio: 0.78,
               children: [
-                for (final s in suggestions) _Tile(app: s.ref, on: ticked.contains(s.ref.id), onTap: () => setState(() {
+                for (final s in suggestions) _Tile(app: s.ref, on: ticked.contains(s.ref.id), onTap: () {
                       final next = {...ticked};
-                      if (!next.remove(s.ref.id)) next.add(s.ref.id);
-                      _ticked = next;
-                    })),
+                      final off = next.remove(s.ref.id);
+                      if (!off) next.add(s.ref.id);
+                      ref.read(hapticsProvider).play(off ? HapticMoment.pickAppOff : HapticMoment.pickAppOn);
+                      setState(() => _ticked = next);
+                    }),
                 for (final p in ticked.where((p) => !suggestions.any((s) => s.ref.id == p)))
-                  _Tile(app: apps.ref(p), on: true, onTap: () => setState(() => _ticked = {...ticked}..remove(p))),
+                  _Tile(app: apps.ref(p), on: true, onTap: () {
+                    ref.read(hapticsProvider).play(HapticMoment.pickAppOff);
+                    setState(() => _ticked = {...ticked}..remove(p));
+                  }),
               ],
             ),
           const SizedBox(height: 18),

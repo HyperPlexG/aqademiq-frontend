@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/subject.dart';
 import '../../../../data/repositories/subjects_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/mascot/ada_mascot.dart';
 import '../../../../shared/widgets/mood_blob.dart';
 import 'subject_bits.dart';
@@ -104,6 +105,11 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
   }
 
   bool get _isEdit => widget.existing != null;
+
+  /// Chips and segments: tick on a new option, nothing on the one already set.
+  void _chip({required bool changed}) {
+    if (changed) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+  }
 
   /// The target grade to persist, encoded into the single target_grade string:
   /// a letter for Letter mode, the raw number for GPA, or `n%` for percent.
@@ -338,7 +344,10 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
           if (i > 0) const SizedBox(width: 6),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _formatIdx = i),
+              onTap: () {
+                _chip(changed: i != _formatIdx);
+                setState(() => _formatIdx = i);
+              },
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 6),
@@ -371,7 +380,10 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
           if (i > 0) const SizedBox(width: 6),
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _gradeIdx = i),
+              onTap: () {
+                _chip(changed: i != _gradeIdx);
+                setState(() => _gradeIdx = i);
+              },
               behavior: HitTestBehavior.opaque,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 7),
@@ -451,7 +463,10 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
         for (var i = 0; i < _swatches.length; i++) ...[
           if (i > 0) const SizedBox(width: 9),
           GestureDetector(
-            onTap: () => setState(() => _colorIdx = i),
+            onTap: () {
+              _chip(changed: i != _colorIdx);
+              setState(() => _colorIdx = i);
+            },
             behavior: HitTestBehavior.opaque,
             child: Container(
               width: 26,
@@ -497,7 +512,11 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
     final selected = i == _moodIdx;
     final tone = kCubeTones[i];
     return GestureDetector(
-      onTap: () => setState(() => _moodIdx = i),
+      onTap: () {
+        // Feelings per subject: each melt cube has its own texture.
+        if (i != _moodIdx) ref.read(hapticsProvider).play(HapticMoment.feelingPick, step: i);
+        setState(() => _moodIdx = i);
+      },
       behavior: HitTestBehavior.opaque,
       child: Container(
         padding: const EdgeInsets.all(2.5),

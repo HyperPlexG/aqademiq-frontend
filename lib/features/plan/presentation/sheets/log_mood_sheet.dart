@@ -8,7 +8,7 @@ import '../../../../shared/widgets/mood_blob.dart';
 import '../../../../shared/widgets/primary_button.dart';
 import '../widgets/plan_sheet.dart';
 
-/// Result of [showLogMoodSheet]. [note] is null when the optional reflection
+/// Result of [showLogMoodSheet]. `note` is null when the optional reflection
 /// field was not shown; otherwise it is the trimmed text (may be empty).
 typedef LogMoodResult = ({int mood, String? note});
 

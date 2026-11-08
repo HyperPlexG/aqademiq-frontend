@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/auth/auth_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../onboarding/onboarding_gate.dart';
@@ -150,7 +151,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               const SizedBox(height: 28),
               OtpField(
                 autofocus: true,
-                onChanged: (v) => setState(() => _code = v),
+                onChanged: (v) {
+                  // A tick per digit added; deleting is silent.
+                  if (v.length > _code.length) ref.read(hapticsProvider).play(HapticMoment.otpDigit);
+                  setState(() => _code = v);
+                },
                 onCompleted: (v) {
                   setState(() => _code = v);
                   if (!busy) unawaited(_verify());

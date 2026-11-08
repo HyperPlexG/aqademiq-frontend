@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../data/models/weekly_report.dart';
 import '../../../data/repositories/weekly_report_repository.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../freeze/domain/freeze_models.dart';
 import '../../freeze/providers/freeze_controller.dart';
@@ -106,6 +107,7 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
     // Held a little longer, so the student sees it took.
     _shotTimer?.cancel();
     _shotTimer = Timer(_shotHold, _hideShot);
+    ref.read(hapticsProvider).play(HapticMoment.copied);
     setState(() => _tagCopied = true);
   }
 
@@ -178,34 +180,48 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
   }
 
   Widget _content(BuildContext context, AsyncValue<WeeklyReport> week, FreezeData freeze) {
-    return week.when(
-      loading: () => _Shell(
+    // The drilling beat sits at the same place in the tree while loading and
+    // while the week waits out the minimum drill, so the core freezes in once
+    // (and its drill haptic with it) instead of restarting when the data lands.
+    return FutureBuilder<void>(
+      future: _drilled,
+      builder: (context, snap) {
+        final drilled = snap.connectionState == ConnectionState.done;
+        return week.when(
+          loading: () => _drilling(context, const []),
+          error: (_, _) => _Shell(
+            pageCount: 1,
+            page: 0,
+            onClose: () => _close(context),
+            child: _Failed(onRetry: () => ref.invalidate(weeklyReportProvider)),
+          ),
+          data: (report) => drilled ? _story(context, report, freeze) : _drilling(context, report.days),
+        );
+      },
+    );
+  }
+
+  Widget _drilling(BuildContext context, List<ReportDay> days) => _Shell(
         pageCount: _maxBeats,
         page: 0,
         onClose: () => _close(context),
-        child: const BeatDrilling(),
-      ),
-      error: (_, _) => _Shell(
-        pageCount: 1,
-        page: 0,
-        onClose: () => _close(context),
-        child: _Failed(onRetry: () => ref.invalidate(weeklyReportProvider)),
-      ),
-      data: (report) => FutureBuilder<void>(
-        future: _drilled,
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return _Shell(
-              pageCount: _maxBeats,
-              page: 0,
-              onClose: () => _close(context),
-              child: BeatDrilling(days: report.days),
-            );
-          }
-          return _story(context, report, freeze);
-        },
-      ),
-    );
+        child: BeatDrilling(days: days),
+      );
+
+  /// A page turn ticks. Beat 3 (the hero) is still, the numeral lands with a
+  /// thud, and the thawed cubes crack once each.
+  void _playArrival(Widget beat) {
+    final haptics = ref.read(hapticsProvider);
+    switch (beat) {
+      case BeatCore():
+        return;
+      case BeatNumeral():
+        haptics.play(HapticMoment.coreNumeral);
+      case BeatThawed(:final thaws):
+        haptics.play(HapticMoment.coreThawedCubes, count: thaws.fold(0, (a, b) => a + b));
+      default:
+        haptics.play(HapticMoment.coreAdvance);
+    }
   }
 
   Widget _story(BuildContext context, WeeklyReport report, FreezeData freeze) {
@@ -222,7 +238,10 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
           : null,
       child: PageView(
         controller: _pager,
-        onPageChanged: (i) => setState(() => _page = i),
+        onPageChanged: (i) {
+          if (i != _page) _playArrival(beats[i]);
+          setState(() => _page = i);
+        },
         children: beats,
       ),
     );
@@ -264,7 +283,10 @@ class _WeeklyReportScreenState extends ConsumerState<WeeklyReportScreen> {
       if (texture.isNotEmpty) BeatTexture(rows: texture),
       BeatLanding(
         isEmptyWeek: r.isEmpty,
-        onKeep: () => _close(context),
+        onKeep: () {
+          ref.read(hapticsProvider).play(HapticMoment.coreAccept);
+          _close(context);
+        },
         onShare: () => unawaited(showShareShapeSheet(context, r)),
         onDismiss: () => _close(context),
       ),

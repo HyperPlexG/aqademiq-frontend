@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ice_timer.dart';
+import '../../../shared/widgets/hold_to_confirm.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../../shared/widgets/settings_row.dart';
@@ -298,11 +300,11 @@ class _ThawAllState extends ConsumerState<_ThawAll> {
       children: [
         const FzSheetTitle('Thaw everything'),
         const FzSheetBody("Every frost stands down until you're back. Never open stays frozen.", bottom: 14),
-        FzPick(icon: 'today', label: 'Just today', sub: 'Back tomorrow at ${FreezeText.clock(morning)}', selected: _pick == 0, onTap: () => setState(() => _pick = 0)),
+        FzPick(icon: 'today', label: 'Just today', sub: 'Back tomorrow at ${FreezeText.clock(morning)}', selected: _pick == 0, haptic: HapticMoment.chipSelect, onTap: () => setState(() => _pick = 0)),
         const SizedBox(height: 9),
-        FzPick(icon: 'date_range', label: 'A week', sub: 'Back in 7 days', selected: _pick == 1, onTap: () => setState(() => _pick = 1)),
+        FzPick(icon: 'date_range', label: 'A week', sub: 'Back in 7 days', selected: _pick == 1, haptic: HapticMoment.chipSelect, onTap: () => setState(() => _pick = 1)),
         const SizedBox(height: 9),
-        FzPick(icon: 'all_inclusive', label: 'Until I bring it back', sub: 'No end date', selected: _pick == 2, onTap: () => setState(() => _pick = 2)),
+        FzPick(icon: 'all_inclusive', label: 'Until I bring it back', sub: 'No end date', selected: _pick == 2, haptic: HapticMoment.chipSelect, onTap: () => setState(() => _pick = 2)),
         if (deep != null && deep.end != null) ...[
           const SizedBox(height: 14),
           Container(
@@ -329,9 +331,17 @@ class _ThawAllState extends ConsumerState<_ThawAll> {
           ),
         ],
         const SizedBox(height: 14),
-        PrimaryButton(
-          label: deep != null ? 'Thaw everything else' : 'Thaw everything',
-          onPressed: () {
+        // The heaviest action in App freeze gets the only hold-to-confirm: a
+        // ratchet over 1.2 s, then a crack and a melt.
+        HoldToConfirm(
+          label: deep != null ? 'Hold to thaw everything else' : 'Hold to thaw everything',
+          duration: thawEverythingHoldTime,
+          holdMoment: HapticMoment.thawEverythingHold,
+          doneMoment: HapticMoment.thawEverythingDone,
+          background: colors.ink,
+          fill: kFzIce,
+          foreground: Colors.white,
+          onConfirmed: () {
             final root = fzRootContext(context);
             Navigator.of(context).pop();
             unawaited(root.push<ThawGrant>(
@@ -430,6 +440,7 @@ class ThawSettingsScreen extends ConsumerWidget {
                       label: 'Standard',
                       sub: '10 seconds, every time',
                       selected: thaw.resistance == ThawResistance.standard,
+                      haptic: HapticMoment.resistancePick,
                       onTap: () {
                         c.setThawSettings(thaw.copyWith(resistance: ThawResistance.standard));
                         Navigator.of(sheet).pop();
@@ -441,6 +452,7 @@ class ThawSettingsScreen extends ConsumerWidget {
                       label: 'Increasing',
                       sub: 'Adds 10 seconds each thaw, up to a minute. Resets each morning.',
                       selected: thaw.resistance == ThawResistance.increasing,
+                      haptic: HapticMoment.resistancePick,
                       onTap: () {
                         c.setThawSettings(thaw.copyWith(resistance: ThawResistance.increasing));
                         Navigator.of(sheet).pop();
@@ -467,7 +479,11 @@ class ThawSettingsScreen extends ConsumerWidget {
                 if (m != ThawSettings.lengths.first) const SizedBox(width: 8),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => c.setThawSettings(thaw.copyWith(minutes: m)),
+                    onTap: () {
+                      // A chip: a tick on change, silent on the chosen one.
+                      if (m != thaw.minutes) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                      c.setThawSettings(thaw.copyWith(minutes: m));
+                    },
                     child: Container(
                       height: 36,
                       alignment: Alignment.center,

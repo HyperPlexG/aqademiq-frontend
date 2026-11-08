@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/domain/freeze_engine.dart';
@@ -73,7 +74,15 @@ class _ObHoursScreenState extends ConsumerState<ObHoursScreen> {
             style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.6, color: colors.textMed),
           ),
           const SizedBox(height: 18),
-          FzDayPicker(days: _days, label: dayLabel, onChanged: (d) => setState(() => _days = d)),
+          FzDayPicker(
+            days: _days,
+            label: dayLabel,
+            onChanged: (d) {
+              // A day on latches, a day off unlatches.
+              ref.read(hapticsProvider).play(d.length > _days.length ? HapticMoment.studyDayOn : HapticMoment.studyDayOff);
+              setState(() => _days = d);
+            },
+          ),
           const SizedBox(height: 8),
           FzWell(
             padding: const EdgeInsets.only(left: 16, right: 12),

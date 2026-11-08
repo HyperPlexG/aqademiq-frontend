@@ -1,9 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_text.dart';
+import '../../services/haptics/haptics_service.dart';
 import '../icons/aq_icon.dart';
 import 'ic.dart';
 
@@ -23,7 +25,10 @@ const Set<String> _kGlyphTags = {
 /// tag's task glyph (built-in tags) or a dot, with an optional ✕; 1.5 solid or
 /// dashed border. Used in forms/Settings (the timeline task row uses a
 /// borderless inline tag instead).
-class TagChip extends StatelessWidget {
+///
+/// Picking a chip that isn't already [active] ticks (haptics §4, "Chips").
+/// Re-tapping the active one and the dashed "+ New" action stay silent.
+class TagChip extends ConsumerWidget {
   const TagChip({
     super.key,
     required this.label,
@@ -42,7 +47,7 @@ class TagChip extends StatelessWidget {
   final VoidCallback? onRemove;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final c = color;
@@ -68,8 +73,14 @@ class TagChip extends StatelessWidget {
       );
     }
 
+    final onTap = this.onTap;
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap == null
+          ? null
+          : () {
+              if (!active && !dashed) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+              onTap();
+            },
       child: CustomPaint(
         painter: _ChipBorderPainter(border: borderColor, fill: fill, dashed: dashed),
         child: SizedBox(

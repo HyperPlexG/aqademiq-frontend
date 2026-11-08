@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/ic.dart';
@@ -109,6 +110,8 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
             AppCard(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               onTap: () {
+                // The mode's own Prism pattern, alongside its audio preview.
+                ref.read(hapticsProvider).play(HapticMoment.meetPrism, mode: mode.name);
                 ref.read(onboardingProvider.notifier).setPrismMode(mode.name);
                 // This pick doubles as the persisted default mode, and the
                 // soundscape previews live so the choice is audible.

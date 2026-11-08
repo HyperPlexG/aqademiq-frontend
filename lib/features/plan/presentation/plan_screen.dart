@@ -45,6 +45,7 @@ import 'widgets/plan_header.dart';
 import 'widgets/plan_list_bits.dart';
 import 'widgets/plan_task_card.dart';
 import 'widgets/plan_task_expanded_card.dart';
+import 'widgets/swipe_haptics.dart';
 
 /// PLAN_TIMELINE and its state variants (FRAMES `plan-timeline`, `plan-list`,
 /// `plan-breakdown`, `plan-anytime/planned-collapsed`, `plan-otherday`).
@@ -62,6 +63,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
   bool _breakingDown = false;
 
   Future<void> _add() async {
+    ref.read(hapticsProvider).play(HapticMoment.quickAddOpen);
     final result = await showQuickAddSheet(context);
     if (result == null || !mounted) return;
     if (result.details) {
@@ -127,6 +129,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
 
   /// Open the full Add-task form pre-bucketed to [part] (list-view group "+").
   void _addToBucket(DayPart part) {
+    ref.read(hapticsProvider).play(HapticMoment.quickAddOpen);
     ref.read(taskDraftProvider.notifier).set(TaskDraft(dayPart: part));
     unawaited(context.push(Routes.addTask));
   }
@@ -166,8 +169,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           // On commit, and only after it lands — distinct from the ramp detents
           // that preceded it inside the sheet.
           ref.read(hapticsProvider).play(HapticMoment.moodSave);
-          ref.invalidate(moodWeekProvider);
-          ref.invalidate(streakProvider);
+          ref
+            ..invalidate(moodWeekProvider)
+            ..invalidate(streakProvider);
         }
       case PlanMenuResult.groupingList:
         ref.read(planViewModeProvider.notifier).set(PlanViewMode.list);
@@ -207,7 +211,13 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           PlanDateStrip(
             selected: selected,
             today: AppDate.today(),
-            onSelect: dateCtrl.select,
+            onSelect: (d) {
+              // The strip is a segmented row of days: tick on a new day only.
+              if (!AppDate.sameDay(d, selected)) {
+                ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+              }
+              dateCtrl.select(d);
+            },
           ),
           if (guest) ...[
             // Account first, then set-up — the same path as the Ada and Stats
@@ -555,6 +565,8 @@ class _SwipeableTask extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onOverflow;
 
+  static const _extentRatio = 0.34;
+
   @override
   Widget build(BuildContext context) {
     // v11 task-swipe: two 62-wide actions (124 of a ~370 card), the last
@@ -563,7 +575,7 @@ class _SwipeableTask extends StatelessWidget {
       key: ValueKey(task.id),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.34,
+        extentRatio: _extentRatio,
         children: [
           CustomSlidableAction(
             onPressed: (_) => onLater(),
@@ -582,7 +594,10 @@ class _SwipeableTask extends StatelessWidget {
           ),
         ],
       ),
-      child: GestureDetector(onLongPress: onOverflow, child: child),
+      child: SwipeHaptics(
+        extentRatio: _extentRatio,
+        child: GestureDetector(onLongPress: onOverflow, child: child),
+      ),
     );
   }
 }

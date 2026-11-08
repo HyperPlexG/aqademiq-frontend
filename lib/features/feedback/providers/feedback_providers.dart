@@ -165,6 +165,9 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
       hasVoted: voted,
       votes: post.votes + (voted ? 1 : -1),
     );
+    // A vote feels like a vote: latch on, unlatch off, with the optimistic
+    // count. A rollback below plays the system error.
+    ref.read(hapticsProvider).play(voted ? HapticMoment.feedbackUpvote : HapticMoment.feedbackUnvote);
     state = AsyncData([
       for (final p in previous)
         if (p.id == post.id) optimistic else p,
@@ -174,13 +177,8 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
           .read(feedbackRepositoryProvider)
           .setVote(post.id, voted: voted);
       // The notifier may have been recreated while the request was in flight
-      // (Riverpod 3 recreates on invalidate) — touching state then throws, and
-      // so does reading a provider off a disposed ref, which is why the haptic
-      // sits below this guard rather than above it.
+      // (Riverpod 3 recreates on invalidate) — touching state then throws.
       if (!ref.mounted) return;
-      // A vote feels like a vote: latch on, unlatch off. On the server's answer,
-      // which is also when the count on screen changes.
-      ref.read(hapticsProvider).play(result.voted ? HapticMoment.feedbackUpvote : HapticMoment.feedbackUnvote);
       state = AsyncData([
         for (final p in state.value ?? previous)
           if (p.id == post.id)
@@ -190,6 +188,7 @@ class FeedbackPostsController extends AsyncNotifier<List<FeedbackPost>> {
       ]);
     } on Object catch (_) {
       if (!ref.mounted) return;
+      ref.read(hapticsProvider).play(HapticMoment.failure);
       // Roll back only this post (within the *current* list) so concurrent
       // optimistic votes / refreshed comment counts are not clobbered.
       state = AsyncData([

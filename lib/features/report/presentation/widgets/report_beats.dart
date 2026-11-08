@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_mood.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../core/utils/hex_color.dart';
 import '../../../../data/models/weekly_report.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/icons/aq_icon.dart';
 import '../../../../shared/mascot/ada_mascot.dart';
 import '../../../../shared/widgets/ic.dart';
@@ -151,13 +153,27 @@ class _CoreWithLabels extends StatelessWidget {
 /// Not a spinner. The same column the story opens with, so arriving at beat 3
 /// is continuous rather than a swap — and so the wait is the drilling, which is
 /// the one place in this feature where making someone wait is the point.
-class BeatDrilling extends StatelessWidget {
+class BeatDrilling extends ConsumerStatefulWidget {
   const BeatDrilling({super.key, this.days = const []});
 
   final List<ReportDay> days;
 
   @override
+  ConsumerState<BeatDrilling> createState() => _BeatDrillingState();
+}
+
+class _BeatDrillingState extends ConsumerState<BeatDrilling> {
+  @override
+  void initState() {
+    super.initState();
+    // The drill starts with the core's freeze-in, which starts in this same
+    // frame; its rumble (1.2 s) ends in a latch as the core locks (1.25 s).
+    ref.read(hapticsProvider).play(HapticMoment.coreFreezesIn);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final days = widget.days;
     // Before the data lands there are no days, so seven blanks stand in: the
     // tube is drawn empty and fills in place.
     final shown = days.isEmpty

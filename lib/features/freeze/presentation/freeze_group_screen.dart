@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/app_toggle.dart';
 import '../domain/freeze_models.dart';
@@ -100,7 +101,10 @@ class FreezeGroupScreen extends ConsumerWidget {
             sub: p == phone && group == FreezeGroup.alwaysOpen ? 'Calls always get through' : null,
             onRemove: p == phone && group == FreezeGroup.alwaysOpen
                 ? null
-                : () => save(set.copyWith(packages: set.packages.where((x) => x != p).toList())),
+                : () {
+                    ref.read(hapticsProvider).play(HapticMoment.chooseAppOff);
+                    save(set.copyWith(packages: set.packages.where((x) => x != p).toList()));
+                  },
           ),
       FzListRow(onAdd: add, last: true, addLabel: apps.ios ? 'Choose apps or sites' : 'Add apps or sites'),
     ];

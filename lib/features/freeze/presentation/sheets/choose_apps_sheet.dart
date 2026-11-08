@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../data/app_freeze_channel.dart';
@@ -76,7 +77,9 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
 
   void _toggle(String package) {
     final list = [..._set.packages];
-    if (!list.remove(package)) list.add(package);
+    final added = !list.remove(package);
+    if (added) list.add(package);
+    ref.read(hapticsProvider).play(added ? HapticMoment.chooseAppOn : HapticMoment.chooseAppOff);
     setState(() => _set = _set.copyWith(packages: list));
   }
 
@@ -324,13 +327,16 @@ class _AppListState extends ConsumerState<_AppList> {
                   final on = _selected.contains(a.package);
                   return GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => setState(() {
-                      if (on) {
-                        _selected.remove(a.package);
-                      } else {
-                        _selected.add(a.package);
-                      }
-                    }),
+                    onTap: () {
+                      ref.read(hapticsProvider).play(on ? HapticMoment.chooseAppOff : HapticMoment.chooseAppOn);
+                      setState(() {
+                        if (on) {
+                          _selected.remove(a.package);
+                        } else {
+                          _selected.add(a.package);
+                        }
+                      });
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 7),
                       child: Row(

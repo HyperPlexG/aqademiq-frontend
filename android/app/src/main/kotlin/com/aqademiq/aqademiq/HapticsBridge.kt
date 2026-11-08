@@ -11,6 +11,7 @@ import android.os.VibrationAttributes
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.provider.Settings
 import android.view.HapticFeedbackConstants
 import android.view.View
 import io.flutter.plugin.common.MethodChannel
@@ -306,6 +307,99 @@ object HapticsBridge {
         try {
             vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1), 0)
         } catch (_: Exception) {
+        }
+    }
+
+    // ─── the shield ────────────────────────────────────────────────────────
+
+    /*
+     * The Android shield is a native activity that runs without Dart, so its
+     * two moments (spec §4-A, both Full tier) are played here, and the checks
+     * the Dart governor would make are made here too: the Full setting, and
+     * Low Power, heat or Remove animations dropping Full to Essential.
+     */
+
+    /** Knock (THUD .6, THUD .45 @95; LOW_TICK where THUD is missing), [times] knocks, scaled. */
+    fun playShieldKnock(context: Context, strength: Float, times: Int = 1) {
+        if (!shieldMayPlay(context)) return
+        val device = resolveVibrator(context) ?: return
+        if (!device.hasVibrator()) return
+        val k = strength.coerceIn(0f, 1f)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val prim = intArrayOf(
+                    VibrationEffect.Composition.PRIMITIVE_THUD,
+                    VibrationEffect.Composition.PRIMITIVE_LOW_TICK,
+                ).firstOrNull { device.areAllPrimitivesSupported(it) }
+                if (prim != null) {
+                    val c = VibrationEffect.startComposition()
+                    repeat(times.coerceAtLeast(1)) { i ->
+                        c.addPrimitive(prim, 0.6f * k, if (i == 0) 0 else 180)
+                        c.addPrimitive(prim, 0.45f * k, 95)
+                    }
+                    shieldVibrate(device, c.compose())
+                    return
+                }
+            }
+            shieldOneShot(device, 70L, k)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** Crystallise, six grains: TICK ×5 (.3 → .62; 70/55/42/32 apart), CLICK 1 @24, scaled. */
+    fun playShieldCrystallise(context: Context, strength: Float) {
+        if (!shieldMayPlay(context)) return
+        val device = resolveVibrator(context) ?: return
+        if (!device.hasVibrator()) return
+        val k = strength.coerceIn(0f, 1f)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val tick = VibrationEffect.Composition.PRIMITIVE_TICK
+                val click = VibrationEffect.Composition.PRIMITIVE_CLICK
+                if (device.areAllPrimitivesSupported(tick, click)) {
+                    val gaps = intArrayOf(70, 55, 42, 32, 24)
+                    val c = VibrationEffect.startComposition()
+                    for (i in 0 until 5) c.addPrimitive(tick, (0.3f + 0.4f * i / 5f) * k, if (i == 0) 0 else gaps[i - 1])
+                    c.addPrimitive(click, k, gaps[4])
+                    shieldVibrate(device, c.compose())
+                    return
+                }
+            }
+            shieldOneShot(device, 45L, k)
+        } catch (_: Exception) {
+        }
+    }
+
+    /** The app's setting, from Flutter's shared_preferences store. Unset is Essential. */
+    private fun shieldMayPlay(context: Context): Boolean {
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        if (prefs.getString("flutter.haptics_level", null) != "full") return false
+        val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        if (power?.isPowerSaveMode == true) return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            (power?.currentThermalStatus ?: 0) >= PowerManager.THERMAL_STATUS_SEVERE
+        ) {
+            return false
+        }
+        val animations = Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+        return animations != 0f
+    }
+
+    private fun shieldVibrate(device: Vibrator, effect: VibrationEffect) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            device.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_TOUCH))
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            device.vibrate(effect)
+        }
+    }
+
+    private fun shieldOneShot(device: Vibrator, ms: Long, k: Float) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val amplitude = if (device.hasAmplitudeControl()) (255 * k).toInt().coerceIn(1, 255) else VibrationEffect.DEFAULT_AMPLITUDE
+            shieldVibrate(device, VibrationEffect.createOneShot(ms, amplitude))
+        } else {
+            @Suppress("DEPRECATION")
+            device.vibrate(ms)
         }
     }
 

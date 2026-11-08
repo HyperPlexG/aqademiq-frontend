@@ -85,8 +85,9 @@ class _MoodEveningScreenState extends ConsumerState<MoodEveningScreen> {
     // On commit. The note field itself is explicitly zero (§7, Mood) — the
     // keyboard owns typing.
     ref.read(hapticsProvider).play(HapticMoment.moodSave);
-    ref.invalidate(moodWeekProvider);
-    ref.invalidate(streakProvider);
+    ref
+      ..invalidate(moodWeekProvider)
+      ..invalidate(streakProvider);
     context.go(Routes.plan);
   }
 

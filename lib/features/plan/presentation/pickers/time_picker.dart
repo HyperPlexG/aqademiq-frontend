@@ -224,10 +224,20 @@ class _TimeWheelState extends ConsumerState<_TimeWheel> {
       FixedExtentScrollController(initialItem: widget.initialIndex);
   late int _selected = widget.initialIndex;
 
+  /// The value moved during this scroll, so its settling earns a landing tick.
+  bool _moved = false;
+
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  /// The wheel has settled: the final value plays at full strength.
+  bool _onScrollEnd(ScrollEndNotification n) {
+    if (_moved) ref.read(hapticsProvider).play(HapticMoment.wheelStep, landed: true);
+    _moved = false;
+    return false;
   }
 
   @override
@@ -235,35 +245,39 @@ class _TimeWheelState extends ConsumerState<_TimeWheel> {
     final colors = context.colors;
     return SizedBox(
       height: 120,
-      child: ListWheelScrollView.useDelegate(
-        controller: _controller,
-        itemExtent: 40,
-        perspective: 0.004,
-        physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: (i) {
-          // Uniform tick per item. A fast fling would rattle, so the governor
-          // suppresses runs of rapid detents (§4.4) rather than this widget
-          // trying to guess at scroll velocity.
-          ref.read(hapticsProvider).play(HapticMoment.wheelStep);
-          setState(() => _selected = i);
-          widget.onChanged(i);
-        },
-        childDelegate: ListWheelChildBuilderDelegate(
-          childCount: widget.count,
-          builder: (context, i) {
-            final selected = i == _selected;
-            return Center(
-              child: Text(
-                widget.label(i),
-                style: AppText.sans(
-                  size: selected ? 28 : 17,
-                  weight: selected ? FontWeight.w800 : FontWeight.w600,
-                  height: 1,
-                  color: selected ? colors.text : const Color(0xFFC8C4BE),
-                ),
-              ),
-            );
+      child: NotificationListener<ScrollEndNotification>(
+        onNotification: _onScrollEnd,
+        child: ListWheelScrollView.useDelegate(
+          controller: _controller,
+          itemExtent: 40,
+          perspective: 0.004,
+          physics: const FixedExtentScrollPhysics(),
+          onSelectedItemChanged: (i) {
+            // Uniform tick per item. A fast fling would rattle, so the governor
+            // suppresses runs of rapid detents (§4.4) rather than this widget
+            // trying to guess at scroll velocity.
+            ref.read(hapticsProvider).play(HapticMoment.wheelStep);
+            _moved = true;
+            setState(() => _selected = i);
+            widget.onChanged(i);
           },
+          childDelegate: ListWheelChildBuilderDelegate(
+            childCount: widget.count,
+            builder: (context, i) {
+              final selected = i == _selected;
+              return Center(
+                child: Text(
+                  widget.label(i),
+                  style: AppText.sans(
+                    size: selected ? 28 : 17,
+                    weight: selected ? FontWeight.w800 : FontWeight.w600,
+                    height: 1,
+                    color: selected ? colors.text : const Color(0xFFC8C4BE),
+                  ),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -271,15 +285,21 @@ class _TimeWheelState extends ConsumerState<_TimeWheel> {
 }
 
 /// AM/PM toggle — tap to switch. The active half is accent-filled, 17/800.
-class _AmPmToggle extends StatelessWidget {
+class _AmPmToggle extends ConsumerWidget {
   const _AmPmToggle({required this.pm, required this.onChanged});
 
   final bool pm;
   final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    // A segmented control: tick on a change, nothing on the half already set.
+    void pick({required bool toPm}) {
+      if (toPm != pm) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+      onChanged(toPm);
+    }
+
     Widget seg({required String label, required bool active, required VoidCallback onTap}) {
       return Semantics(
         button: true,
@@ -309,9 +329,9 @@ class _AmPmToggle extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        seg(label: 'AM', active: !pm, onTap: () => onChanged(false)),
+        seg(label: 'AM', active: !pm, onTap: () => pick(toPm: false)),
         const SizedBox(height: 6),
-        seg(label: 'PM', active: pm, onTap: () => onChanged(true)),
+        seg(label: 'PM', active: pm, onTap: () => pick(toPm: true)),
       ],
     );
   }

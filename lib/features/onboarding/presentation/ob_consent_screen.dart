@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../core/utils/launch_external.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
@@ -93,7 +94,11 @@ class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
             title: 'Yes, I consent',
             subtitle: 'Aqademiq can collect and use my info',
             selected: _consent == true,
-            onTap: () => setState(() => _consent = true),
+            onTap: () {
+              // Agreeing latches; declining is not marked.
+              if (_consent != true) ref.read(hapticsProvider).play(HapticMoment.consentAgree);
+              setState(() => _consent = true);
+            },
           ),
           const SizedBox(height: 8),
           _ConsentCard(

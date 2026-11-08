@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../services/haptics/haptics_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text.dart';
@@ -13,6 +12,7 @@ import '../../../../data/models/tag.dart';
 import '../../../../data/models/tag_resolve.dart';
 import '../../../../data/models/task.dart';
 import '../../../../data/repositories/tags_repository.dart';
+import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/widgets/calendar_grid.dart';
 import '../../../../shared/widgets/ic.dart';
 import '../../../../shared/widgets/primary_button.dart';
