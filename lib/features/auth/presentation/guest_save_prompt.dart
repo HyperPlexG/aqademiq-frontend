@@ -17,7 +17,7 @@ class GuestSavePrompt extends StatelessWidget {
     final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: colors.page,
       body: const Stack(
         children: [
           Positioned.fill(child: SafeArea(child: _SessionDoneBackdrop())),

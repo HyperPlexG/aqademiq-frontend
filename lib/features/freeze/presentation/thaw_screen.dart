@@ -16,15 +16,20 @@ import 'widgets/fz_widgets.dart';
 
 /// What a thaw is for: one app ([target] is its package / iOS token id), or
 /// [ThawGrant.allApps]. [standDown] makes it Thaw everything (settings) —
-/// "Takes the usual breath first."
+/// "Takes the usual breath first." [stopNow] ends a Freeze now that has no end
+/// ("Until I stop"), after the same breath, and touches nothing else.
 @immutable
 class ThawRequest {
-  const ThawRequest({required this.target, this.label, this.standDown = false, this.standDownUntil});
+  const ThawRequest({required this.target, this.label, this.standDown = false, this.standDownUntil, this.stopNow = false});
 
   final String target;
   final String? label;
   final bool standDown;
   final DateTime? standDownUntil;
+  final bool stopNow;
+
+  /// Ends with the breath alone — no "how long" step after it.
+  bool get endsOnBreath => standDown || stopNow;
 }
 
 /// The breath (fz-thaw-pause, -more), then how long (fz-thaw-minutes).
@@ -71,7 +76,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
         .where((a) => a.deep && a.end != null && (target == ThawGrant.allApps || ios || a.covers(target)))
         .toList();
     final deep = holding.isEmpty ? null : holding.reduce((a, b) => b.end!.isAfter(a.end!) ? b : a);
-    if (deep != null && deep.end != null && !widget.request.standDown) {
+    if (deep != null && deep.end != null && !widget.request.endsOnBreath) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         // Ice holding, not an error.
@@ -121,6 +126,11 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
   void _done() {
     final c = ref.read(freezeControllerProvider.notifier);
     ref.read(hapticsProvider).play(HapticMoment.thawConfirmed);
+    if (widget.request.stopNow) {
+      c.stopNow();
+      Navigator.of(context).pop();
+      return;
+    }
     if (widget.request.standDown) {
       c.standDown(widget.request.standDownUntil);
       Navigator.of(context).pop();
@@ -148,9 +158,16 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
 
   Widget _breathBody(bool ready) {
     final progress = _total == 0 ? 1.0 : 1 - _left / _total;
-    final question = widget.request.standDown
-        ? 'Still want everything thawed in $_left seconds?'
-        : 'Still want $_who in $_left seconds?';
+    final question = widget.request.stopNow
+        ? 'Still want to stop freezing in $_left seconds?'
+        : widget.request.standDown
+            ? 'Still want everything thawed in $_left seconds?'
+            : 'Still want $_who in $_left seconds?';
+    final readyLabel = widget.request.stopNow
+        ? 'Stop freezing'
+        : widget.request.standDown
+            ? 'Thaw everything'
+            : 'Thaw';
     return Column(
       children: [
         Expanded(
@@ -194,11 +211,11 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
         Semantics(
           button: true,
           enabled: ready,
-          label: ready ? 'Thaw' : 'Thaw in $_left seconds',
+          label: ready ? readyLabel : 'Thaw in $_left seconds',
           child: GestureDetector(
             onTap: ready
                 ? () {
-                    if (widget.request.standDown) {
+                    if (widget.request.endsOnBreath) {
                       _done();
                     } else {
                       setState(() => _choosing = true);
@@ -224,7 +241,7 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                     ),
                     Center(
                       child: Text(
-                        ready ? (widget.request.standDown ? 'Thaw everything' : 'Thaw') : 'Thaw in ${_left}s',
+                        ready ? readyLabel : 'Thaw in ${_left}s',
                         style: AppText.sans(size: 17, weight: ready ? FontWeight.w800 : FontWeight.w600, color: ready ? kFrostInk : kFrostSub),
                       ),
                     ),
@@ -243,6 +260,8 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
   Widget _minutesBody() {
     final apps = ref.watch(freezeAppsProvider);
     final target = widget.request.target;
+    // Token views need what App freeze itself needs on iOS (16+, entitled).
+    final tokenViews = ref.watch(freezeAccessProvider).value?.supported ?? false;
     Widget step(String icon, VoidCallback onTap) => Semantics(
           button: true,
           label: icon == 'add' ? 'More' : 'Less',
@@ -270,6 +289,11 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                 children: [
                   if (target != ThawGrant.allApps && !apps.ios) ...[
                     FzAppIcon(app: apps.ref(target), size: 40, glyph: apps.glyphOf(target)),
+                    const SizedBox(width: 10),
+                  ] else if (apps.ios && FzAppRef.isTokenId(target) && tokenViews) ...[
+                    // iOS: the pick the shield (or a Frozen tile) named, drawn
+                    // by the system — we still don't know its name.
+                    FzAppIcon(app: FzAppRef.token(target), size: 40),
                     const SizedBox(width: 10),
                   ],
                   Flexible(

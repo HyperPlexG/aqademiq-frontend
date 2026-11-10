@@ -8,6 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
 
 /// FRAMES `welcome` — Jump in / Sign up / Sign in fork.
@@ -52,7 +53,8 @@ class WelcomeScreen extends ConsumerWidget {
                       ghost: true,
                       onPressed: () async {
                         await ref.read(authControllerProvider.notifier).guest();
-                        if (context.mounted) context.go(Routes.plan);
+                        // A guest lands on Focus too, like every launch (TestFlight).
+                        if (context.mounted) context.go(appHome);
                       },
                     ),
                     const SizedBox(height: 12),

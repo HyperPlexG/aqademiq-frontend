@@ -6,8 +6,10 @@ import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/ic.dart';
 
 /// Pill control on the Focus header (v11 `FocusPill` → `BarPill fill="well"`):
-/// 44 high, a well pill (closed) or `accentSoft` (open), with a leading icon in
-/// the accent — Prism on the left, App freeze on the right.
+/// 44 high, radius 22, padding 15 / 18, a well pill (closed, transparent 1px
+/// border) or `accentSoft` with an accent `55` border (open), with a leading
+/// 19 icon in the accent and a 17 / w700 label — Prism on the left, App
+/// freeze on the right.
 class FocusPill extends StatelessWidget {
   const FocusPill({super.key, this.glyph, this.icon, this.iconName, required this.label, this.open = false, this.onTap});
 
@@ -32,7 +34,12 @@ class FocusPill extends StatelessWidget {
           height: 44,
           padding: EdgeInsets.only(left: glyph != null || icon != null || iconName != null ? 15 : 18, right: 18),
           decoration: BoxDecoration(
-            color: open ? colors.accentSoft : colors.bg,
+            // The design's `well` is one step off the page it sits on (BG on
+            // a white page; HILITE is the dark page's pill). The app's Focus
+            // page is `colors.bg` itself, so a `bg` fill drew no pill at all —
+            // just an icon and a word. `hilite` reads as the pill in both
+            // themes, whatever the page tone.
+            color: open ? colors.accentSoft : colors.hilite,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: open ? colors.accent.alpha8(0x55) : Colors.transparent),
           ),

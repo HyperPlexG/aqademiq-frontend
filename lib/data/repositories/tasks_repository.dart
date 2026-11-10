@@ -36,6 +36,14 @@ class TasksRepository {
     return dto.toModel();
   }
 
+  /// Save [task] and end its repeating series on [task]'s own day ("Done for
+  /// good"), in one request. Days before it — and any already ticked after it —
+  /// are left as they are; the series simply stops occurring.
+  Future<Task> updateAndEndSeries(Task task) async {
+    final dto = await _source.update(task.toDto(), endSeriesOn: task.date);
+    return dto.toModel();
+  }
+
   /// Move a task to another day (the source re-keys it by date).
   Future<Task> move(Task task, DateTime newDate) async {
     final dto = await _source.move(task.id, newDate);

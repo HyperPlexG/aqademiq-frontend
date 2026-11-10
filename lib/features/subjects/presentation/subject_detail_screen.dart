@@ -14,6 +14,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../plan/presentation/widgets/swipe_haptics.dart';
@@ -53,8 +54,10 @@ class SubjectDetailScreen extends ConsumerWidget {
     final subject = byId[id];
     if (subject == null) {
       return Scaffold(
-        backgroundColor: colors.bg,
-        body: Center(child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed))),
+        backgroundColor: colors.page,
+        body: Center(
+          child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed)),
+        ),
       );
     }
     final color = hexColor(subject.color);
@@ -62,155 +65,173 @@ class SubjectDetailScreen extends ConsumerWidget {
     final files = filesAsync.value;
     final mood = (subject.mood ?? 2).clamp(0, 4);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 96),
-      children: [
-        _Hero(
-          subject: subject,
-          color: color,
-          onBack: () => context.pop(),
-          onEdit: () => unawaited(_editSubject(context, ref, subject)),
-          onDelete: () => unawaited(_deleteSubject(context, ref, subject)),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      child: Row(
-                        children: [
-                          MoodBlob(idx: subject.mood ?? 2, size: 26),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('You feel', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
-                                Text(
-                                  MoodScale.labels[mood],
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.sans(size: 15, weight: FontWeight.w800, color: AppMood.ramp[mood]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _StatCard(
-                      child: Row(
-                        children: [
-                          Ic('focus', size: 20, color: color),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('This week', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
-                                Text(
-                                  '${subject.focusHours ?? 0}h focus',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(child: SubjLabel('Materials (${files?.length ?? subject.fileCount})', bottom: 0)),
-                  GestureDetector(
-                    onTap: () => unawaited(
-                      showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
-                    ),
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Ic('add', size: 16, color: colors.accent),
-                          const SizedBox(width: 2),
-                          Text('Add file', style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 1),
-              ...filesAsync.when(
-                data: (list) => list.isEmpty
-                    ? [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            'No materials yet — add your syllabus or notes.',
-                            style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
-                          ),
-                        ),
-                      ]
-                    : [
-                        for (final f in list) ...[
-                          Builder(
-                            builder: (_) {
-                              final (icon, fileColor) = _fileVisual(f.name);
-                              return _FileRow(
-                                key: ValueKey(f.id),
-                                icon: icon,
-                                name: f.name,
-                                size: f.sizeLabel,
-                                color: fileColor,
-                                onTap: () => unawaited(_openFile(context, ref, f.id)),
-                                onDelete: () => unawaited(
-                                  _deleteFile(context, ref, subject.id, f.id, f.name),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 6),
-                        ],
-                      ],
-                loading: () => [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.2),
-                      ),
-                    ),
-                  ),
-                ],
-                error: (_, _) => [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      "Couldn't load materials.",
-                      style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    // The page paints its own background. It is pushed inside the Subjects
+    // tab's navigator, above the list, and it used to be a bare ListView: for
+    // the whole push (the iOS slide, Android's zoom) and every back swipe the
+    // subject list showed through it. Opaque, the platform transition is clean.
+    return ColoredBox(
+      color: colors.page,
+      child: ListView(
+        // Runs on under the shell's nav and its fade; the end padding lifts the
+        // last row clear of the bar on every device.
+        padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
+        children: [
+          _Hero(
+            subject: subject,
+            color: color,
+            onBack: () => context.pop(),
+            onEdit: () => unawaited(_editSubject(context, ref, subject)),
+            onDelete: () => unawaited(_deleteSubject(context, ref, subject)),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        child: Row(
+                          children: [
+                            MoodBlob(idx: subject.mood ?? 2, size: 26),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'You feel',
+                                    style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim),
+                                  ),
+                                  Text(
+                                    MoodScale.labels[mood],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.sans(size: 15, weight: FontWeight.w800, color: AppMood.ramp[mood]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _StatCard(
+                        child: Row(
+                          children: [
+                            Ic('focus', size: 20, color: color),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'This week',
+                                    style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim),
+                                  ),
+                                  Text(
+                                    '${subject.focusHours ?? 0}h focus',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppText.sans(size: 15, weight: FontWeight.w800, color: colors.text),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: SubjLabel('Materials (${files?.length ?? subject.fileCount})', bottom: 0)),
+                    GestureDetector(
+                      onTap: () => unawaited(
+                        showAddFileSheet(context, subjectId: subject.id, subjectName: subject.name, subjectColor: color),
+                      ),
+                      behavior: HitTestBehavior.opaque,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Ic('add', size: 16, color: colors.accent),
+                            const SizedBox(width: 2),
+                            Text(
+                              'Add file',
+                              style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 1),
+                ...filesAsync.when(
+                  data: (list) => list.isEmpty
+                      ? [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No materials yet — add your syllabus or notes.',
+                              style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
+                            ),
+                          ),
+                        ]
+                      : [
+                          for (final f in list) ...[
+                            Builder(
+                              builder: (_) {
+                                final (icon, fileColor) = _fileVisual(f.name);
+                                return _FileRow(
+                                  key: ValueKey(f.id),
+                                  icon: icon,
+                                  name: f.name,
+                                  size: f.sizeLabel,
+                                  color: fileColor,
+                                  onTap: () => unawaited(_openFile(context, ref, f.id)),
+                                  onDelete: () => unawaited(
+                                    _deleteFile(context, ref, subject.id, f.id, f.name),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                        ],
+                  loading: () => [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                      ),
+                    ),
+                  ],
+                  error: (_, _) => [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        "Couldn't load materials.",
+                        style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -221,14 +242,7 @@ class SubjectDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     Subject subject,
   ) async {
-    await showModalBottomSheet<Subject>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x4C140F1C),
-      builder: (_) => SubjectFormSheet(existing: subject),
-    );
+    await showSubjectFormSheet(context, existing: subject);
   }
 
   /// Fetch a short-lived signed URL for [fileId] and open it in the browser /
@@ -247,7 +261,8 @@ class SubjectDetailScreen extends ConsumerWidget {
     }
   }
 
-  static const _keepsHistory = 'Its tasks stay on your plan without a subject, '
+  static const _keepsHistory =
+      'Its tasks stay on your plan without a subject, '
       'and past focus sessions and Ada chats keep their history.';
 
   /// SUB-6: the API and `SubjectsController.remove` both existed; nothing on
@@ -262,8 +277,7 @@ class SubjectDetailScreen extends ConsumerWidget {
       context,
       title: 'Delete ${subject.name}?',
       message: [
-        if (files > 0)
-          '${files == 1 ? 'Its file' : 'All $files of its files'} will be deleted for good.',
+        if (files > 0) '${files == 1 ? 'Its file' : 'All $files of its files'} will be deleted for good.',
         _keepsHistory,
       ].join(' '),
       confirmLabel: 'Delete subject',
@@ -376,7 +390,10 @@ class _Hero extends StatelessWidget {
             ),
             const SizedBox(height: 3),
           ],
-          Text(subject.name, style: AppText.sans(size: 28, weight: FontWeight.w800, height: 1.15, color: Colors.white)),
+          Text(
+            subject.name,
+            style: AppText.sans(size: 28, weight: FontWeight.w800, height: 1.15, color: Colors.white),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 10,
@@ -408,7 +425,10 @@ class _Hero extends StatelessWidget {
                     children: [
                       const Ic('goal', size: 14, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text('Target ${subject.targetGrade}', style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white)),
+                      Text(
+                        'Target ${subject.targetGrade}',
+                        style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white),
+                      ),
                     ],
                   ),
                 ),
@@ -500,7 +520,12 @@ class _FileRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                      ),
                       Text(size, style: AppText.sans(size: 12, color: colors.textDim)),
                     ],
                   ),

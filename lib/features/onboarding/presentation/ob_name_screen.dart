@@ -11,6 +11,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 1 (prototype `ob1`): the user's first name. Writes to the
@@ -46,7 +47,7 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 4,
+      step: ObStep.name,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -28,6 +28,9 @@ _RepeatRuleDto _$RepeatRuleDtoFromJson(Map<String, dynamic> json) =>
               ?.map((e) => (e as num).toInt())
               .toList() ??
           const <int>[],
+      untilDate: json['until_date'] == null
+          ? null
+          : DateTime.parse(json['until_date'] as String),
     );
 
 Map<String, dynamic> _$RepeatRuleDtoToJson(_RepeatRuleDto instance) =>
@@ -35,6 +38,7 @@ Map<String, dynamic> _$RepeatRuleDtoToJson(_RepeatRuleDto instance) =>
       'frequency': instance.frequency,
       'interval': instance.interval,
       'weekdays': instance.weekdays,
+      'until_date': instance.untilDate?.toIso8601String(),
     };
 
 _TaskDto _$TaskDtoFromJson(Map<String, dynamic> json) => _TaskDto(

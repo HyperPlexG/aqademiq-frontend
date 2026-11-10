@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/utils/mime_type.dart';
 import '../dtos/subject_dto.dart';
 import '../fixtures/fixtures.dart';
 import 'api_helpers.dart';
@@ -206,7 +207,8 @@ class ApiSubjectsSource implements SubjectsSource {
     String? mimeType,
     required List<int> bytes,
   }) async {
-    final contentType = mimeType ?? 'application/octet-stream';
+    // The iOS picker reports no type; the bytes and the name decide.
+    final contentType = uploadMimeType(name: name, declared: mimeType, bytes: bytes);
 
     // Presign → PUT bytes → commit. NOTE: this Dio's baseUrl already carries the
     // `/v1` prefix, so these are relative resource paths ('/uploads/...'), not

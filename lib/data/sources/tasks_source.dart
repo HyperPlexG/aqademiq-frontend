@@ -15,7 +15,15 @@ abstract interface class TasksSource {
   Future<List<TaskDto>> tasksInRange(DateTime from, DateTime to);
 
   Future<TaskDto> create(TaskDto input);
-  Future<TaskDto> update(TaskDto task);
+
+  /// `PATCH /tasks/{id}` — save one occurrence.
+  ///
+  /// [endSeriesOn] also ends the task's repeating series on that day (wire
+  /// `until_date`), in the same request: "Done for good" is `done: true` plus
+  /// this. The server writes it to the series, whichever occurrence carries it,
+  /// and leaves earlier days alone. A server that predates `until_date` ignores
+  /// it, so the worst case is today's occurrence completed and nothing more.
+  Future<TaskDto> update(TaskDto task, {DateTime? endSeriesOn});
   Future<TaskDto> move(String id, DateTime newDate);
   Future<void> delete(String id);
 
@@ -50,6 +58,11 @@ class MockTasksSource implements TasksSource {
     _key(Fixtures.today): Fixtures.tasksForToday(),
   };
 
+  /// Per-day state of a repeating task's later occurrences, keyed series id →
+  /// day key — the mock's version of the server's per-day rows. Ticking one
+  /// day must not tick the others (mock == real).
+  final Map<String, Map<String, TaskDto>> _perDay = {};
+
   static String _key(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -57,13 +70,25 @@ class MockTasksSource implements TasksSource {
 
   @override
   Future<List<TaskDto>> tasksForDay(DateTime date) {
-    final base = List<TaskDto>.from(_byDay[_key(date)] ?? const []);
+    final key = _key(date);
+    final base = List<TaskDto>.from(_byDay[key] ?? const []);
     // Expand recurring tasks stored on other days that recur onto this date.
+    // A day's own state (ticked, say) lives in [_perDay]; without one the
+    // occurrence is fresh.
     final recurring = <TaskDto>[];
+    final seen = <String>{};
     for (final list in _byDay.values) {
       for (final t in list) {
-        if (_occursOn(t, date)) {
-          recurring.add(t.copyWith(id: '${t.id}@${_key(date)}', date: _dayOnly(date), done: false));
+        final saved = _perDay[t.id]?[key];
+        // Like the server, a day that was saved keeps showing on its own date
+        // even after the series has ended before it — ending a series never
+        // takes away history.
+        if (_occursOn(t, date) || (saved != null && _dayOnly(date).isAfter(_dayOnly(t.date)))) {
+          final id = '${t.id}@$key';
+          if (!seen.add(id)) continue;
+          recurring.add(
+            (saved ?? t.copyWith(done: false)).copyWith(id: id, date: _dayOnly(date), repeat: t.repeat),
+          );
         }
       }
     }
@@ -92,6 +117,9 @@ class MockTasksSource implements TasksSource {
     final start = _dayOnly(base.date);
     final d = _dayOnly(day);
     if (!d.isAfter(start)) return false;
+    // Ended ("Done for good"): nothing after the last day.
+    final until = r.untilDate;
+    if (until != null && d.isAfter(_dayOnly(until))) return false;
     final interval = r.interval <= 0 ? 1 : r.interval;
     switch (r.frequency) {
       case 'daily':
@@ -125,14 +153,32 @@ class MockTasksSource implements TasksSource {
   }
 
   @override
-  Future<TaskDto> update(TaskDto task) async {
-    final key = _key(task.date);
-    final list = _byDay[key];
-    if (list != null) {
-      final i = list.indexWhere((t) => t.id == task.id);
-      if (i >= 0) list[i] = task;
+  Future<TaskDto> update(TaskDto task, {DateTime? endSeriesOn}) async {
+    final at = task.id.lastIndexOf('@');
+    final seriesId = at < 0 ? task.id : task.id.substring(0, at);
+    var saved = task;
+    if (at >= 0) {
+      // A later occurrence of a repeating task: only that day changes.
+      (_perDay[seriesId] ??= {})[_key(task.date)] = task;
+    } else {
+      final list = _byDay[_key(task.date)];
+      if (list != null) {
+        final i = list.indexWhere((t) => t.id == task.id);
+        if (i >= 0) list[i] = task;
+      }
     }
-    return mockDelay(task);
+    if (endSeriesOn != null) {
+      // Written to the series, wherever it is stored, as the server does.
+      final until = _dayOnly(endSeriesOn);
+      for (final list in _byDay.values) {
+        final i = list.indexWhere((t) => t.id == seriesId);
+        if (i < 0 || list[i].repeat == null) continue;
+        list[i] = list[i].copyWith(repeat: list[i].repeat!.copyWith(untilDate: until));
+        if (saved.repeat != null) saved = saved.copyWith(repeat: saved.repeat!.copyWith(untilDate: until));
+        break;
+      }
+    }
+    return mockDelay(saved);
   }
 
   @override
@@ -224,8 +270,12 @@ class MockTasksSource implements TasksSource {
     final monday = _dayOnly(around).subtract(Duration(days: _dayOnly(around).weekday - 1));
     var count = 0;
     for (var i = 0; i < 7; i++) {
-      final list = _byDay[_key(monday.add(Duration(days: i)))];
+      final key = _key(monday.add(Duration(days: i)));
+      final list = _byDay[key];
       if (list != null) count += list.where((t) => t.done).length;
+      for (final days in _perDay.values) {
+        if (days[key]?.done ?? false) count++;
+      }
     }
     return mockDelay(count);
   }
@@ -282,12 +332,13 @@ class ApiTasksSource implements TasksSource {
         'repeat': _repeatToWire(input.repeat!)
       else
         'repeat': {'kind': 'none'},
+      if (input.repeat?.untilDate != null) 'until_date': ymd(input.repeat!.untilDate!),
     };
     return _occToDto(await _dio.postMap('/tasks', body), fallbackDate: input.date);
   }
 
   @override
-  Future<TaskDto> update(TaskDto task) async {
+  Future<TaskDto> update(TaskDto task, {DateTime? endSeriesOn}) async {
     final body = <String, dynamic>{
       'title': task.title,
       'status': task.done ? 'COMPLETE' : 'PENDING',
@@ -300,6 +351,8 @@ class ApiTasksSource implements TasksSource {
       if (task.durationMin != null) 'duration_seconds': task.durationMin! * 60,
       if (task.startTime != null) 'scheduled_at': naiveIso(task.startTime!),
       'part_of_day': task.timeOfDay ?? 'anytime',
+      // Only when asked: an ordinary save must not rewrite the series' end.
+      if (endSeriesOn != null) 'until_date': ymd(endSeriesOn),
     };
     return _occToDto(await _dio.patchMap('/tasks/${task.id}', body), fallbackDate: task.date);
   }
@@ -399,7 +452,19 @@ class ApiTasksSource implements TasksSource {
     final kind = raw['kind'] as String? ?? 'none';
     if (kind == 'none') return null;
     final interval = (raw['interval'] as num?)?.toInt() ?? 1;
-    return RepeatRuleDto(frequency: _kindToFrequency(kind), interval: interval);
+    return RepeatRuleDto(
+      frequency: _kindToFrequency(kind),
+      interval: interval,
+      untilDate: _untilFromWire(raw['until_date']),
+    );
+  }
+
+  /// `yyyy-MM-dd` (or a full ISO stamp) → that calendar day. Absent, null or
+  /// unreadable — an older server never sends it — is "still repeating".
+  static DateTime? _untilFromWire(Object? raw) {
+    if (raw is! String || raw.length < 10) return null;
+    final d = DateTime.tryParse(raw.substring(0, 10));
+    return d == null ? null : DateTime(d.year, d.month, d.day);
   }
 
   Map<String, dynamic> _repeatToWire(RepeatRuleDto r) => {

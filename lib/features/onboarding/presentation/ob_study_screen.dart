@@ -8,12 +8,12 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../data/models/subject.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../subjects/presentation/widgets/subject_form_sheet.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// ob2 — Step 2: what the student studies (level + subjects).
@@ -34,7 +34,7 @@ class ObStudyScreen extends ConsumerWidget {
     final controller = ref.read(onboardingProvider.notifier);
 
     return OnboardingScaffold(
-      activeStep: 5,
+      step: ObStep.study,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -95,7 +95,12 @@ class ObStudyScreen extends ConsumerWidget {
       ),
       footer: PrimaryButton(
         label: 'Continue →',
-        onPressed: () => unawaited(context.push(Routes.obMood)),
+        // "How do you feel about each?" rates the chosen subjects, so with none
+        // there is nothing to ask: go straight to study hours. Each step is
+        // pushed, so Back from there returns here, never to an empty step.
+        onPressed: () => unawaited(
+          context.push(draft.subjects.isEmpty ? Routes.obHours : Routes.obMood),
+        ),
       ),
     );
   }
@@ -104,13 +109,7 @@ class ObStudyScreen extends ConsumerWidget {
     BuildContext context,
     OnboardingController controller,
   ) async {
-    final subject = await showModalBottomSheet<Subject>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const SubjectFormSheet(),
-    );
+    final subject = await showSubjectFormSheet(context);
     final name = subject?.name.trim();
     if (name != null && name.isNotEmpty) {
       controller.toggleSubject(name);

@@ -66,6 +66,9 @@ class _FreezeNowState extends ConsumerState<_FreezeNow> {
             ? 'Thaws when your focus session ends · ${FreezeText.clock(endsAt)}'
             : 'Thaws by itself at ${FreezeText.clock(endsAt)}';
     final count = _apps.count;
+    // The first three picks and "+N": Android's apps, iOS's tokens (drawn by
+    // the system), or nothing to draw — then the count.
+    final shown = apps.ios ? fzTokensOf(ref, _apps) ?? const <FzAppRef>[] : apps.of(_apps);
     final label = _apps.keepOnly
         ? 'Freeze everything else'
         : (count == 0 ? 'Choose apps first' : 'Freeze ${FreezeApps.countLabel(_apps)}');
@@ -83,8 +86,8 @@ class _FreezeNowState extends ConsumerState<_FreezeNow> {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (!apps.ios && _apps.packages.isNotEmpty)
-                FzStack(apps: apps.of(_apps).take(3).toList(), more: _apps.packages.length - 3 > 0 ? _apps.packages.length - 3 : 0, edge: colors.bg)
+              if (shown.isNotEmpty)
+                FzStack(apps: shown.take(3).toList(), more: shown.length > 3 ? shown.length - 3 : 0, edge: colors.bg)
               else
                 Text(count == 0 ? 'None' : FreezeApps.countLabel(_apps),
                     style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),

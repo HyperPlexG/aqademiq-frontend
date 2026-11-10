@@ -24,10 +24,12 @@ enum AppAccent {
 /// whole design system reads tokens through `context.colors` and they animate /
 /// switch correctly across light, dark, and accent changes.
 ///
-/// Values are lifted verbatim from the v5 prototype (see PROTOTYPE_SPECS.md).
+/// Values are lifted verbatim from the v11 prototype (`prototypes/v11/app.jsx`,
+/// `applyTweaks`).
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
+    required this.page,
     required this.bg,
     required this.surface,
     required this.text,
@@ -47,24 +49,28 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.sheetShadow,
   });
 
-  /// Warm-paper app background.
+  /// v11 light, the design's default "Cool" warmth (`applyTweaks`): a
+  /// near-white page, white raised surfaces told apart by soft shadow, and
+  /// stone fills one step down.
   factory AppColors.light(AppAccent accent) => AppColors(
-        bg: const Color(0xFFF4F3F0),
+        page: const Color(0xFFFBFCFD),
+        bg: const Color(0xFFECEFF3),
         surface: const Color(0xFFFFFFFF),
-        text: const Color(0xFF111111),
-        textMed: const Color(0xFF777777),
-        textDim: const Color(0xFFC0C0C0),
+        text: const Color(0xFF111717),
+        textMed: const Color(0xFF646464),
+        textDim: const Color(0xFFA7A7A7),
         border: const Color(0x12000000),
-        hilite: const Color(0xFFECEAE7),
-        ink: const Color(0xFF111111),
+        hilite: const Color(0xFFE8EBF0),
+        ink: const Color(0xFF111717),
         accent: accent.color,
         accentSoft: accent.softLight,
         success: const Color(0xFF2A9D6B),
         warn: const Color(0xFFE8A430),
         danger: const Color(0xFFE85476),
-        frameBg: const Color(0xFFDBD9D5),
+        frameBg: const Color(0xFFE4E4E3),
+        // v11 SHADOW: 0 4px 22px rgba(0,0,0,0.06).
         cardShadow: const [
-          BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x0F000000), blurRadius: 22, offset: Offset(0, 4)),
         ],
         navShadow: const [
           BoxShadow(color: Color(0x21000000), blurRadius: 28, offset: Offset(0, 4)),
@@ -75,6 +81,8 @@ class AppColors extends ThemeExtension<AppColors> {
       );
 
   factory AppColors.dark(AppAccent accent) => AppColors(
+        // Dark mode draws the page and the well the same (v11 `PAGE = BG`).
+        page: const Color(0xFF0E0E0E),
         bg: const Color(0xFF0E0E0E),
         surface: const Color(0xFF1B1B1B),
         text: const Color(0xFFEFEFEF),
@@ -102,6 +110,13 @@ class AppColors extends ThemeExtension<AppColors> {
         ],
       );
 
+  /// The screen background (v11 `PAGE`): every scaffold, the shell, and the
+  /// scroll-edge fades that dissolve content into it.
+  final Color page;
+
+  /// The "well" fill on white surfaces: inputs, chips, tiles, tracks (v11
+  /// `BG`). Not the page: in light mode it sits a step under [page]; dark mode
+  /// draws both the same.
   final Color bg;
   final Color surface;
   final Color text;
@@ -122,6 +137,7 @@ class AppColors extends ThemeExtension<AppColors> {
 
   @override
   AppColors copyWith({
+    Color? page,
     Color? bg,
     Color? surface,
     Color? text,
@@ -141,6 +157,7 @@ class AppColors extends ThemeExtension<AppColors> {
     List<BoxShadow>? sheetShadow,
   }) {
     return AppColors(
+      page: page ?? this.page,
       bg: bg ?? this.bg,
       surface: surface ?? this.surface,
       text: text ?? this.text,
@@ -165,6 +182,7 @@ class AppColors extends ThemeExtension<AppColors> {
   AppColors lerp(covariant AppColors? other, double t) {
     if (other == null) return this;
     return AppColors(
+      page: Color.lerp(page, other.page, t)!,
       bg: Color.lerp(bg, other.bg, t)!,
       surface: Color.lerp(surface, other.surface, t)!,
       text: Color.lerp(text, other.text, t)!,

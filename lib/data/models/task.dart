@@ -21,6 +21,10 @@ abstract class RepeatRule with _$RepeatRule {
     required RepeatFrequency frequency,
     @Default(1) int interval,
     @Default(<int>[]) List<int> weekdays, // 1=Mon … 7=Sun
+    /// The last day the series occurs, or null while it runs on. Set by
+    /// "Done for good", which ends the series on the occurrence it was ticked
+    /// from; earlier days (and any already ticked) stay as they are.
+    DateTime? untilDate,
   }) = _RepeatRule;
 }
 

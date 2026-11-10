@@ -28,8 +28,8 @@ import '../../plan/providers/plan_providers.dart';
 import '../../report/presentation/widgets/core_column.dart';
 import '../../report/report_copy.dart';
 import '../../report/report_optout.dart';
-import '../../settings/presentation/sheets/rate_sheet.dart';
 import '../../settings/providers/profile_controller.dart';
+import '../../settings/rate_app.dart';
 
 /// FRAMES `profile-top` / `profile-main` — the Profile/Stats tab (one scrollable
 /// page: identity + stats + mood week up top, support links + invite hero below).
@@ -40,6 +40,9 @@ class StatsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statsProvider);
     return AppScaffold(
+      // The list runs on under the nav and its fade, and pads its own end
+      // (AppScaffold.navClearanceOf) so the last row still scrolls clear.
+      bottomClearance: 0,
       child: statsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: context.colors.accent)),
         error: (_, _) => Center(
@@ -82,7 +85,7 @@ class _Body extends ConsumerWidget {
         : ReportCopy.weekRange(week.weekStart, week.weekEnd);
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         // ProfileTopHead: the name in a 44 pill, share and settings beside it.
         Row(
@@ -592,7 +595,7 @@ class _LinksCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
     final links = <(String, VoidCallback)>[
-      ('Rate the app', () => unawaited(showRateSheet(context))),
+      ('Rate the app', () => unawaited(rateApp(context))),
       // Opens the in-app feedback board (backed by /feedback), not a mailto —
       // the old mail link silently did nothing on web and never reached the board.
       ('Share feedback', () => unawaited(context.push(Routes.settingsFeedback))),

@@ -56,6 +56,7 @@ import '../../features/shell/presentation/app_shell.dart';
 import '../../features/stats/presentation/stats_screen.dart';
 import '../../features/subjects/presentation/subject_detail_screen.dart';
 import '../../features/subjects/presentation/subjects_screen.dart';
+import '../../shared/widgets/dismiss_keyboard.dart';
 
 /// Route paths. Tab branch order MUST match the `NavTab` semantic indices
 /// (subjects 0 · planner 1 · timer 2 · stats 3 · ada 4).
@@ -103,6 +104,14 @@ abstract final class Routes {
   static const freezeAlways = '/timer/freeze/always';
   static const freezeNever = '/timer/freeze/never';
   static const freezeDistract = '/timer/freeze/distracting';
+
+  /// The same hub, full-screen, for a door that is not in the Focus tab
+  /// (Settings → App freeze → Frosts & groups, and the setup pages opened from
+  /// there). A page on the root navigator must never push a route inside the
+  /// shell: go_router builds a second copy of the shell for it, the branch
+  /// navigators' keys clash, and the page comes up blank and takes the Focus
+  /// tab down with it. Its group pages are `freezeHubSettings/always` etc.
+  static const freezeHubSettings = '/settings/app-freeze/frosts';
   static const freezeIntro = '/freeze/intro';
   static const freezePermission = '/freeze/permission';
   static const freezeDenied = '/freeze/denied';
@@ -166,6 +175,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: Routes.splash,
+    // The keyboard never outlives the page it was opened on. One observer per
+    // navigator: this one for full-screen routes, one per tab branch below.
+    observers: [DismissKeyboardObserver()],
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.welcome, builder: (_, _) => const WelcomeScreen()),
@@ -209,6 +221,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: Routes.settingsAppFreeze, builder: (_, _) => const AppFreezeSettingsScreen()),
+      GoRoute(
+        path: Routes.freezeHubSettings,
+        builder: (_, _) => const FreezeHubScreen(at: Routes.freezeHubSettings),
+        routes: _freezeGroupRoutes(),
+      ),
       GoRoute(path: Routes.settingsThaw, builder: (_, _) => const ThawSettingsScreen()),
       GoRoute(path: Routes.moodMorning, builder: (_, _) => const MoodMorningScreen()),
       GoRoute(path: Routes.moodEvening, builder: (_, _) => const MoodEveningScreen()),
@@ -248,6 +265,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           // 0 — Subjects
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(
                 path: Routes.subjects,
@@ -263,12 +281,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // 1 — Planner
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.plan, builder: (_, _) => const PlanScreen()),
             ],
           ),
           // 2 — Timer
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(
                 path: Routes.timer,
@@ -277,11 +297,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'freeze',
                     builder: (_, _) => const FreezeHubScreen(),
-                    routes: [
-                      GoRoute(path: 'always', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.alwaysOpen)),
-                      GoRoute(path: 'never', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.neverOpen)),
-                      GoRoute(path: 'distracting', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.distracting)),
-                    ],
+                    routes: _freezeGroupRoutes(),
                   ),
                 ],
               ),
@@ -289,12 +305,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // 3 — Stats
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.stats, builder: (_, _) => const StatsScreen()),
             ],
           ),
           // 4 — Ada
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.ada, builder: (_, _) => const AdaScreen()),
             ],
@@ -304,3 +322,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Always open · Never open · Distracting, under whichever hub opened them
+/// (the Focus tab's or Settings').
+List<RouteBase> _freezeGroupRoutes() => [
+      for (final group in FreezeGroup.values)
+        GoRoute(path: FreezeGroupScreen.segmentFor(group), builder: (_, _) => FreezeGroupScreen(group: group)),
+    ];

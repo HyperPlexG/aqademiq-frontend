@@ -43,6 +43,9 @@ class SubjectsScreen extends ConsumerWidget {
     final selectedName = _selectedSemesterName(semesters, selectedId);
 
     return AppScaffold(
+      // The list runs on under the nav and its fade, and pads its own end
+      // (AppScaffold.navClearanceOf) so the last row still scrolls clear.
+      bottomClearance: 0,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -58,7 +61,11 @@ class SubjectsScreen extends ConsumerWidget {
             error: (_, _) => Expanded(child: Center(child: Text('Could not load subjects', style: AppText.sans(size: 15, color: colors.textMed)))),
             data: (subjects) => Expanded(
               child: subjects.isEmpty
-                  ? _Empty(guest: guest, onAdd: () => unawaited(_addSubject(context)))
+                  // Fixed, not scrolling: keeps its own clearance off the nav.
+                  ? Padding(
+                      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
+                      child: _Empty(guest: guest, onAdd: () => unawaited(_addSubject(context))),
+                    )
                   : _SubjectCollection(
                       subjects: subjects,
                       layout: layout,
@@ -95,14 +102,7 @@ class SubjectsScreen extends ConsumerWidget {
 
   Future<void> _addSubject(BuildContext context) async {
     // The controller refreshes the list on save, so we only need to await it.
-    await showModalBottomSheet<Subject>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x4C140F1C),
-      builder: (_) => const SubjectFormSheet(),
-    );
+    await showSubjectFormSheet(context);
   }
 
   Future<void> _menu(BuildContext context, WidgetRef ref) async {
@@ -237,7 +237,7 @@ class _SubjectCollection extends StatelessWidget {
     final missingCount = subjects.where((s) => s.fileCount == 0).length;
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         _TitleRow(count: subjects.length, semesterName: semesterName),
         const SizedBox(height: 12),

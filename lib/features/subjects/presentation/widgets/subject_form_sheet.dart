@@ -14,6 +14,23 @@ import '../../../../shared/mascot/ada_mascot.dart';
 import '../../../../shared/widgets/mood_blob.dart';
 import 'subject_bits.dart';
 
+/// Presents [SubjectFormSheet] the one way every caller uses (Subjects "+",
+/// subject detail Edit, onboarding "+ More"). `useSafeArea` keeps the sheet
+/// below the status bar however tall the keyboard makes it; the sheet itself
+/// then scrolls inside the height that is left. Pops the saved [Subject], or
+/// null when dismissed.
+Future<Subject?> showSubjectFormSheet(BuildContext context, {Subject? existing}) {
+  return showModalBottomSheet<Subject>(
+    context: context,
+    useRootNavigator: true,
+    useSafeArea: true,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    barrierColor: const Color(0x4C140F1C),
+    builder: (_) => SubjectFormSheet(existing: existing),
+  );
+}
+
 /// The shared "New subject" form sheet (prototype `AddSubjectBody`). A
 /// bottom-anchored sheet reused by onboarding (`ob2-add`) and §03 (`subj-add`):
 /// a white header card (close / title / save), a name field, then a body with
@@ -25,6 +42,10 @@ import 'subject_bits.dart';
 /// [Subject].
 class SubjectFormSheet extends ConsumerStatefulWidget {
   const SubjectFormSheet({super.key, this.existing});
+
+  /// The space kept between the status bar and the top of the sheet, so a
+  /// sheet raised by the keyboard still reads as a floating sheet.
+  static const double topGap = 8;
 
   /// The subject being edited, or `null` to create a new one.
   final Subject? existing;
@@ -170,8 +191,13 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    // The keyboard used to push the whole sheet up past the status bar: the
+    // sheet grew to its full content height plus the keyboard, so on a small
+    // phone its header and Save ran under the clock. Now the sheet is held
+    // below the safe area (see [showSubjectFormSheet]) and a gap under it, the
+    // header card stays pinned, and only the body scrolls in what is left.
     return Padding(
-      padding: EdgeInsets.only(bottom: keyboard),
+      padding: EdgeInsets.only(top: SubjectFormSheet.topGap, bottom: keyboard),
       child: Container(
         decoration: BoxDecoration(
           color: colors.bg,
@@ -182,12 +208,13 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
         clipBehavior: Clip.antiAlias,
         child: SafeArea(
           top: false,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildHeaderCard(colors),
-                Padding(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeaderCard(colors),
+              Flexible(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,8 +245,8 @@ class _SubjectFormSheetState extends ConsumerState<SubjectFormSheet> {
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

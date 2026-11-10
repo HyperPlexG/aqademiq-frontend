@@ -19,6 +19,7 @@ import '../../freeze/presentation/sheets/choose_apps_sheet.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../freeze/providers/freeze_controller.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'ob_source_screen.dart';
 import 'widgets/onboarding_scaffold.dart';
 
@@ -111,7 +112,7 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
     }
 
     return OnboardingScaffold(
-      activeStep: 8,
+      step: ObStep.freeze,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -238,6 +239,7 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
     setState(() => _picking = true);
     final r = await ref.read(appFreezeChannelProvider).pickApps(selectionId: 'sel-ob', title: 'Choose what freezes');
     if (!mounted) return;
+    if (r != null) ref.invalidate(fzSelectionTokensProvider(r.selectionId));
     setState(() {
       _picking = false;
       if (r != null) _ios = AppSet(iosSelection: r.selectionId, iosCount: r.count);
@@ -294,7 +296,7 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
 
     if (apps.ios) {
       return OnboardingScaffold(
-        activeStep: 9,
+        step: ObStep.apps,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -310,8 +312,12 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(_ios.isEmpty ? 'Nothing yet' : FreezeApps.countLabel(_ios),
-                      style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
+                  // The first picks as the system draws them, else the count.
+                  if (fzTokensOf(ref, _ios) case final picks? when picks.isNotEmpty)
+                    FzStack(apps: picks.take(3).toList(), more: picks.length > 3 ? picks.length - 3 : 0, edge: colors.bg)
+                  else
+                    Text(_ios.isEmpty ? 'Nothing yet' : FreezeApps.countLabel(_ios),
+                        style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
                   Ic('chevron_right', size: 20, color: colors.textDim),
                 ],
               ),
@@ -339,7 +345,7 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
     }
 
     return OnboardingScaffold(
-      activeStep: 9,
+      step: ObStep.apps,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

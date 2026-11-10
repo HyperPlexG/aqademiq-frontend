@@ -87,6 +87,12 @@ class PlanTaskCard extends StatelessWidget {
                           weight: FontWeight.w800,
                           height: 1.25,
                           color: colors.text,
+                        ).copyWith(
+                          // A done task is struck through as well as dimmed, so
+                          // it reads as finished at a glance (TestFlight).
+                          decoration: task.done ? TextDecoration.lineThrough : null,
+                          decorationColor: colors.text,
+                          decorationThickness: 2,
                         ),
                       ),
                       const SizedBox(height: 4),

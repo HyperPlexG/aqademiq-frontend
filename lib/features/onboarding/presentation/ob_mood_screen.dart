@@ -14,6 +14,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Frame `ob-mood` (step 3): how the student feels about each subject. A mood
@@ -39,7 +40,7 @@ class ObMoodScreen extends ConsumerWidget {
     final moods = ref.watch(onboardingProvider).subjectMoods;
 
     return OnboardingScaffold(
-      activeStep: 6,
+      step: ObStep.mood,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

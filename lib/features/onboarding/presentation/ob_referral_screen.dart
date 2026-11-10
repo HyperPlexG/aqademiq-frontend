@@ -18,6 +18,7 @@ import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../auth/presentation/widgets/otp_field.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'ob_source_screen.dart' show ObLink;
 import 'widgets/onboarding_scaffold.dart';
 
@@ -124,7 +125,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 2,
+      step: ObStep.referral,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -8,11 +8,14 @@
 /// Two link shapes are accepted, and both matter:
 ///
 ///  * `https://www.aqademiq.com/join?ref=CODE` — what gets shared. It is a real
-///    web link, so it works in every chat app and does something sensible when
-///    the app is not installed. It opens the app directly **only once
-///    `.well-known/assetlinks.json` (Android) and `apple-app-site-association`
-///    (iOS) are hosted on the domain** — until then it opens the site, which is
-///    no worse than the bare URL it replaces.
+///    web link, so it is clickable in every chat app. It is an Android App Link
+///    (`AndroidManifest.xml`, www only) and an iOS Universal Link
+///    (`applinks:` in `Runner.entitlements`), so it opens the app directly
+///    **once the site serves `.well-known/assetlinks.json` and
+///    `.well-known/apple-app-site-association`** — and, for anyone without the
+///    app, a `/join` page that sends them to the App Store or Google Play.
+///    None of the three existed as of 2026-11-10 (all 404), which is why the
+///    link landed on a "page not found". See `docs/REFERRAL_DEEP_LINKS.md`.
 ///  * `aqademiq://join?ref=CODE` — the custom scheme, which needs nothing
 ///    hosted and works the moment the app is installed. It is not clickable in
 ///    most chat clients, which is exactly why it is not the one we share.
@@ -63,6 +66,18 @@ String referralLink(String code) {
   final clean = _normalize(code);
   if (!_codePattern.hasMatch(clean)) return 'https://$kReferralHost';
   return 'https://$kReferralHost/$kReferralPath?$kReferralParam=$clean';
+}
+
+/// The message "Share Invite" sends for [code].
+///
+/// The code is spelled out as well as carried in the link: the link opens the
+/// app only where the domain-association files are hosted and the app is
+/// installed, and someone who installs it from the store first still needs
+/// something to type at onboarding's referral step.
+String referralShareText(String code) {
+  final clean = _normalize(code);
+  final codePart = clean.isEmpty ? '' : ' Use my referral code $clean.';
+  return 'Join me on Aqademiq — my focus sanctuary.$codePart ${referralLink(code)}';
 }
 
 /// The referral code carried by [uri], or null if it carries none.

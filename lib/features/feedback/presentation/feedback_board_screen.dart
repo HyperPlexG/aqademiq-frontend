@@ -17,6 +17,7 @@ import '../../../shared/icons/app_icon.dart';
 import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/ic.dart';
+import '../../../shared/widgets/scroll_fade.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
 import 'sheets/feedback_sort_sheet.dart';
@@ -173,130 +174,132 @@ class _FeedbackBoardScreenState extends ConsumerState<FeedbackBoardScreen> {
     final contentBottom = actionBottom + 50 + 24;
 
     return Scaffold(
-      backgroundColor: colors.bg,
-      body: Stack(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                  child: Row(
-                    children: [
-                      const CircleBackButton(),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Feedback',
-                        style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
-                      ),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _ViewToggle(
-                    view: view,
-                    onSelect: (v) {
-                      if (v != view) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
-                      ref.read(feedbackViewProvider.notifier).set(v);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 11),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _SearchField(
-                          controller: _search,
-                          hasQuery: _hasText,
-                          onChanged: _onSearchChanged,
-                          onClear: _clearSearch,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      _SortButton(sort: sort, onTap: () => unawaited(_pickSort())),
-                    ],
-                  ),
-                ),
-                if (view == FeedbackView.list) ...[
-                  const SizedBox(height: 6),
-                  // 36 chips with 4 of room either side for their shadow.
-                  SizedBox(
-                    height: 44,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      backgroundColor: colors.page,
+      body: ScrollEdgeFades(
+        child: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Row(
                       children: [
-                        _StatusChip(
-                          label: 'All',
-                          selected: statusFilter == null,
-                          onTap: () {
-                            if (statusFilter != null) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
-                            ref.read(feedbackStatusFilterProvider.notifier).set(null);
-                          },
+                        const CircleBackButton(),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Feedback',
+                          style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
                         ),
-                        for (final status in _statusPills())
-                          _StatusChip(
-                            label: status.label,
-                            dot: status.value.color(colors),
-                            selected: statusFilter == status.value,
-                            onTap: () {
-                              ref.read(hapticsProvider).play(HapticMoment.chipSelect);
-                              ref
-                                  .read(feedbackStatusFilterProvider.notifier)
-                                  .set(statusFilter == status.value ? null : status.value);
-                            },
-                          ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                ] else
-                  const SizedBox(height: 10),
-                Expanded(
-                  child: postsAsync.when(
-                    loading: () => Center(
-                      child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _ViewToggle(
+                      view: view,
+                      onSelect: (v) {
+                        if (v != view) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                        ref.read(feedbackViewProvider.notifier).set(v);
+                      },
                     ),
-                    error: (error, _) => Padding(
-                      padding: EdgeInsets.only(bottom: contentBottom),
-                      child: _BoardError(
-                        error: error,
-                        onRetry: () => ref.invalidate(feedbackPostsProvider),
+                  ),
+                  const SizedBox(height: 11),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _SearchField(
+                            controller: _search,
+                            hasQuery: _hasText,
+                            onChanged: _onSearchChanged,
+                            onClear: _clearSearch,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        _SortButton(sort: sort, onTap: () => unawaited(_pickSort())),
+                      ],
+                    ),
+                  ),
+                  if (view == FeedbackView.list) ...[
+                    const SizedBox(height: 6),
+                    // 36 chips with 4 of room either side for their shadow.
+                    SizedBox(
+                      height: 44,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        children: [
+                          _StatusChip(
+                            label: 'All',
+                            selected: statusFilter == null,
+                            onTap: () {
+                              if (statusFilter != null) ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                              ref.read(feedbackStatusFilterProvider.notifier).set(null);
+                            },
+                          ),
+                          for (final status in _statusPills())
+                            _StatusChip(
+                              label: status.label,
+                              dot: status.value.color(colors),
+                              selected: statusFilter == status.value,
+                              onTap: () {
+                                ref.read(hapticsProvider).play(HapticMoment.chipSelect);
+                                ref
+                                    .read(feedbackStatusFilterProvider.notifier)
+                                    .set(statusFilter == status.value ? null : status.value);
+                              },
+                            ),
+                        ],
                       ),
                     ),
-                    data: (posts) => view == FeedbackView.list
-                        ? _ListBody(
-                            posts: posts,
-                            bottomInset: contentBottom,
-                            onOpen: _open,
-                            onVote: _vote,
-                            onLoadMore: () => unawaited(
-                              ref.read(feedbackPostsProvider.notifier).loadMore(),
+                    const SizedBox(height: 8),
+                  ] else
+                    const SizedBox(height: 10),
+                  Expanded(
+                    child: postsAsync.when(
+                      loading: () => Center(
+                        child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
+                      ),
+                      error: (error, _) => Padding(
+                        padding: EdgeInsets.only(bottom: contentBottom),
+                        child: _BoardError(
+                          error: error,
+                          onRetry: () => ref.invalidate(feedbackPostsProvider),
+                        ),
+                      ),
+                      data: (posts) => view == FeedbackView.list
+                          ? _ListBody(
+                              posts: posts,
+                              bottomInset: contentBottom,
+                              onOpen: _open,
+                              onVote: _vote,
+                              onLoadMore: () => unawaited(
+                                ref.read(feedbackPostsProvider.notifier).loadMore(),
+                              ),
+                            )
+                          : _BoardBody(
+                              posts: posts,
+                              bottomInset: contentBottom,
+                              onOpen: _open,
+                              onVote: _vote,
                             ),
-                          )
-                        : _BoardBody(
-                            posts: posts,
-                            bottomInset: contentBottom,
-                            onOpen: _open,
-                            onVote: _vote,
-                          ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Positioned(
-            left: 16,
-            right: 16,
-            bottom: actionBottom,
-            child: _MakeSuggestionButton(onTap: () => unawaited(_suggest())),
-          ),
-        ],
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: actionBottom,
+              child: _MakeSuggestionButton(onTap: () => unawaited(_suggest())),
+            ),
+          ],
+        ),
       ),
     );
   }

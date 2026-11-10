@@ -1,11 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/env/env.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
@@ -106,12 +104,8 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
     }
   }
 
-  /// Apple sign-in is native to Apple platforms; on Android/web it would need
-  /// the web OAuth flow (Services ID), which isn't set up, so hide it there.
-  bool get _appleAvailable =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS);
+  /// Apple sign-in is native to Apple platforms (see [ssoAppleAvailable]).
+  bool get _appleAvailable => ssoAppleAvailable;
 
   Future<void> _googleSignIn() async {
     final ok = await ref.read(authControllerProvider.notifier).signInWithGoogle();
@@ -128,16 +122,9 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
     }
   }
 
-  /// Native Google sign-in is wired for mobile; hidden until the client IDs are
-  /// configured (and off the web build, which needs the button-render flow).
-  ///
-  /// Apple platforms are checked separately because they need an *iOS* client
-  /// id that Android does not. Offering the button without one is worse than
-  /// hiding it: the SDK cannot present its sheet, never calls back, and the
-  /// screen wedges on `busy` (see Env.hasAppleGoogleSignIn).
-  bool get _googleAvailable =>
-      !kIsWeb &&
-      (_appleAvailable ? Env.hasAppleGoogleSignIn : Env.hasGoogleSignIn);
+  /// Hidden until the client ids are configured — App Review 7d5244b9 (see
+  /// [ssoGoogleAvailable]).
+  bool get _googleAvailable => ssoGoogleAvailable;
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +169,7 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
                 ),
                 const SizedBox(height: 18),
               ],
-              const _OrDivider(),
+              const SsoOrDivider(),
               const SizedBox(height: 16),
               const FieldLabel('Email'),
               AppTextField(controller: _email, keyboardType: TextInputType.emailAddress),
@@ -236,25 +223,6 @@ class _SigninScreenState extends ConsumerState<SigninScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      children: [
-        Expanded(child: Container(height: 1, color: colors.border)),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Text('or email', style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textDim)),
-        ),
-        Expanded(child: Container(height: 1, color: colors.border)),
-      ],
     );
   }
 }

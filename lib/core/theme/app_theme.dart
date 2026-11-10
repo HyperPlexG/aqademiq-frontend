@@ -31,8 +31,8 @@ ThemeData buildAppTheme({
   );
 
   return base.copyWith(
-    scaffoldBackgroundColor: colors.bg,
-    canvasColor: colors.bg,
+    scaffoldBackgroundColor: colors.page,
+    canvasColor: colors.page,
     colorScheme: scheme,
     textTheme: textTheme,
     extensions: <ThemeExtension<dynamic>>[colors],

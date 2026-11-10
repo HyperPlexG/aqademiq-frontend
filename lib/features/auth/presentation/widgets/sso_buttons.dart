@@ -1,9 +1,52 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/env/env.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_text.dart';
 
 enum SsoProvider { apple, google }
+
+/// Whether "Sign in with Apple" can be offered here.
+///
+/// Native to Apple platforms; on Android/web it would need the web OAuth flow
+/// (a Services ID), which isn't set up, so it is hidden there.
+bool get ssoAppleAvailable =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS);
+
+/// Whether "Sign in with Google" can be offered here.
+///
+/// Hidden until the client ids are configured (and off the web build, which
+/// needs the button-render flow). Apple platforms need an *iOS* client id that
+/// Android does not. Offering the button without one is worse than hiding it:
+/// the SDK cannot present its sheet, never calls back, and the screen wedges —
+/// App Review 7d5244b9 (see Env.hasAppleGoogleSignIn).
+bool get ssoGoogleAvailable =>
+    !kIsWeb &&
+    (ssoAppleAvailable ? Env.hasAppleGoogleSignIn : Env.hasGoogleSignIn);
+
+/// The "or email" rule between the SSO buttons and the email form (v11 AUTH).
+class SsoOrDivider extends StatelessWidget {
+  const SsoOrDivider({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Row(
+      children: [
+        Expanded(child: Container(height: 1, color: colors.border)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Text('or email', style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textDim)),
+        ),
+        Expanded(child: Container(height: 1, color: colors.border)),
+      ],
+    );
+  }
+}
 
 /// Apple / Google SSO pill (v11 `SSOButtons`): 50 high, each brand's own mark
 /// and system type, per the Apple and Google button guidelines.

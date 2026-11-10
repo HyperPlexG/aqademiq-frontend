@@ -37,6 +37,7 @@ import 'sheets/log_mood_sheet.dart';
 import 'sheets/month_picker_sheet.dart';
 import 'sheets/plan_menu.dart';
 import 'sheets/quick_add_sheet.dart';
+import 'sheets/repeat_done_sheet.dart';
 import 'sheets/reschedule_sheet.dart';
 import 'sheets/task_overflow_sheet.dart';
 import 'widgets/collapse_head.dart';
@@ -196,6 +197,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final dateCtrl = ref.read(selectedDateProvider.notifier);
 
     return AppScaffold(
+      // The list runs on under the nav and its fade, and pads its own end
+      // (AppScaffold.navClearanceOf) so the last row still scrolls clear.
+      bottomClearance: 0,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -277,7 +281,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     );
   }
 
-  void _toggleDone(Task t) => ref.read(dayTasksProvider.notifier).toggleDone(t);
+  /// Every tick on the Plan (the circle in either view, the overflow sheet's
+  /// "Mark as done") goes through [tickTask], which asks first for a
+  /// repeating task.
+  void _toggleDone(Task t) => unawaited(tickTask(context, ref, t));
 
   void _toggleStep(Task t, Subtask s) =>
       unawaited(ref.read(dayTasksProvider.notifier).toggleStep(t, s));
@@ -472,7 +479,7 @@ class _PlanTimeline extends StatelessWidget {
       ..sort((a, b) => a.startTime!.compareTo(b.startTime!));
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: anytimeOpen ? 10 : 12),
@@ -676,12 +683,23 @@ class _PlanListGrouped extends ConsumerWidget {
     for (final t in tasks) {
       groups[taskBucket(t)]!.add(t);
     }
+    // A busy day lists only the buckets that hold something. An empty day used
+    // to list nothing at all: every bucket was filtered out, the ListView had no
+    // children, and choosing "List" on a day without tasks blanked the planner.
+    // With nothing planned, every bucket shows, each with a way to add to it.
+    final empty = tasks.isEmpty;
+    const addLabels = {
+      DayPart.anytime: 'Add a task for anytime',
+      DayPart.morning: 'Add a task for the morning',
+      DayPart.afternoon: 'Add a task for the afternoon',
+      DayPart.evening: 'Add a task for the evening',
+    };
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         for (final part in _order)
-          if (groups[part]!.isNotEmpty) ...[
+          if (empty || groups[part]!.isNotEmpty) ...[
             ListGroupHead(
               icon: meta[part]!.$1,
               label: meta[part]!.$2,
@@ -705,6 +723,8 @@ class _PlanListGrouped extends ConsumerWidget {
                     onToggleDone: () => onToggleDone(t),
                   ),
                 ),
+            if (empty && !collapsed.contains(part))
+              AddRow(label: addLabels[part]!, onTap: () => onAddBucket(part)),
             const SizedBox(height: 12),
           ],
       ],
@@ -761,7 +781,9 @@ class _EmptyDay extends StatelessWidget {
     // answer. So the door sits underneath, secondary, and never instead.
     return CustomScrollView(
       slivers: [
-        SliverFillRemaining(
+        SliverPadding(
+          padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
+          sliver: SliverFillRemaining(
           hasScrollBody: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -799,6 +821,7 @@ class _EmptyDay extends StatelessWidget {
               const _ShowMeHowButton(),
             ],
           ),
+        ),
         ),
       ],
     );

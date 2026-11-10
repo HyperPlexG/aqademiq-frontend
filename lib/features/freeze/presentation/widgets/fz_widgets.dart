@@ -1,7 +1,9 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
@@ -66,12 +68,27 @@ class FzSquircleClipper extends CustomClipper<Path> {
 
 /// An app as the UI knows it. [id] is an Android package, or on iOS a
 /// placeholder — iOS never names the apps a student picks.
+///
+/// [FzAppRef.token] is one iOS pick — an app, a category or a site — by the
+/// token id the native side keeps for it (`app_…`, `cat_…`, `web_…`). It has
+/// no name in Dart: FamilyControls draws its icon and name ([FzTokenView]).
 @immutable
 class FzAppRef {
-  const FzAppRef(this.id, this.name);
+  const FzAppRef(this.id, this.name) : token = false;
+
+  const FzAppRef.token(this.id)
+      : name = '',
+        token = true;
 
   final String id;
   final String name;
+
+  /// An iOS token, drawn by the platform rather than by Dart.
+  final bool token;
+
+  /// Whether [id] looks like a token id the iOS side hands out (a
+  /// `thaw_request` target, an entry of `selectionTokens`).
+  static bool isTokenId(String id) => id.startsWith('app_') || id.startsWith('cat_') || id.startsWith('web_');
 
   @override
   bool operator ==(Object other) => other is FzAppRef && other.id == id;
@@ -130,6 +147,7 @@ class FzAppIcon extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    if (app.token) return _frame(dark, _tokenFace(context));
     final t = FzKnownApps.tintOf(app.name);
     final bg = dark
         ? HSLColor.fromAHSL(1, t.h, (t.s * 0.4) / 100, 0.21).toColor()
@@ -150,12 +168,28 @@ class FzAppIcon extends ConsumerWidget {
                     style: AppText.sans(size: (size * 0.46).roundToDouble(), weight: FontWeight.w800, height: 1, color: ink),
                   ),
           );
+    return _frame(dark, ClipPath(clipper: const FzSquircleClipper(), child: face));
+  }
+
+  /// An iOS token: a quiet squircle, with FamilyControls' icon over it. The
+  /// native side clips the icon to the same outline, so no Flutter clip
+  /// touches the platform view; if the token no longer resolves, the
+  /// squircle is what shows.
+  Widget _tokenFace(BuildContext context) => Stack(
+        fit: StackFit.expand,
+        children: [
+          ClipPath(clipper: const FzSquircleClipper(), child: ColoredBox(color: context.colors.hilite)),
+          FzTokenView(id: app.id),
+        ],
+      );
+
+  Widget _frame(bool dark, Widget face) {
     return SizedBox.square(
       dimension: size,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ClipPath(clipper: const FzSquircleClipper(), child: face),
+          face,
           if (frozen) ...[
             ClipPath(
               clipper: const FzSquircleClipper(),
@@ -202,6 +236,53 @@ class _SquircleStroke extends CustomPainter {
   @override
   bool shouldRepaint(covariant _SquircleStroke old) =>
       old.color != color || old.width != width || old.progress != progress;
+}
+
+/// One iOS pick drawn by FamilyControls (`aqademiq/fz_token`, a platform
+/// view hosting SwiftUI's `Label(token)`): its icon, or with [title] its
+/// name in that style. The app never learns either — the system draws them
+/// in place ("We never see your picks").
+///
+/// Fills its parent; keep them few and small (a row of tiles, a stack of
+/// three), never one per list item in a long list.
+class FzTokenView extends StatelessWidget {
+  const FzTokenView({super.key, required this.id, this.title});
+
+  static const viewType = 'aqademiq/fz_token';
+
+  /// A token id from `selectionTokens` or a `thaw_request`.
+  final String id;
+
+  /// Draw the name in this style instead of the icon.
+  final TextStyle? title;
+
+  Map<String, Object?> get creationParams {
+    final t = title;
+    if (t == null) return {'id': id, 'style': 'icon'};
+    return {
+      'id': id,
+      'style': 'title',
+      'font_size': t.fontSize ?? 17,
+      'weight': (t.fontWeight ?? FontWeight.w500).value,
+      'color': (t.color ?? kFrostInk).toARGB32(),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Only iOS has the view. Anywhere else (a test, a stray call) the
+    // caller's placeholder shows instead.
+    if (defaultTargetPlatform != TargetPlatform.iOS) return const SizedBox.expand();
+    return UiKitView(
+      // A new id is a new view: creation params are read once, natively.
+      key: ValueKey('${title == null ? 'icon' : 'title'}:$id'),
+      viewType: viewType,
+      creationParams: creationParams,
+      creationParamsCodec: const StandardMessageCodec(),
+      // The view takes no touches of its own; a tile's tap stays Flutter's.
+      hitTestBehavior: PlatformViewHitTestBehavior.transparent,
+    );
+  }
 }
 
 enum FzTileState { plain, frozen, thawed }
@@ -293,16 +374,15 @@ class FzStack extends StatelessWidget {
     final rim = edge ?? colors.surface;
     final children = <Widget>[];
     for (var i = 0; i < apps.length; i++) {
+      // The rim is painted, not clipped: an iOS token icon is a platform
+      // view, and a Flutter clip around one costs a native mask per frame.
       children.add(Transform.translate(
         offset: Offset(-8.0 * i, 0),
-        child: ClipPath(
-          clipper: const FzSquircleClipper(),
-          child: Container(
-            width: size + 4,
-            height: size + 4,
-            color: rim,
-            alignment: Alignment.center,
-            child: FzAppIcon(app: apps[i], size: size),
+        child: SizedBox.square(
+          dimension: size + 4,
+          child: CustomPaint(
+            painter: _SquircleFill(rim),
+            child: Center(child: FzAppIcon(app: apps[i], size: size)),
           ),
         ),
       ));
@@ -328,8 +408,57 @@ class FzStack extends StatelessWidget {
   }
 }
 
+class _SquircleFill extends CustomPainter {
+  const _SquircleFill(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) => canvas.drawPath(fzSquircle(size), Paint()..color = color);
+
+  @override
+  bool shouldRepaint(covariant _SquircleFill old) => old.color != color;
+}
+
+/// The "+3" after the first few iOS picks in a row of tiles, sized like an
+/// [FzAppTile] so the row stays level.
+class FzMoreTile extends StatelessWidget {
+  const FzMoreTile({super.key, required this.more, this.size = 60});
+
+  final int more;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox.square(
+          dimension: size + 10,
+          child: Center(
+            child: ClipPath(
+              clipper: const FzSquircleClipper(),
+              child: Container(
+                width: size,
+                height: size,
+                color: colors.hilite,
+                alignment: Alignment.center,
+                child: Text('+$more', style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.textMed)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text('more', style: AppText.sans(size: 15, color: colors.textMed)),
+      ],
+    );
+  }
+}
+
 /// An app set's stand-in on iOS, where the apps have no names: one frosted
-/// tile with the count.
+/// tile with the count. Also the fallback wherever the picks' own icons
+/// can't be drawn (below iOS 16, before the token ids arrive).
 class FzCountTile extends StatelessWidget {
   const FzCountTile({super.key, required this.count, this.size = 60, this.frozen = true});
 
@@ -1306,14 +1435,24 @@ class FzListRow extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          add ? addLabel : app!.name,
-                          style: AppText.sans(
-                            size: 17,
-                            weight: add ? FontWeight.w700 : FontWeight.w500,
-                            color: add ? colors.accent : colors.text,
+                        if (!add && app!.token)
+                          // iOS: the name is the system's to draw, not ours.
+                          SizedBox(
+                            height: 22,
+                            child: FzTokenView(
+                              id: app!.id,
+                              title: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.text),
+                            ),
+                          )
+                        else
+                          Text(
+                            add ? addLabel : app!.name,
+                            style: AppText.sans(
+                              size: 17,
+                              weight: add ? FontWeight.w700 : FontWeight.w500,
+                              color: add ? colors.accent : colors.text,
+                            ),
                           ),
-                        ),
                         if (sub != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 1),

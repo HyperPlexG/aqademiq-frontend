@@ -21,7 +21,7 @@ class GuestStatsPrompt extends StatelessWidget {
     final colors = context.colors;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: colors.page,
       body: const SafeArea(
         child: Stack(
           children: [

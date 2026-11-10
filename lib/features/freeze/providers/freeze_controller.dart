@@ -315,6 +315,54 @@ class FreezeController extends Notifier<FreezeData> {
 
   void setGroups(FreezeGroups groups) => _commit(state.copyWith(groups: groups));
 
+  // ---- signing out ---------------------------------------------------------
+
+  /// The Screen Time picks kept under a fixed id, whatever the data says: the
+  /// picker opens preloaded with what was last saved under its id, so one left
+  /// behind would show the last account's apps to the next one. (Frost picks
+  /// are `sel-<frost id>`; those still in use are found in the data.)
+  @visibleForTesting
+  static const fixedSelectionIds = [
+    'sel-usual',
+    'sel-now',
+    'sel-ob',
+    'sel-ob-study',
+    'sel-ob-wellness',
+    'sel-always',
+    'sel-never',
+    'sel-distracting',
+  ];
+
+  /// Signing out, or another account on this phone: App freeze starts again
+  /// from nothing.
+  ///
+  /// It is device-local, but it is the account's: left in place, the next
+  /// person to use the app inherits the frosts, groups and The usual — and
+  /// with nobody signed in, apps would stay frozen with no screen saying why.
+  /// So whatever is frozen stops, and the empty policy goes to the native side
+  /// like any other change: Android stops its monitor, iOS clears its three
+  /// stores and unschedules every activity. Thaw history goes too (it feeds
+  /// the weekly report). The OS permissions stay; they are the phone's.
+  void forgetAll() {
+    final selections = <String>{
+      ...fixedSelectionIds,
+      for (final f in state.frosts) ...['sel-${f.id}', ?f.apps.iosSelection],
+      ?state.recentApps.iosSelection,
+      ?state.now?.apps.iosSelection,
+      ?state.groups.alwaysOpen.iosSelection,
+      ?state.groups.neverOpen.iosSelection,
+      ?state.groups.distracting.iosSelection,
+    };
+    // Applied first, so no policy is ever left pointing at a pick that is gone.
+    _commit(const FreezeData());
+    for (final id in selections) {
+      unawaited(_channel.deleteSelection(id));
+    }
+    // A Thaw pressed on a shield before signing out belongs to that account;
+    // read off the queue so it does not open a breath for the next one.
+    unawaited(_channel.takeEvents());
+  }
+
   // ---- onboarding ----------------------------------------------------------
 
   /// Onboarding's Study hours step hands over its days and hours; App freeze
