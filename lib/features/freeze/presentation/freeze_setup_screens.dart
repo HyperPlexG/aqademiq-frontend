@@ -19,6 +19,26 @@ import 'widgets/fz_widgets.dart';
 /// (fz-perm-ios), the two grants on Android (fz-perm-android), the battery
 /// sheet (fz-perm-battery) and the no-nagging decline (fz-perm-denied).
 
+/// Swaps this full-screen setup page for the hub.
+///
+/// These pages sit on the root navigator, so the hub they hand over to depends
+/// on what is under them. Opened from Focus (the shell is right below): go to
+/// the Focus tab's hub, so the bar is back under it and back lands on Focus.
+/// Opened from Settings: the full-screen hub, so back lands on Settings.
+/// Never `pushReplacement(Routes.freeze)` from here — a root page pushing a
+/// route inside the shell builds a second shell, and the page comes up blank
+/// and breaks the Focus tab (see `Routes.freezeHubSettings`).
+void replaceWithFreezeHub(BuildContext context) {
+  final router = GoRouter.of(context);
+  final matches = router.routerDelegate.currentConfiguration.matches;
+  final below = matches.length >= 2 ? matches[matches.length - 2] : null;
+  if (below is ShellRouteMatch) {
+    router.go(Routes.freeze);
+  } else {
+    unawaited(router.pushReplacement(Routes.freezeHubSettings));
+  }
+}
+
 class _Page extends StatelessWidget {
   const _Page({required this.children, this.center = false});
 
@@ -135,7 +155,7 @@ class _FreezePermissionScreenState extends ConsumerState<FreezePermissionScreen>
       ..invalidate(floorAppsProvider);
     if (!mounted) return;
     if (access.batteryRestricted) await showBatterySheet(context, ref);
-    if (mounted) context.pushReplacement(Routes.freeze);
+    if (mounted) replaceWithFreezeHub(context);
   }
 
   Future<void> _continueIos() async {
@@ -362,7 +382,7 @@ class FreezeDeniedScreen extends ConsumerWidget {
             if (ios && await channel.requestAuthorization()) {
               ref.read(hapticsProvider).play(HapticMoment.freezePermissionGranted);
               ref.read(freezeControllerProvider.notifier).markSetUp();
-              if (context.mounted) context.pushReplacement(Routes.freeze);
+              if (context.mounted) replaceWithFreezeHub(context);
               return;
             }
             // Neither OS asks twice: Settings is the way back.

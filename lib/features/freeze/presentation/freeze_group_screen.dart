@@ -21,6 +21,14 @@ class FreezeGroupScreen extends ConsumerWidget {
 
   final FreezeGroup group;
 
+  /// The group page's path under a hub: `<hub>/always`, `/never`,
+  /// `/distracting` (`Routes.freezeAlways` and friends under the Focus tab).
+  static String segmentFor(FreezeGroup group) => switch (group) {
+        FreezeGroup.alwaysOpen => 'always',
+        FreezeGroup.neverOpen => 'never',
+        FreezeGroup.distracting => 'distracting',
+      };
+
   /// iOS: picks listed one by one before "N more". Each row is two platform
   /// views (icon and name), so the list stays short.
   static const _maxTokenRows = 8;

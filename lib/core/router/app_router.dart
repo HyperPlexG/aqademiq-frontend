@@ -104,6 +104,14 @@ abstract final class Routes {
   static const freezeAlways = '/timer/freeze/always';
   static const freezeNever = '/timer/freeze/never';
   static const freezeDistract = '/timer/freeze/distracting';
+
+  /// The same hub, full-screen, for a door that is not in the Focus tab
+  /// (Settings → App freeze → Frosts & groups, and the setup pages opened from
+  /// there). A page on the root navigator must never push a route inside the
+  /// shell: go_router builds a second copy of the shell for it, the branch
+  /// navigators' keys clash, and the page comes up blank and takes the Focus
+  /// tab down with it. Its group pages are `freezeHubSettings/always` etc.
+  static const freezeHubSettings = '/settings/app-freeze/frosts';
   static const freezeIntro = '/freeze/intro';
   static const freezePermission = '/freeze/permission';
   static const freezeDenied = '/freeze/denied';
@@ -213,6 +221,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: Routes.settingsAppFreeze, builder: (_, _) => const AppFreezeSettingsScreen()),
+      GoRoute(
+        path: Routes.freezeHubSettings,
+        builder: (_, _) => const FreezeHubScreen(at: Routes.freezeHubSettings),
+        routes: _freezeGroupRoutes(),
+      ),
       GoRoute(path: Routes.settingsThaw, builder: (_, _) => const ThawSettingsScreen()),
       GoRoute(path: Routes.moodMorning, builder: (_, _) => const MoodMorningScreen()),
       GoRoute(path: Routes.moodEvening, builder: (_, _) => const MoodEveningScreen()),
@@ -284,11 +297,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'freeze',
                     builder: (_, _) => const FreezeHubScreen(),
-                    routes: [
-                      GoRoute(path: 'always', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.alwaysOpen)),
-                      GoRoute(path: 'never', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.neverOpen)),
-                      GoRoute(path: 'distracting', builder: (_, _) => const FreezeGroupScreen(group: FreezeGroup.distracting)),
-                    ],
+                    routes: _freezeGroupRoutes(),
                   ),
                 ],
               ),
@@ -313,3 +322,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Always open · Never open · Distracting, under whichever hub opened them
+/// (the Focus tab's or Settings').
+List<RouteBase> _freezeGroupRoutes() => [
+      for (final group in FreezeGroup.values)
+        GoRoute(path: FreezeGroupScreen.segmentFor(group), builder: (_, _) => FreezeGroupScreen(group: group)),
+    ];
