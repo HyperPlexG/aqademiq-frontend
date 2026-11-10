@@ -78,7 +78,7 @@ void main() {
         final box = find.descendant(of: detail, matching: find.byType(ColoredBox)).first;
         final colored = tester.widget<ColoredBox>(box);
         expect(colored.color.a, 1.0);
-        expect(colored.color, theme.extension<AppColors>()!.bg);
+        expect(colored.color, theme.extension<AppColors>()!.page);
         expect(tester.getSize(box), tester.getSize(detail));
         expect(
           find.descendant(of: box, matching: find.byType(ListView)),
