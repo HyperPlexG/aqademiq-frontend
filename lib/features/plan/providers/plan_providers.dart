@@ -53,9 +53,19 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
   /// The feel lands with the tick on screen, not after the round trip
   /// (haptic architecture principle 5, "Touch and picture land together"). A
   /// rollback is a real failure, so it gets the system error.
-  Future<void> toggleDone(Task task) async {
+  ///
+  /// [endSeries] is "Done for good" on a repeating task: the occurrence is
+  /// completed and the series ends on its day, so it stops coming back. It only
+  /// applies to ticking a repeating task off; un-ticking ignores it. Same one
+  /// feel either way — the choice sheet in front of this plays none.
+  Future<void> toggleDone(Task task, {bool endSeries = false}) async {
     final previous = state.value ?? const <Task>[];
-    final next = task.copyWith(done: !task.done);
+    final ending = endSeries && !task.done && task.repeat != null;
+    final day = DateTime(task.date.year, task.date.month, task.date.day);
+    final next = task.copyWith(
+      done: !task.done,
+      repeat: ending ? task.repeat!.copyWith(untilDate: day) : task.repeat,
+    );
     final updated = [
       for (final t in previous) if (t.id == task.id) next else t,
     ];
@@ -70,7 +80,12 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
                   : HapticMoment.taskChecked,
         );
     try {
-      await ref.read(tasksRepositoryProvider).update(next);
+      final repo = ref.read(tasksRepositoryProvider);
+      if (ending) {
+        await repo.updateAndEndSeries(next);
+      } else {
+        await repo.update(next);
+      }
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {

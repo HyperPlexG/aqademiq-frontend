@@ -37,6 +37,7 @@ import 'sheets/log_mood_sheet.dart';
 import 'sheets/month_picker_sheet.dart';
 import 'sheets/plan_menu.dart';
 import 'sheets/quick_add_sheet.dart';
+import 'sheets/repeat_done_sheet.dart';
 import 'sheets/reschedule_sheet.dart';
 import 'sheets/task_overflow_sheet.dart';
 import 'widgets/collapse_head.dart';
@@ -277,7 +278,10 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     );
   }
 
-  void _toggleDone(Task t) => ref.read(dayTasksProvider.notifier).toggleDone(t);
+  /// Every tick on the Plan (the circle in either view, the overflow sheet's
+  /// "Mark as done") goes through [tickTask], which asks first for a
+  /// repeating task.
+  void _toggleDone(Task t) => unawaited(tickTask(context, ref, t));
 
   void _toggleStep(Task t, Subtask s) =>
       unawaited(ref.read(dayTasksProvider.notifier).toggleStep(t, s));

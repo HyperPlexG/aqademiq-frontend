@@ -285,7 +285,9 @@ as bool,
 mixin _$RepeatRuleDto {
 
  String get frequency;// none|daily|weekly|monthly|custom
- int get interval; List<int> get weekdays;
+ int get interval; List<int> get weekdays;/// Wire `repeat.until_date` (`yyyy-MM-dd`): the series' last day, or null.
+/// A server that predates it simply never sends it.
+@JsonKey(name: 'until_date') DateTime? get untilDate;
 /// Create a copy of RepeatRuleDto
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -298,16 +300,16 @@ $RepeatRuleDtoCopyWith<RepeatRuleDto> get copyWith => _$RepeatRuleDtoCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RepeatRuleDto&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other.weekdays, weekdays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RepeatRuleDto&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other.weekdays, weekdays)&&(identical(other.untilDate, untilDate) || other.untilDate == untilDate));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(weekdays));
+int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(weekdays),untilDate);
 
 @override
 String toString() {
-  return 'RepeatRuleDto(frequency: $frequency, interval: $interval, weekdays: $weekdays)';
+  return 'RepeatRuleDto(frequency: $frequency, interval: $interval, weekdays: $weekdays, untilDate: $untilDate)';
 }
 
 
@@ -318,7 +320,7 @@ abstract mixin class $RepeatRuleDtoCopyWith<$Res>  {
   factory $RepeatRuleDtoCopyWith(RepeatRuleDto value, $Res Function(RepeatRuleDto) _then) = _$RepeatRuleDtoCopyWithImpl;
 @useResult
 $Res call({
- String frequency, int interval, List<int> weekdays
+ String frequency, int interval, List<int> weekdays,@JsonKey(name: 'until_date') DateTime? untilDate
 });
 
 
@@ -335,12 +337,13 @@ class _$RepeatRuleDtoCopyWithImpl<$Res>
 
 /// Create a copy of RepeatRuleDto
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,Object? untilDate = freezed,}) {
   return _then(_self.copyWith(
 frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as String,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
 as int,weekdays: null == weekdays ? _self.weekdays : weekdays // ignore: cast_nullable_to_non_nullable
-as List<int>,
+as List<int>,untilDate: freezed == untilDate ? _self.untilDate : untilDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -425,10 +428,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String frequency,  int interval,  List<int> weekdays)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String frequency,  int interval,  List<int> weekdays, @JsonKey(name: 'until_date')  DateTime? untilDate)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RepeatRuleDto() when $default != null:
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   return orElse();
 
 }
@@ -446,10 +449,10 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String frequency,  int interval,  List<int> weekdays)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String frequency,  int interval,  List<int> weekdays, @JsonKey(name: 'until_date')  DateTime? untilDate)  $default,) {final _that = this;
 switch (_that) {
 case _RepeatRuleDto():
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -466,10 +469,10 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String frequency,  int interval,  List<int> weekdays)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String frequency,  int interval,  List<int> weekdays, @JsonKey(name: 'until_date')  DateTime? untilDate)?  $default,) {final _that = this;
 switch (_that) {
 case _RepeatRuleDto() when $default != null:
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   return null;
 
 }
@@ -481,7 +484,7 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 @JsonSerializable()
 
 class _RepeatRuleDto implements RepeatRuleDto {
-  const _RepeatRuleDto({required this.frequency, this.interval = 1, final  List<int> weekdays = const <int>[]}): _weekdays = weekdays;
+  const _RepeatRuleDto({required this.frequency, this.interval = 1, final  List<int> weekdays = const <int>[], @JsonKey(name: 'until_date') this.untilDate}): _weekdays = weekdays;
   factory _RepeatRuleDto.fromJson(Map<String, dynamic> json) => _$RepeatRuleDtoFromJson(json);
 
 @override final  String frequency;
@@ -494,6 +497,9 @@ class _RepeatRuleDto implements RepeatRuleDto {
   return EqualUnmodifiableListView(_weekdays);
 }
 
+/// Wire `repeat.until_date` (`yyyy-MM-dd`): the series' last day, or null.
+/// A server that predates it simply never sends it.
+@override@JsonKey(name: 'until_date') final  DateTime? untilDate;
 
 /// Create a copy of RepeatRuleDto
 /// with the given fields replaced by the non-null parameter values.
@@ -508,16 +514,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RepeatRuleDto&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other._weekdays, _weekdays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RepeatRuleDto&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other._weekdays, _weekdays)&&(identical(other.untilDate, untilDate) || other.untilDate == untilDate));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(_weekdays));
+int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(_weekdays),untilDate);
 
 @override
 String toString() {
-  return 'RepeatRuleDto(frequency: $frequency, interval: $interval, weekdays: $weekdays)';
+  return 'RepeatRuleDto(frequency: $frequency, interval: $interval, weekdays: $weekdays, untilDate: $untilDate)';
 }
 
 
@@ -528,7 +534,7 @@ abstract mixin class _$RepeatRuleDtoCopyWith<$Res> implements $RepeatRuleDtoCopy
   factory _$RepeatRuleDtoCopyWith(_RepeatRuleDto value, $Res Function(_RepeatRuleDto) _then) = __$RepeatRuleDtoCopyWithImpl;
 @override @useResult
 $Res call({
- String frequency, int interval, List<int> weekdays
+ String frequency, int interval, List<int> weekdays,@JsonKey(name: 'until_date') DateTime? untilDate
 });
 
 
@@ -545,12 +551,13 @@ class __$RepeatRuleDtoCopyWithImpl<$Res>
 
 /// Create a copy of RepeatRuleDto
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,Object? untilDate = freezed,}) {
   return _then(_RepeatRuleDto(
 frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as String,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
 as int,weekdays: null == weekdays ? _self._weekdays : weekdays // ignore: cast_nullable_to_non_nullable
-as List<int>,
+as List<int>,untilDate: freezed == untilDate ? _self.untilDate : untilDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

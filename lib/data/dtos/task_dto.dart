@@ -23,6 +23,9 @@ abstract class RepeatRuleDto with _$RepeatRuleDto {
     required String frequency, // none|daily|weekly|monthly|custom
     @Default(1) int interval,
     @Default(<int>[]) List<int> weekdays,
+    /// Wire `repeat.until_date` (`yyyy-MM-dd`): the series' last day, or null.
+    /// A server that predates it simply never sends it.
+    @JsonKey(name: 'until_date') DateTime? untilDate,
   }) = _RepeatRuleDto;
 
   factory RepeatRuleDto.fromJson(Map<String, dynamic> json) =>
