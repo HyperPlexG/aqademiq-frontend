@@ -6,6 +6,21 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<!-- Universal Links for the shared referral link
+	     (https://www.aqademiq.com/join?ref=CODE, referral_link.dart). Opens the
+	     app only once the site serves /.well-known/apple-app-site-association
+	     for R6YW5K2YSP.com.r13.aqademiq (docs/REFERRAL_DEEP_LINKS.md); until
+	     then the link opens Safari, so nothing breaks in the meantime.
+	     Associated Domains is an ordinary capability (no Apple review):
+	     automatic signing turns it on for the App ID; if an archive ever
+	     says the profile lacks it, tick it on the identifier at
+	     developer.apple.com. The apex is listed for typed links; it only
+	     associates if aqademiq.com serves the file itself, not a redirect. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:www.aqademiq.com</string>
+		<string>applinks:aqademiq.com</string>
+	</array>
 	<!-- Push Notifications (APNs). Xcode promotes this to `production` for
 	     distribution/TestFlight archives; `development` is correct for the file. -->
 	<key>aps-environment</key>

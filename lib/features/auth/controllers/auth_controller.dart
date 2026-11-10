@@ -122,7 +122,11 @@ class AuthController extends AsyncNotifier<void> {
   /// SHA-256 to Apple, and passes the raw nonce + identity token to Supabase.
   /// Returns `true` on success; a user cancellation returns `false` with no
   /// error state (so the screen shows no snackbar), while real failures do.
-  Future<bool> signInWithApple() async {
+  ///
+  /// [upgradeGuest] is the Create account screen's promise that a guest keeps
+  /// everything: the identity must be linked to the guest account, or nothing
+  /// changes (see `exchangeSsoToken`).
+  Future<bool> signInWithApple({bool upgradeGuest = false}) async {
     state = const AsyncLoading();
     try {
       final rawNonce = _generateNonce();
@@ -148,6 +152,7 @@ class AuthController extends AsyncNotifier<void> {
             identityToken: idToken,
             nonce: rawNonce,
             fullName: fullName.isEmpty ? null : fullName,
+            upgradeGuest: upgradeGuest,
           );
       state = const AsyncData(null);
       return true;
@@ -157,17 +162,14 @@ class AuthController extends AsyncNotifier<void> {
         state = const AsyncData(null);
         return false;
       }
-      state = AsyncError(AuthFailure(message: e.message), StackTrace.current);
+      _ssoFailed(AuthFailure(message: e.message));
       return false;
     } on TimeoutException {
-      state = AsyncError(
-        const AuthFailure(
-            message: "Apple sign-in didn't respond. Please try again."),
-        StackTrace.current,
-      );
+      _ssoFailed(const AuthFailure(
+          message: "Apple sign-in didn't respond. Please try again."));
       return false;
     } on Object catch (e, st) {
-      state = AsyncError(e, st);
+      _ssoFailed(e, st);
       return false;
     } finally {
       _clearIfStillLoading();
@@ -192,7 +194,9 @@ class AuthController extends AsyncNotifier<void> {
   /// re-hashes and compares). The nonce is fixed for the app session because
   /// `initialize` runs once; that still binds the token to this client. Android
   /// stays nonce-free, so its already-working path is unchanged.
-  Future<bool> signInWithGoogle() async {
+  ///
+  /// [upgradeGuest] as for [signInWithApple].
+  Future<bool> signInWithGoogle({bool upgradeGuest = false}) async {
     state = const AsyncLoading();
     try {
       final google = GoogleSignIn.instance;
@@ -226,7 +230,11 @@ class AuthController extends AsyncNotifier<void> {
       }
       await ref
           .read(authRepositoryProvider)
-          .signInWithGoogle(idToken, nonce: _googleRawNonce);
+          .signInWithGoogle(
+            idToken,
+            nonce: _googleRawNonce,
+            upgradeGuest: upgradeGuest,
+          );
       state = const AsyncData(null);
       return true;
     } on GoogleSignInException catch (e) {
@@ -239,29 +247,32 @@ class AuthController extends AsyncNotifier<void> {
         state = const AsyncData(null);
         return false;
       }
-      state = AsyncError(
-          AuthFailure(
-              message: (e.description?.isNotEmpty ?? false)
-                  ? e.description!
-                  : 'Google sign-in failed (${e.code.name}).'),
-          StackTrace.current);
+      _ssoFailed(AuthFailure(
+          message: (e.description?.isNotEmpty ?? false)
+              ? e.description!
+              : 'Google sign-in failed (${e.code.name}).'));
       return false;
     } on TimeoutException {
       // The sheet never came back. Most often it never presented at all —
       // see _ssoTimeout and _googleAvailable on the sign-in screen.
-      state = AsyncError(
-        const AuthFailure(
-            message: "Google sign-in didn't respond. Please try again."),
-        StackTrace.current,
-      );
+      _ssoFailed(const AuthFailure(
+          message: "Google sign-in didn't respond. Please try again."));
       return false;
     } on Object catch (e, st) {
       debugPrint('Google sign-in failed (unexpected): $e');
-      state = AsyncError(e, st);
+      _ssoFailed(e, st);
       return false;
     } finally {
       _clearIfStillLoading();
     }
+  }
+
+  /// A real SSO failure (never a cancel): the error state, and the same system
+  /// error every other submitted auth action gives in [_run] — a guest whose
+  /// upgrade did not go through feels it the way a wrong code does.
+  void _ssoFailed(Object error, [StackTrace? st]) {
+    state = AsyncError(error, st ?? StackTrace.current);
+    ref.read(hapticsProvider).play(HapticMoment.failure);
   }
 
   /// A cryptographically-random nonce for the Apple ID token exchange.

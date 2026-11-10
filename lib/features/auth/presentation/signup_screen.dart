@@ -11,10 +11,21 @@ import '../../../data/auth/auth_repository.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
+import '../../onboarding/onboarding_gate.dart';
 import '../controllers/auth_controller.dart';
 import 'widgets/password_eye.dart';
+import 'widgets/sso_buttons.dart';
 
-/// FRAMES `auth-signup` — Create an account.
+/// FRAMES `auth-signup` — Create an account (email + password, with SSO).
+///
+/// Apple and Google are offered here exactly as on the sign-in screen, and
+/// hidden under the same conditions ([ssoAppleAvailable], [ssoGoogleAvailable]
+/// — never shown without their config, App Review 7d5244b9).
+///
+/// For a guest they are an upgrade, not a new account: the identity is linked
+/// to the guest account so its id, and everything made under it, carries over
+/// (`upgradeGuest`). If that link cannot be made the guest stays a guest and
+/// is told so; it never falls back to a different, empty account.
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
 
@@ -67,10 +78,39 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  /// Apple or Google. A guest is upgraded in place, so — like a verified email
+  /// upgrade — they go back into the app, or into onboarding if they never did
+  /// it (`routeAfterAuth` decides, as it does for the OTP screen).
+  Future<void> _sso(Future<bool> Function() run) async {
+    final ok = await run();
+    if (!mounted) return;
+    if (ok) {
+      await routeAfterAuth(context, ref);
+    } else if (ref.read(authControllerProvider).hasError) {
+      // Cancellations leave no error, so only real failures get a snackbar.
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(authErrorMessage(ref.read(authControllerProvider).error)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _apple() => _sso(
+        () => ref.read(authControllerProvider.notifier).signInWithApple(upgradeGuest: true),
+      );
+
+  Future<void> _google() => _sso(
+        () => ref.read(authControllerProvider.notifier).signInWithGoogle(upgradeGuest: true),
+      );
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final busy = ref.watch(authControllerProvider).isLoading;
+    final apple = ssoAppleAvailable;
+    final google = ssoGoogleAvailable;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -96,6 +136,26 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 style: AppText.sans(size: 17, weight: FontWeight.w500, height: 1.4, color: colors.textMed),
               ),
               const SizedBox(height: 22),
+              if (apple) ...[
+                SsoButton(
+                  provider: SsoProvider.apple,
+                  label: 'Continue with Apple',
+                  onTap: busy ? null : () => unawaited(_apple()),
+                ),
+                SizedBox(height: google ? 10 : 18),
+              ],
+              if (google) ...[
+                SsoButton(
+                  provider: SsoProvider.google,
+                  label: 'Continue with Google',
+                  onTap: busy ? null : () => unawaited(_google()),
+                ),
+                const SizedBox(height: 18),
+              ],
+              if (apple || google) ...[
+                const SsoOrDivider(),
+                const SizedBox(height: 16),
+              ],
               const FieldLabel('Email'),
               AppTextField(controller: _email, keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 14),
