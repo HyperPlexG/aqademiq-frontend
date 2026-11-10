@@ -253,8 +253,16 @@ class _AdaScreenState extends ConsumerState<AdaScreen> {
     const typeGroup = XTypeGroup(
       label: 'Documents',
       // iOS filters by UTIs; without them the picker greys out every file.
-      extensions: <String>['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'md'],
-      mimeTypes: <String>['application/pdf', 'text/plain'],
+      // Images too: Ada reads screenshots and timetable photos, and without
+      // them Android's picker greys out every PNG and JPEG.
+      extensions: <String>[
+        'pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt', 'md', //
+        'png', 'jpg', 'jpeg', 'gif', 'webp', 'heic',
+      ],
+      mimeTypes: <String>[
+        'application/pdf', 'text/plain', //
+        'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/heic',
+      ],
       uniformTypeIdentifiers: <String>[
         'com.adobe.pdf',
         'public.plain-text',
