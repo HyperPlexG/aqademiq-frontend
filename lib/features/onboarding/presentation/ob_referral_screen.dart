@@ -13,7 +13,7 @@ import '../../../core/theme/app_text.dart';
 import '../../../data/repositories/referral_repository.dart';
 import '../../../services/deep_link_service.dart';
 import '../../../services/haptics/haptics_service.dart';
-import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/mascot/ada_brand_mark.dart';
 import '../../../shared/widgets/app_text_field.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../auth/presentation/widgets/otp_field.dart';
@@ -177,7 +177,7 @@ class _ObReferralScreenState extends ConsumerState<ObReferralScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AdaMascot(size: 28),
+                const AdaBrandMark(),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(

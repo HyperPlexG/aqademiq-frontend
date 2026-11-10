@@ -9,7 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../services/haptics/haptics_service.dart';
-import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/mascot/ada_brand_mark.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../../shared/widgets/primary_button.dart';
@@ -72,7 +72,7 @@ class ObMoodScreen extends ConsumerWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AdaMascot(size: 24),
+                const AdaBrandMark(size: 24),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Text(

@@ -8,7 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
-import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/mascot/ada_brand_mark.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
 import '../providers/onboarding_steps.dart';
@@ -100,7 +100,7 @@ class _ObNameScreenState extends ConsumerState<ObNameScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AdaMascot(size: 28),
+                const AdaBrandMark(),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
