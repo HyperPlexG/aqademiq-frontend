@@ -95,14 +95,7 @@ class SubjectsScreen extends ConsumerWidget {
 
   Future<void> _addSubject(BuildContext context) async {
     // The controller refreshes the list on save, so we only need to await it.
-    await showModalBottomSheet<Subject>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      barrierColor: const Color(0x4C140F1C),
-      builder: (_) => const SubjectFormSheet(),
-    );
+    await showSubjectFormSheet(context);
   }
 
   Future<void> _menu(BuildContext context, WidgetRef ref) async {

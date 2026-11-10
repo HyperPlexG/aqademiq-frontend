@@ -11,6 +11,7 @@ import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 0 (`ob-age`): the age gate. Aqademiq is 18+. Entering a
@@ -52,7 +53,7 @@ class _ObAgeScreenState extends ConsumerState<ObAgeScreen> {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 0,
+      step: ObStep.age,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

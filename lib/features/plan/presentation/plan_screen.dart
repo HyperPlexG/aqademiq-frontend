@@ -680,12 +680,23 @@ class _PlanListGrouped extends ConsumerWidget {
     for (final t in tasks) {
       groups[taskBucket(t)]!.add(t);
     }
+    // A busy day lists only the buckets that hold something. An empty day used
+    // to list nothing at all: every bucket was filtered out, the ListView had no
+    // children, and choosing "List" on a day without tasks blanked the planner.
+    // With nothing planned, every bucket shows, each with a way to add to it.
+    final empty = tasks.isEmpty;
+    const addLabels = {
+      DayPart.anytime: 'Add a task for anytime',
+      DayPart.morning: 'Add a task for the morning',
+      DayPart.afternoon: 'Add a task for the afternoon',
+      DayPart.evening: 'Add a task for the evening',
+    };
 
     return ListView(
       padding: EdgeInsets.zero,
       children: [
         for (final part in _order)
-          if (groups[part]!.isNotEmpty) ...[
+          if (empty || groups[part]!.isNotEmpty) ...[
             ListGroupHead(
               icon: meta[part]!.$1,
               label: meta[part]!.$2,
@@ -709,6 +720,8 @@ class _PlanListGrouped extends ConsumerWidget {
                     onToggleDone: () => onToggleDone(t),
                   ),
                 ),
+            if (empty && !collapsed.contains(part))
+              AddRow(label: addLabels[part]!, onTap: () => onAddBucket(part)),
             const SizedBox(height: 12),
           ],
       ],

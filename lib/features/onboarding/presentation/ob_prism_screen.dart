@@ -16,6 +16,7 @@ import '../../../shared/widgets/primary_button.dart';
 import '../../focus/providers/prism_audio_provider.dart';
 import '../../settings/providers/prism_settings_provider.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// Onboarding step 6 (prototype `ob5`): introduces Prism focus audio and lets
@@ -90,7 +91,7 @@ class _ObPrismScreenState extends ConsumerState<ObPrismScreen> {
     ];
 
     return OnboardingScaffold(
-      activeStep: 10,
+      step: ObStep.prism,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -14,6 +14,7 @@ import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// The privacy-policy / terms version this consent screen renders. Sent as
@@ -75,7 +76,7 @@ class _ObConsentScreenState extends ConsumerState<ObConsentScreen> {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 1,
+      step: ObStep.consent,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

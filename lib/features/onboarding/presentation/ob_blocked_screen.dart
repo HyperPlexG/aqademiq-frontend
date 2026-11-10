@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// `ob-age-gate`: the under-18 block. Reached from the age screen when the
@@ -21,7 +22,7 @@ class ObBlockedScreen extends StatelessWidget {
     final colors = context.colors;
 
     return OnboardingScaffold(
-      activeStep: 0,
+      step: ObStep.age,
       centerBody: true,
       body: Column(
         children: [
