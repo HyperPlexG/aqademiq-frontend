@@ -11,11 +11,11 @@ enum HapticSetting {
   off,
 
   /// Sessions, freezing and thawing; deep freeze holding; system success and
-  /// error. About ten moments a day. **The default.**
+  /// error; and v1's earned moments and deletes.
   essential,
 
   /// Everything: ticks, toggles, wheels, swipes, Ada, the Core, Prism
-  /// previews.
+  /// previews. **The default.**
   full;
 
   /// Stable key for SharedPreferences; a bare `name` would silently change
@@ -26,12 +26,14 @@ enum HapticSetting {
         HapticSetting.full => 'full',
       };
 
-  /// Unset means Essential (principle 6, "Essential by default"). A student
-  /// who picked Full or Off keeps their pick.
+  /// Unset means Full, as it always was before v2: a student who never opened
+  /// the setting keeps feeling every tap. (The architecture's principle 6 asks
+  /// for Essential; the product owner chose to keep v1's default.) A student
+  /// who picked Essential or Off keeps their pick.
   static HapticSetting fromStorageKey(String? key) => switch (key) {
         'off' => HapticSetting.off,
-        'full' => HapticSetting.full,
-        _ => HapticSetting.essential,
+        'essential' => HapticSetting.essential,
+        _ => HapticSetting.full,
       };
 
   String get label => switch (this) {

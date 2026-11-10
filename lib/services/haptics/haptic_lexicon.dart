@@ -909,3 +909,84 @@ List<int> _gapsFilling(int from, int to, int total) {
   }
   return [total];
 }
+
+// ─── v1, kept alongside ───────────────────────────────────────────────────
+
+/// The v1 ("Melt Ramp") patterns for touchpoints the haptic architecture does
+/// not list, brought back so nothing a student already felt went silent. The
+/// numbers are v1's exactly. They have no Android primitives of their own:
+/// Android plays the waveform derived from the iOS timeline.
+abstract final class AqV1 {
+  static IosCurve _hold(int ms, double i, double s, {int at = 0}) =>
+      IosCurve(at: Duration(milliseconds: at), duration: Duration(milliseconds: ms), sharpness: s, points: [(0, i), (1, i)]);
+
+  /// A swell, then two strikes: arrival. The streak milestone.
+  static final streakMilestone = HapticSpec(
+    name: 'v1.streak',
+    ios: [
+      _hold(250, 0.55, 0.3),
+      const IosTap(at: Duration(milliseconds: 260), intensity: 1, sharpness: 0.9),
+      const IosTap(at: Duration(milliseconds: 380), intensity: 1, sharpness: 0.9),
+    ],
+    android: const [],
+    fallback: Fallback.heavy,
+  );
+
+  /// Relief, not triumph: a soft swell that settles. A guest's account is made.
+  static final guestUpgraded = HapticSpec(
+    name: 'v1.guestUpgraded',
+    ios: [_hold(200, 0.5, 0.2), const IosTap(at: Duration(milliseconds: 200), intensity: 0.7, sharpness: 0.5)],
+    android: const [],
+    fallback: Fallback.medium,
+  );
+
+  /// "Done, done, done", ascending. Onboarding finished.
+  static const onboardingFinished = HapticSpec(
+    name: 'v1.onboardingFinished',
+    ios: [
+      IosTap(intensity: 0.4, sharpness: 0.3),
+      IosTap(at: Duration(milliseconds: 110), intensity: 0.6, sharpness: 0.55),
+      IosTap(at: Duration(milliseconds: 220), intensity: 0.9, sharpness: 0.8),
+    ],
+    android: [],
+    fallback: Fallback.medium,
+  );
+
+  /// A light single. A subject or semester created.
+  static const created = HapticSpec(
+    name: 'v1.created',
+    ios: [IosTap(intensity: 0.55, sharpness: 0.65)],
+    android: [],
+    fallback: Fallback.light,
+  );
+
+  /// Two equal soft beats: moved, never a penalty. A task pushed to another day.
+  static const moved = HapticSpec(
+    name: 'v1.moved',
+    ios: [
+      IosTap(intensity: 0.4, sharpness: 0.35),
+      IosTap(at: Duration(milliseconds: 70), intensity: 0.4, sharpness: 0.35),
+    ],
+    android: [],
+    fallback: Fallback.light,
+  );
+
+  /// Two hard, evenly spaced hits. Something deleted for good.
+  static const deleted = HapticSpec(
+    name: 'v1.deleted',
+    ios: [
+      IosTap(intensity: 1, sharpness: 0.95),
+      IosTap(at: Duration(milliseconds: 130), intensity: 1, sharpness: 0.95),
+    ],
+    android: [],
+    fallback: Fallback.heavy,
+  );
+
+  /// A detent on a continuous slider. The Prism volume sliders.
+  static const sliderStop = HapticSpec(
+    name: 'v1.slider',
+    ios: [IosTap(intensity: 0.65, sharpness: 0.85)],
+    android: [],
+    fallback: Fallback.selection,
+  );
+}

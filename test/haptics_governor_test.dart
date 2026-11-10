@@ -56,9 +56,9 @@ class _Rig {
 
 void main() {
   group('setting', () {
-    test('Essential is the default for a student who never picked', () {
-      expect(HapticSetting.fromStorageKey(null), HapticSetting.essential);
-      expect(HapticSetting.fromStorageKey('full'), HapticSetting.full);
+    test('Full is the default for a student who never picked, as in v1', () {
+      expect(HapticSetting.fromStorageKey(null), HapticSetting.full);
+      expect(HapticSetting.fromStorageKey('essential'), HapticSetting.essential);
       expect(HapticSetting.fromStorageKey('off'), HapticSetting.off);
     });
 
@@ -109,6 +109,11 @@ void main() {
         HapticMoment.thawEverythingDone,
         HapticMoment.deleteAccountHold,
         HapticMoment.deleteAccountDone,
+        // v1's earned moments and its delete warning, kept alongside.
+        HapticMoment.streakMilestone,
+        HapticMoment.guestUpgraded,
+        HapticMoment.onboardingFinished,
+        HapticMoment.itemDeleted,
       });
     });
   });

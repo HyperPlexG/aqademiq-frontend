@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
+import '../../../services/haptics/haptics_service.dart';
 import '../../../services/sound_settings_service.dart';
 import '../../../shared/widgets/app_bottom_sheet.dart';
 import '../../../shared/widgets/settings_row.dart';
@@ -176,6 +177,9 @@ class _VolumeRow extends ConsumerWidget {
   final bool last;
   final ValueChanged<double> onChanged;
 
+  /// Quantise the 0–1 travel into twenty stops; a tick only on crossing one.
+  static int _detent(double v) => (v * 20).round();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
@@ -219,9 +223,14 @@ class _VolumeRow extends ConsumerWidget {
               ),
               child: Slider(
                 value: value.clamp(0.0, 1.0),
-                // Volume sliders have no feel in the haptic architecture:
-                // the sound itself is the feedback.
-                onChanged: onChanged,
+                // v1's detent: a tick each time the slider crosses one of
+                // twenty stops, never per pixel.
+                onChanged: (v) {
+                  if (_detent(v) != _detent(value)) {
+                    ref.read(hapticsProvider).play(HapticMoment.volumeStep);
+                  }
+                  onChanged(v);
+                },
               ),
             ),
           ),
