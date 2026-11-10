@@ -80,6 +80,7 @@ extension RepeatRuleX on RepeatRule {
         frequency: frequency.name,
         interval: interval,
         weekdays: weekdays,
+        untilDate: untilDate,
       );
 }
 
@@ -89,6 +90,7 @@ extension RepeatRuleDtoX on RepeatRuleDto {
             _enumByName(RepeatFrequency.values, frequency, RepeatFrequency.none),
         interval: interval,
         weekdays: weekdays,
+        untilDate: untilDate,
       );
 }
 

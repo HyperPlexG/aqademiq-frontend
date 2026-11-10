@@ -21,6 +21,10 @@ class FreezeGroupScreen extends ConsumerWidget {
 
   final FreezeGroup group;
 
+  /// iOS: picks listed one by one before "N more". Each row is two platform
+  /// views (icon and name), so the list stays short.
+  static const _maxTokenRows = 8;
+
   String get _title => switch (group) {
         FreezeGroup.alwaysOpen => 'Always open',
         FreezeGroup.neverOpen => 'Never open',
@@ -59,6 +63,9 @@ class FreezeGroupScreen extends ConsumerWidget {
     final controller = ref.read(freezeControllerProvider.notifier);
     final set = _setOf(data.groups);
     final phone = apps.floor.entries.where((e) => e.value == 'phone').map((e) => e.key).firstOrNull;
+    // iOS: the picks themselves, icon and name drawn by the system. Null
+    // where they can't be — then the one "N apps · Chosen in Screen Time" row.
+    final tokens = apps.ios ? fzTokensOf(ref, set) : null;
 
     void save(AppSet s) {
       // An app lives in one group at a time: Never open and Always open
@@ -87,7 +94,16 @@ class FreezeGroupScreen extends ConsumerWidget {
         const FzListRow(app: FzAppRef('ios.phone', 'Phone'), sub: 'Calls always get through', glyph: 'call'),
       if (group == FreezeGroup.neverOpen && apps.ios)
         _AdultSites(value: data.groups.adultSites, onChanged: (v) => controller.setGroups(data.groups.copyWith(adultSites: v))),
-      if (apps.ios)
+      if (tokens != null) ...[
+        // Removing one happens in Apple's picker (the Add row), not here.
+        for (final t in tokens.take(_maxTokenRows)) FzListRow(app: t),
+        if (tokens.length > _maxTokenRows)
+          FzListRow(
+            app: FzAppRef('ios.more', '${tokens.length - _maxTokenRows} more'),
+            sub: 'Chosen in Screen Time',
+            glyph: 'hourglass_empty',
+          ),
+      ] else if (apps.ios)
         FzListRow(
           app: FzAppRef('ios.sel', set.count == 0 ? 'Nothing added yet' : FreezeApps.countLabel(set)),
           sub: 'Chosen in Screen Time',

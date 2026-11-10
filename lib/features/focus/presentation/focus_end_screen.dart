@@ -97,6 +97,10 @@ class _FocusEndScreenState extends ConsumerState<FocusEndScreen> {
   /// same reason: routing through the plan controller would add a second
   /// haptic to one action. Fire-and-forget, so a failed write never holds
   /// anyone on this screen.
+  ///
+  /// Yes on a repeating task completes this day only (no "for good?"
+  /// question): the session was about today's occurrence, and ending the
+  /// series is the Plan's choice to offer.
   void _settleLinkedTask() {
     final task = _askAbout;
     if (task == null) return;

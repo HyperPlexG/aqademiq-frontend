@@ -189,6 +189,9 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final apps = ref.watch(freezeAppsProvider);
+    // The first three picks and "+N": Android's apps, iOS's tokens (drawn by
+    // the system), or nothing to draw — then the count.
+    final shown = apps.ios ? fzTokensOf(ref, _f.apps) ?? const <FzAppRef>[] : apps.of(_f.apps);
     final controller = ref.read(freezeControllerProvider.notifier);
     // Locked by the SAVED frost's Deep freeze, not this draft's: switching Deep
     // on for a running frost must not lock its own Save.
@@ -260,10 +263,10 @@ class _FrostEditorState extends ConsumerState<_FrostEditor> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (!apps.ios && _f.apps.packages.isNotEmpty)
+                      if (shown.isNotEmpty)
                         FzStack(
-                          apps: apps.of(_f.apps).take(3).toList(),
-                          more: _f.apps.packages.length > 3 ? _f.apps.packages.length - 3 : 0,
+                          apps: shown.take(3).toList(),
+                          more: shown.length > 3 ? shown.length - 3 : 0,
                           edge: colors.bg,
                         )
                       else
@@ -542,7 +545,9 @@ class _ActiveFrost extends ConsumerWidget {
     final w = FreezeEngine.windowAt(frost, now);
     final session = frost.kind == FrostKind.session;
     final leftText = w?.end == null ? 'running' : '${FreezeText.left(w!.end!.difference(now))} left';
-    final frozen = apps.ios ? const <({FzAppRef app, ThawGrant? grant})>[] : [
+    final frozen = apps.ios
+        ? fzFrozenTokens(ref, data, frost.apps, deep: frost.deep, now: now) ?? const <({FzAppRef app, ThawGrant? grant})>[]
+        : [
       for (final p in frost.apps.keepOnly ? const <String>[] : frost.apps.packages)
         if (!data.groups.alwaysOpen.contains(p))
           (app: apps.ref(p), grant: FreezeEngine.isFrozen(data, p, now) ? null : FreezeEngine.grantFor(data, p, now)),
@@ -612,7 +617,8 @@ class _ActiveFrost extends ConsumerWidget {
                           state: f.grant == null ? FzTileState.frozen : FzTileState.thawed,
                           minutesLeft: f.grant == null ? null : (f.grant!.until.difference(now).inSeconds / 60).ceil(),
                           progress: f.grant == null ? 0 : _share(f.grant!, now),
-                          onTap: f.grant == null ? () => onThaw(f.app.id, f.app.name) : null,
+                          // An iOS pick has no name; the thaw screen shows its icon.
+                          onTap: f.grant == null ? () => onThaw(f.app.id, f.app.token ? null : f.app.name) : null,
                         ),
                         const SizedBox(width: 18),
                       ],

@@ -277,7 +277,11 @@ as bool,
 /// @nodoc
 mixin _$RepeatRule {
 
- RepeatFrequency get frequency; int get interval; List<int> get weekdays;
+ RepeatFrequency get frequency; int get interval; List<int> get weekdays;// 1=Mon … 7=Sun
+/// The last day the series occurs, or null while it runs on. Set by
+/// "Done for good", which ends the series on the occurrence it was ticked
+/// from; earlier days (and any already ticked) stay as they are.
+ DateTime? get untilDate;
 /// Create a copy of RepeatRule
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -288,16 +292,16 @@ $RepeatRuleCopyWith<RepeatRule> get copyWith => _$RepeatRuleCopyWithImpl<RepeatR
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RepeatRule&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other.weekdays, weekdays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RepeatRule&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other.weekdays, weekdays)&&(identical(other.untilDate, untilDate) || other.untilDate == untilDate));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(weekdays));
+int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(weekdays),untilDate);
 
 @override
 String toString() {
-  return 'RepeatRule(frequency: $frequency, interval: $interval, weekdays: $weekdays)';
+  return 'RepeatRule(frequency: $frequency, interval: $interval, weekdays: $weekdays, untilDate: $untilDate)';
 }
 
 
@@ -308,7 +312,7 @@ abstract mixin class $RepeatRuleCopyWith<$Res>  {
   factory $RepeatRuleCopyWith(RepeatRule value, $Res Function(RepeatRule) _then) = _$RepeatRuleCopyWithImpl;
 @useResult
 $Res call({
- RepeatFrequency frequency, int interval, List<int> weekdays
+ RepeatFrequency frequency, int interval, List<int> weekdays, DateTime? untilDate
 });
 
 
@@ -325,12 +329,13 @@ class _$RepeatRuleCopyWithImpl<$Res>
 
 /// Create a copy of RepeatRule
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,Object? untilDate = freezed,}) {
   return _then(_self.copyWith(
 frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as RepeatFrequency,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
 as int,weekdays: null == weekdays ? _self.weekdays : weekdays // ignore: cast_nullable_to_non_nullable
-as List<int>,
+as List<int>,untilDate: freezed == untilDate ? _self.untilDate : untilDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -415,10 +420,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RepeatFrequency frequency,  int interval,  List<int> weekdays)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( RepeatFrequency frequency,  int interval,  List<int> weekdays,  DateTime? untilDate)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RepeatRule() when $default != null:
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   return orElse();
 
 }
@@ -436,10 +441,10 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RepeatFrequency frequency,  int interval,  List<int> weekdays)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( RepeatFrequency frequency,  int interval,  List<int> weekdays,  DateTime? untilDate)  $default,) {final _that = this;
 switch (_that) {
 case _RepeatRule():
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -456,10 +461,10 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RepeatFrequency frequency,  int interval,  List<int> weekdays)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( RepeatFrequency frequency,  int interval,  List<int> weekdays,  DateTime? untilDate)?  $default,) {final _that = this;
 switch (_that) {
 case _RepeatRule() when $default != null:
-return $default(_that.frequency,_that.interval,_that.weekdays);case _:
+return $default(_that.frequency,_that.interval,_that.weekdays,_that.untilDate);case _:
   return null;
 
 }
@@ -471,7 +476,7 @@ return $default(_that.frequency,_that.interval,_that.weekdays);case _:
 
 
 class _RepeatRule implements RepeatRule {
-  const _RepeatRule({required this.frequency, this.interval = 1, final  List<int> weekdays = const <int>[]}): _weekdays = weekdays;
+  const _RepeatRule({required this.frequency, this.interval = 1, final  List<int> weekdays = const <int>[], this.untilDate}): _weekdays = weekdays;
   
 
 @override final  RepeatFrequency frequency;
@@ -483,6 +488,11 @@ class _RepeatRule implements RepeatRule {
   return EqualUnmodifiableListView(_weekdays);
 }
 
+// 1=Mon … 7=Sun
+/// The last day the series occurs, or null while it runs on. Set by
+/// "Done for good", which ends the series on the occurrence it was ticked
+/// from; earlier days (and any already ticked) stay as they are.
+@override final  DateTime? untilDate;
 
 /// Create a copy of RepeatRule
 /// with the given fields replaced by the non-null parameter values.
@@ -494,16 +504,16 @@ _$RepeatRuleCopyWith<_RepeatRule> get copyWith => __$RepeatRuleCopyWithImpl<_Rep
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RepeatRule&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other._weekdays, _weekdays));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RepeatRule&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.interval, interval) || other.interval == interval)&&const DeepCollectionEquality().equals(other._weekdays, _weekdays)&&(identical(other.untilDate, untilDate) || other.untilDate == untilDate));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(_weekdays));
+int get hashCode => Object.hash(runtimeType,frequency,interval,const DeepCollectionEquality().hash(_weekdays),untilDate);
 
 @override
 String toString() {
-  return 'RepeatRule(frequency: $frequency, interval: $interval, weekdays: $weekdays)';
+  return 'RepeatRule(frequency: $frequency, interval: $interval, weekdays: $weekdays, untilDate: $untilDate)';
 }
 
 
@@ -514,7 +524,7 @@ abstract mixin class _$RepeatRuleCopyWith<$Res> implements $RepeatRuleCopyWith<$
   factory _$RepeatRuleCopyWith(_RepeatRule value, $Res Function(_RepeatRule) _then) = __$RepeatRuleCopyWithImpl;
 @override @useResult
 $Res call({
- RepeatFrequency frequency, int interval, List<int> weekdays
+ RepeatFrequency frequency, int interval, List<int> weekdays, DateTime? untilDate
 });
 
 
@@ -531,12 +541,13 @@ class __$RepeatRuleCopyWithImpl<$Res>
 
 /// Create a copy of RepeatRule
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? frequency = null,Object? interval = null,Object? weekdays = null,Object? untilDate = freezed,}) {
   return _then(_RepeatRule(
 frequency: null == frequency ? _self.frequency : frequency // ignore: cast_nullable_to_non_nullable
 as RepeatFrequency,interval: null == interval ? _self.interval : interval // ignore: cast_nullable_to_non_nullable
 as int,weekdays: null == weekdays ? _self._weekdays : weekdays // ignore: cast_nullable_to_non_nullable
-as List<int>,
+as List<int>,untilDate: freezed == untilDate ? _self.untilDate : untilDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

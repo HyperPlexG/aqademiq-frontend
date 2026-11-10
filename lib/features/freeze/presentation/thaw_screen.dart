@@ -260,6 +260,8 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
   Widget _minutesBody() {
     final apps = ref.watch(freezeAppsProvider);
     final target = widget.request.target;
+    // Token views need what App freeze itself needs on iOS (16+, entitled).
+    final tokenViews = ref.watch(freezeAccessProvider).value?.supported ?? false;
     Widget step(String icon, VoidCallback onTap) => Semantics(
           button: true,
           label: icon == 'add' ? 'More' : 'Less',
@@ -287,6 +289,11 @@ class _ThawScreenState extends ConsumerState<ThawScreen> {
                 children: [
                   if (target != ThawGrant.allApps && !apps.ios) ...[
                     FzAppIcon(app: apps.ref(target), size: 40, glyph: apps.glyphOf(target)),
+                    const SizedBox(width: 10),
+                  ] else if (apps.ios && FzAppRef.isTokenId(target) && tokenViews) ...[
+                    // iOS: the pick the shield (or a Frozen tile) named, drawn
+                    // by the system — we still don't know its name.
+                    FzAppIcon(app: FzAppRef.token(target), size: 40),
                     const SizedBox(width: 10),
                   ],
                   Flexible(

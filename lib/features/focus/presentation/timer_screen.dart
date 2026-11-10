@@ -106,6 +106,11 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         // through it would fire two haptics for one user action: the session's
         // own completion, and a task completion the user did not ask for.
         // Spec §4.3 names this exact case as its sharpest.
+        //
+        // A repeating task is completed for this day only, with no "for
+        // good?" question: the session was about today's occurrence, and
+        // ending a whole series is a choice made on the Plan, not a side
+        // effect of a timer running out.
         final t = ref.read(linkedTaskProvider);
         if (t != null && !t.done && !next.endedEarly) {
           unawaited(ref.read(tasksRepositoryProvider).update(t.copyWith(done: true)));
