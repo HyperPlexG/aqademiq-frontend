@@ -86,7 +86,7 @@ class _RescheduleReviewState extends ConsumerState<_RescheduleReview> {
     try {
       final ctrl = ref.read(dayTasksProvider.notifier);
       for (final t in tasks) {
-        await ctrl.move(t, to);
+        await ctrl.move(t, to, feel: false);
       }
     } finally {
       if (mounted) setState(() => _moving = false);

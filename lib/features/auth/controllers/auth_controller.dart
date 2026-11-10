@@ -95,12 +95,16 @@ class AuthController extends AsyncNotifier<void> {
 
   /// Confirm the pending OTP.
   ///
-  /// A verified code ends on the system success — the rhythm of typing digits,
-  /// then a clear finish. A wrong code is a real failure, and `_run` gives it
-  /// the system error.
+  /// A verified sign-up or guest link ends on v1's relief: the moment a
+  /// guest's worry about losing their data resolves. A password-reset code
+  /// ends on the system success instead. The pending type is read before the
+  /// call: `verifyOtp` leaves it alone so the verify screen can still tell
+  /// which flow it finished. A wrong code is a real failure, and `_run` gives
+  /// it the system error.
   Future<bool> verify(String code) async {
+    final recovery = ref.read(authRepositoryProvider).isRecoveryPending;
     final ok = await _run(() => ref.read(authRepositoryProvider).verifyOtp(code));
-    if (ok) ref.read(hapticsProvider).play(HapticMoment.otpVerified);
+    if (ok) ref.read(hapticsProvider).play(recovery ? HapticMoment.otpVerified : HapticMoment.guestUpgraded);
     return ok;
   }
 

@@ -352,7 +352,33 @@ enum HapticMoment {
 
   /// Delete account: the hold completes → knock. The only action that cannot
   /// be undone gets the most friction.
-  deleteAccountDone(HapticTier.essential);
+  deleteAccountDone(HapticTier.essential),
+
+  // ── From v1, kept alongside ────────────────────────────────────────────
+  // Touchpoints that had a feel before the haptic architecture and are not in
+  // its §4. They keep v1's patterns (`AqV1`) and v1's tiers: the earned
+  // moments and the warning play under Essential, the rest under Full.
+
+  /// The day streak crosses a milestone (3, 7, 14, 30 …), once per crossing.
+  streakMilestone(HapticTier.essential),
+
+  /// A guest's account is created (their code verified). Relief.
+  guestUpgraded(HapticTier.essential),
+
+  /// Onboarding accepted by the server, before the plan appears.
+  onboardingFinished(HapticTier.essential),
+
+  /// A subject or a semester created.
+  subjectCreated(HapticTier.full),
+
+  /// One task moved to another day (move to tomorrow, reschedule).
+  taskMoved(HapticTier.full),
+
+  /// A task, subject or semester deleted, after the confirm.
+  itemDeleted(HapticTier.essential),
+
+  /// A Prism volume slider crosses one of its 20 detents.
+  volumeStep(HapticTier.full, stream: true);
 
   const HapticMoment(this.tier, {this.stream = false, this.ambient = false});
 
@@ -479,6 +505,13 @@ HapticSpec specFor(HapticMoment moment, {int step = 0, int count = 1, String? mo
       HapticMoment.rateSubmit => Aq.latch,
       HapticMoment.deleteAccountHold => Aq.ratchet(deleteAccountHoldTime),
       HapticMoment.deleteAccountDone => Aq.knock,
+      HapticMoment.streakMilestone => AqV1.streakMilestone,
+      HapticMoment.guestUpgraded => AqV1.guestUpgraded,
+      HapticMoment.onboardingFinished => AqV1.onboardingFinished,
+      HapticMoment.subjectCreated => AqV1.created,
+      HapticMoment.taskMoved => AqV1.moved,
+      HapticMoment.itemDeleted => AqV1.deleted,
+      HapticMoment.volumeStep => AqV1.sliderStop,
     };
 
 /// Thud, then 120 ms later the Prism pattern, landing on the audio's first

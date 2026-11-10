@@ -18,6 +18,7 @@ class HapticSettingsService {
   static final HapticSettingsService instance = HapticSettingsService._();
 
   static const _kLevel = 'haptics_level';
+  static const _kStreakMark = 'haptics_streak_mark';
 
   SharedPreferences? _prefs;
 
@@ -30,4 +31,11 @@ class HapticSettingsService {
 
   Future<void> setSetting(HapticSetting value) async =>
       _prefs?.setString(_kLevel, value.storageKey);
+
+  /// Highest day-streak the milestone haptic has already accounted for, so a
+  /// crossing fires once, never each time the streak is recomputed.
+  int get streakMark => _prefs?.getInt(_kStreakMark) ?? 0;
+
+  Future<void> setStreakMark(int value) async =>
+      _prefs?.setInt(_kStreakMark, value);
 }

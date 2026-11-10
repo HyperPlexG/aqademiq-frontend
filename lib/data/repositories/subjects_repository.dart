@@ -5,6 +5,7 @@ import '../../core/network/dio_client.dart';
 import '../adapters/adapters.dart';
 import '../auth/auth_repository.dart';
 import '../models/subject.dart';
+import '../../services/haptics/haptics_service.dart';
 import '../sources/subjects_source.dart';
 
 class SubjectsRepository {
@@ -97,15 +98,18 @@ class SubjectsController extends AsyncNotifier<List<Subject>> {
     return ref.watch(subjectsRepositoryProvider).all();
   }
 
-  /// Create or edit.
+  /// Create or edit. A creation gets v1's light single.
   Future<Subject> save(Subject subject) async {
+    final creating = subject.id.isEmpty;
     final saved = await ref.read(subjectsRepositoryProvider).upsert(subject);
+    if (creating) ref.read(hapticsProvider).play(HapticMoment.subjectCreated);
     ref.invalidateSelf();
     return saved;
   }
 
   Future<void> remove(String id) async {
     await ref.read(subjectsRepositoryProvider).delete(id);
+    ref.read(hapticsProvider).play(HapticMoment.itemDeleted);
     ref.invalidateSelf();
   }
 }
@@ -127,15 +131,18 @@ class SemestersController extends AsyncNotifier<List<Semester>> {
     DateTime? start,
     DateTime? end,
   }) async {
+    final creating = semester.id.isEmpty;
     final saved = await ref
         .read(subjectsRepositoryProvider)
         .upsertSemester(semester, start: start, end: end);
+    if (creating) ref.read(hapticsProvider).play(HapticMoment.subjectCreated);
     ref.invalidateSelf();
     return saved;
   }
 
   Future<void> remove(String id) async {
     await ref.read(subjectsRepositoryProvider).deleteSemester(id);
+    ref.read(hapticsProvider).play(HapticMoment.itemDeleted);
     // The semester's subjects went with it on the server; without the second
     // invalidate they stayed listed until something else refreshed them.
     ref

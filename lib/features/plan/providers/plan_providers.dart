@@ -123,13 +123,15 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
   }
 
   /// Move a task to another day — it leaves the current day's list.
-  Future<void> move(Task task, DateTime newDate) async {
+  ///
+  /// A single move gets v1's two soft beats once it sticks. The reschedule
+  /// review passes [feel] false: it plays its own "several things moved".
+  Future<void> move(Task task, DateTime newDate, {bool feel = true}) async {
     final previous = state.value ?? const <Task>[];
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
-      // No feel of its own: the gesture that moved it (a swipe, a drop, the
-      // reschedule review) already gave one.
       await ref.read(tasksRepositoryProvider).move(task, newDate);
+      if (feel) ref.read(hapticsProvider).play(HapticMoment.taskMoved);
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
@@ -144,6 +146,8 @@ class DayTasksController extends AsyncNotifier<List<Task>> {
     state = AsyncData([for (final t in previous) if (t.id != task.id) t]);
     try {
       await ref.read(tasksRepositoryProvider).delete(task.id);
+      // v1's two hard hits, after the confirm and once the delete sticks.
+      ref.read(hapticsProvider).play(HapticMoment.itemDeleted);
       ref.invalidate(weeklyCompletedProvider);
       _rescheduleReminders();
     } on Object catch (_) {
