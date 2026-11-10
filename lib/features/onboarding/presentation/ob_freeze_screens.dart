@@ -19,6 +19,7 @@ import '../../freeze/presentation/sheets/choose_apps_sheet.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../freeze/providers/freeze_controller.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'ob_source_screen.dart';
 import 'widgets/onboarding_scaffold.dart';
 
@@ -111,7 +112,7 @@ class _ObFreezeScreenState extends ConsumerState<ObFreezeScreen> with WidgetsBin
     }
 
     return OnboardingScaffold(
-      activeStep: 8,
+      step: ObStep.freeze,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -295,7 +296,7 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
 
     if (apps.ios) {
       return OnboardingScaffold(
-        activeStep: 9,
+        step: ObStep.apps,
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -344,7 +345,7 @@ class _ObAppsScreenState extends ConsumerState<ObAppsScreen> {
     }
 
     return OnboardingScaffold(
-      activeStep: 9,
+      step: ObStep.apps,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

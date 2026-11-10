@@ -15,6 +15,7 @@ import '../../freeze/presentation/sheets/frost_sheets.dart';
 import '../../freeze/presentation/widgets/fz_widgets.dart';
 import '../../freeze/providers/freeze_controller.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'ob_source_screen.dart';
 import 'widgets/onboarding_scaffold.dart';
 
@@ -63,7 +64,7 @@ class _ObHoursScreenState extends ConsumerState<ObHoursScreen> {
     final valid = _days.isNotEmpty && _from != _until % 1440;
 
     return OnboardingScaffold(
-      activeStep: 7,
+      step: ObStep.hours,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

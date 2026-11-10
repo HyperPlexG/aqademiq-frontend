@@ -11,6 +11,7 @@ import '../../../data/repositories/onboarding_repository.dart';
 import '../../../services/haptics/haptics_service.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../providers/onboarding_controller.dart';
+import '../providers/onboarding_steps.dart';
 import 'widgets/onboarding_scaffold.dart';
 
 /// ob-source / ob-source-other — "How did you hear about us?" One pick, or
@@ -49,7 +50,7 @@ class _ObSourceScreenState extends ConsumerState<ObSourceScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     return OnboardingScaffold(
-      activeStep: 3,
+      step: ObStep.source,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
