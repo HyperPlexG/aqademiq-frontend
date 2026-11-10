@@ -31,10 +31,10 @@ import '../../report/report_optout.dart';
 import '../providers/haptic_settings_provider.dart';
 import '../providers/prism_settings_provider.dart';
 import '../providers/profile_controller.dart';
+import '../rate_app.dart';
 import 'sheets/add_tag_sheet.dart';
 import 'sheets/appearance_sheet.dart';
 import 'sheets/delete_account_dialog.dart';
-import 'sheets/rate_sheet.dart';
 import 'widgets/settings_scaffold.dart';
 import 'widgets/study_tag_mark.dart';
 
@@ -283,7 +283,7 @@ class SettingsHomeScreen extends ConsumerWidget {
               onTap: () => unawaited(context.push(Routes.iceBreakers)),
             ),
             SettingsRow(label: 'Feedback & suggestions', icon: Icons.forum_outlined, showChevron: true, onTap: () => unawaited(context.push(Routes.settingsFeedback))),
-            SettingsRow(label: 'Rate Aqademiq', icon: Icons.star_outline, showChevron: true, onTap: () => unawaited(showRateSheet(context))),
+            SettingsRow(label: 'Rate Aqademiq', icon: Icons.star_outline, showChevron: true, onTap: () => unawaited(rateApp(context))),
             SettingsRow(label: 'Privacy Policy', icon: Icons.description, showChevron: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/privacy-policy')))),
             SettingsRow(label: 'Terms of service', icon: Icons.help_outline, showChevron: true, last: true, onTap: () => unawaited(openExternal(context, Uri.parse('https://www.aqademiq.com/terms-of-use')))),
           ],

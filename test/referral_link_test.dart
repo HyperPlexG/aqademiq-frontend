@@ -49,6 +49,31 @@ void main() {
     });
   });
 
+  group('the message we share', () {
+    test('spells the code out and carries it in the link', () {
+      // The code is typed at onboarding by anyone who installs from the store
+      // first, so it has to be readable as well as linked.
+      expect(
+        referralShareText(_code),
+        'Join me on Aqademiq — my focus sanctuary. Use my referral code '
+        '$_code. https://www.aqademiq.com/join?ref=$_code',
+      );
+      expect(from(referralShareText(_code).split(' ').last), _code);
+    });
+
+    test('normalises a lowercase code from the API', () {
+      expect(referralShareText('a1b2c3d4'), contains('join?ref=$_code'));
+      expect(referralShareText('a1b2c3d4'), contains('code $_code.'));
+    });
+
+    test('with no code it still shares something sensible', () {
+      expect(
+        referralShareText(''),
+        'Join me on Aqademiq — my focus sanctuary. https://www.aqademiq.com',
+      );
+    });
+  });
+
   group('links we accept', () {
     test('the shared https form', () {
       expect(from('https://www.aqademiq.com/join?ref=$_code'), _code);

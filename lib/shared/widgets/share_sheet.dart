@@ -262,11 +262,6 @@ class _ShareInviteButton extends ConsumerWidget {
     final colors = context.colors;
     return GestureDetector(
       onTap: () async {
-        final code = ref.read(referralCodeProvider).value ?? '';
-        // The code stays in the text as well as the link: the link only opens
-        // the app once the domain-association files are hosted, and until then
-        // the readable code is still the thing that works.
-        final codePart = code.isEmpty ? '' : ' Use my referral code $code.';
         // iPad presents the share sheet as a POPOVER, and UIKit requires an
         // anchor rect for it. Without one the presentation fails on iPad while
         // working fine on iPhone (where it is a modal sheet) — and because the
@@ -281,10 +276,24 @@ class _ShareInviteButton extends ConsumerWidget {
                 width: 1,
                 height: 1,
               );
+        // The code arrives with the sheet, but a tap can beat it. Reading
+        // `.value` then shared the bare site with no code at all — a link that
+        // attributes nothing. Wait for it briefly instead; a slow or failed
+        // load still shares something rather than nothing.
+        var code = ref.read(referralCodeProvider).value ?? '';
+        if (code.isEmpty) {
+          try {
+            code = await ref
+                .read(referralCodeProvider.future)
+                .timeout(const Duration(seconds: 5));
+          } on Object {
+            code = '';
+          }
+          if (!context.mounted) return;
+        }
         await SharePlus.instance.share(
           ShareParams(
-            text: 'Join me on Aqademiq — my focus sanctuary.$codePart '
-                '${referralLink(code)}',
+            text: referralShareText(code),
             subject: 'Join me on Aqademiq',
             sharePositionOrigin: origin,
           ),

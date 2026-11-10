@@ -9,6 +9,7 @@ import '../../core/env/env.dart';
 import '../../core/error/failure.dart';
 import '../../core/network/dio_client.dart';
 import '../models/app_user.dart';
+import 'sso_exchange.dart';
 
 /// Shown when a signup targets an email that already has an account.
 ///
@@ -100,15 +101,27 @@ abstract interface class AuthRepository {
   /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
   /// handed to Google's SDK; on iOS the token embeds that nonce and Supabase
   /// needs the raw value to validate it (Android passes `null`).
-  Future<AppUser> signInWithGoogle(String idToken, {String? nonce});
+  ///
+  /// A guest's identity is linked to the guest account instead, keeping its
+  /// id and data. [upgradeGuest] (the Create account screen) makes that link
+  /// mandatory: if it fails the guest stays a guest and an [AuthFailure] is
+  /// thrown, rather than falling back to a different account. See
+  /// `exchangeSsoToken`.
+  Future<AppUser> signInWithGoogle(
+    String idToken, {
+    String? nonce,
+    bool upgradeGuest = false,
+  });
 
   /// Apple Sign-In — exchange the Apple identity token for a Supabase session
   /// via `signInWithIdToken`. [nonce] is the **raw** nonce whose SHA-256 was
   /// sent to Apple; Supabase needs the raw value to validate the token.
+  /// [upgradeGuest] as for [signInWithGoogle].
   Future<AppUser> signInWithApple({
     required String identityToken,
     String? nonce,
     String? fullName,
+    bool upgradeGuest = false,
   });
 
   /// "Save progress": attach email/password to the guest account. Issues an
@@ -261,23 +274,32 @@ class MockAuthRepository implements AuthRepository {
   bool _mockRecovery = false;
 
   @override
-  Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
-    final user = await _delayed(
-      const AppUser(id: 'user-google', name: 'Google User', isGuest: false),
-    );
-    _emit(user);
-    return user;
-  }
+  Future<AppUser> signInWithGoogle(
+    String idToken, {
+    String? nonce,
+    bool upgradeGuest = false,
+  }) =>
+      _sso(const AppUser(id: 'user-google', name: 'Google User', isGuest: false));
 
   @override
   Future<AppUser> signInWithApple({
     required String identityToken,
     String? nonce,
     String? fullName,
-  }) async {
+    bool upgradeGuest = false,
+  }) =>
+      _sso(AppUser(id: 'user-apple', name: fullName ?? 'Apple User', isGuest: false));
+
+  /// mock == real: a guest who picks Apple or Google is linked in place (same
+  /// id, no longer a guest); anyone else lands on the provider's account.
+  Future<AppUser> _sso(AppUser account) async {
+    final current = _user;
     final user = await _delayed(
-      AppUser(id: 'user-apple', name: fullName ?? 'Apple User', isGuest: false),
+      _guestChosen && current != null && current.isGuest
+          ? current.copyWith(isGuest: false)
+          : account,
     );
+    _guestChosen = false;
     _emit(user);
     return user;
   }
@@ -541,8 +563,18 @@ class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AppUser> signInWithGoogle(String idToken, {String? nonce}) async {
-    final res = await _signInOrLink(OAuthProvider.google, idToken, nonce);
+  Future<AppUser> signInWithGoogle(
+    String idToken, {
+    String? nonce,
+    bool upgradeGuest = false,
+  }) async {
+    final res = await exchangeSsoToken(
+      GoTrueIdTokenAuth(_auth),
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      nonce: nonce,
+      upgradeGuest: upgradeGuest,
+    );
     return _require(res.session);
   }
 
@@ -551,35 +583,16 @@ class ApiAuthRepository implements AuthRepository {
     required String identityToken,
     String? nonce,
     String? fullName,
+    bool upgradeGuest = false,
   }) async {
-    final res = await _signInOrLink(OAuthProvider.apple, identityToken, nonce);
+    final res = await exchangeSsoToken(
+      GoTrueIdTokenAuth(_auth),
+      provider: OAuthProvider.apple,
+      idToken: identityToken,
+      nonce: nonce,
+      upgradeGuest: upgradeGuest,
+    );
     return _require(res.session);
-  }
-
-  /// A guest who picks Google or Apple keeps what they made: the identity is
-  /// linked to the guest account, which makes it a real one with the same id.
-  ///
-  /// Linking fails when that Google or Apple account already has an Aqademiq
-  /// account of its own, or when manual linking is switched off in Supabase.
-  /// Either way this falls back to signing in exactly as before — the person
-  /// gets their existing account, and the guest data stays where it was.
-  Future<AuthResponse> _signInOrLink(
-    OAuthProvider provider,
-    String idToken,
-    String? nonce,
-  ) async {
-    if (_auth.currentUser?.isAnonymous ?? false) {
-      try {
-        return await _auth.linkIdentityWithIdToken(
-          provider: provider,
-          idToken: idToken,
-          nonce: nonce,
-        );
-      } on AuthException catch (e) {
-        debugPrint('guest link with ${provider.name} not possible: ${e.message}');
-      }
-    }
-    return _auth.signInWithIdToken(provider: provider, idToken: idToken, nonce: nonce);
   }
 
   @override

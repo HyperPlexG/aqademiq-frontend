@@ -98,17 +98,31 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="aqademiq"/>
             </intent-filter>
-            <!-- The shared link. android:autoVerify makes this an Android App
-                 Link, which opens the app instead of the browser - but ONLY
-                 once https://www.aqademiq.com/.well-known/assetlinks.json is
-                 hosted with this app's package name and signing-cert SHA-256.
-                 Until that file exists the link still works, it just opens the
-                 site, which is what the bare URL it replaced already did. -->
+            <!-- The shared link (referral_link.dart builds it on www).
+                 android:autoVerify makes this an Android App Link, which opens
+                 the app instead of the browser - but ONLY once
+                 https://www.aqademiq.com/.well-known/assetlinks.json is hosted
+                 with this app's package name and signing-cert SHA-256
+                 (docs/REFERRAL_DEEP_LINKS.md). Until then it opens the site.
+
+                 www only, on purpose. aqademiq.com 308-redirects to www, and
+                 verification never follows a redirect, so the apex can never
+                 verify. On Android 11 and lower one unverifiable host fails
+                 EVERY host in the app's autoVerify filters, so keeping the apex
+                 here would have stopped www from ever opening the app there. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="www.aqademiq.com" android:pathPrefix="/join"/>
+            </intent-filter>
+            <!-- The apex form people type. Not verified (see above), so Android
+                 12+ opens it in the browser, which redirects to www; it is
+                 here so a chooser can still offer the app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="aqademiq.com" android:pathPrefix="/join"/>
             </intent-filter>
         </activity>
