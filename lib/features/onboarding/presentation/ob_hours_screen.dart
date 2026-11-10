@@ -8,7 +8,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_text.dart';
 import '../../../services/haptics/haptics_service.dart';
-import '../../../shared/mascot/ada_mascot.dart';
+import '../../../shared/mascot/ada_brand_mark.dart';
 import '../../../shared/widgets/primary_button.dart';
 import '../../freeze/domain/freeze_engine.dart';
 import '../../freeze/presentation/sheets/frost_sheets.dart';
@@ -101,7 +101,7 @@ class _ObHoursScreenState extends ConsumerState<ObHoursScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AdaMascot(size: 28),
+                const AdaBrandMark(),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
