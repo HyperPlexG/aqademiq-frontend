@@ -88,10 +88,16 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         : 'No task linked';
     final defaultPrismMode = ref.watch(prismDefaultModeProvider);
     final freeze = ref.watch(freezeControllerProvider);
-    // The ice chip (fc-ice): only once App freeze is set up, and then a bare
-    // outline when nothing is on ice — no badge, no nag, forever.
-    final iceCount = freeze.setUp ? freeze.recentApps.count : null;
     final freezeAvailable = ref.watch(appFreezeAvailableProvider);
+    // The ice chip (fc-ice): wherever App freeze can run, a bare outline when
+    // nothing is on ice — no badge, no nag, forever.
+    //
+    // It used to wait for `setUp`, which iOS and Android reach differently:
+    // Android's intro marks it the moment both grants are on, while an iPhone
+    // that allowed Screen Time in onboarding and skipped the picks never
+    // marked it at all, so iOS showed no chip where Android said "Nothing on
+    // ice". Availability is the one gate both platforms share.
+    final iceCount = freezeAvailable ? freeze.recentApps.count : null;
     final prismMode = session.prismMode ?? defaultPrismMode;
 
     ref.listen(focusControllerProvider, (prev, next) {
@@ -148,7 +154,7 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
               onSetTime: _setTime,
               onPrism: _prism,
               onAppFreeze: freezeAvailable ? _appFreeze : null,
-              iceCount: freezeAvailable ? iceCount : null,
+              iceCount: iceCount,
               iceKeepOnly: freeze.recentApps.keepOnly,
               onIce: _ice,
               onStart: () => unawaited(_start()),
@@ -183,11 +189,24 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
   }
 
   /// The ice chip: what goes on ice when this session starts.
+  ///
+  /// Nothing can freeze until the phone lets it (Screen Time on iOS, the two
+  /// grants on Android), so before then the chip opens the same setup the
+  /// App freeze pill does, rather than a list that would freeze nothing.
+  /// Once allowed, picking here sets App freeze up: a session only freezes
+  /// the usual once `setUp` is true (`freezeForFocus`).
   Future<void> _ice() async {
-    final current = ref.read(freezeControllerProvider).recentApps;
-    final picked = await chooseApps(context, current: current, owner: 'usual', title: 'The usual');
+    final freeze = ref.read(freezeControllerProvider);
+    final allowed = ref.read(freezeAccessProvider).value?.authorized ?? false;
+    if (!freeze.setUp && !allowed) {
+      unawaited(context.push(Routes.freezeIntro));
+      return;
+    }
+    final picked = await chooseApps(context, current: freeze.recentApps, owner: 'usual', title: 'The usual');
     if (!mounted || picked == null) return;
-    ref.read(freezeControllerProvider.notifier).setRecentApps(picked);
+    ref.read(freezeControllerProvider.notifier)
+      ..markSetUp()
+      ..setRecentApps(picked);
   }
 
   Future<void> _setTime() async {
@@ -231,7 +250,7 @@ class _SetupView extends StatelessWidget {
   /// Null hides the pill: App freeze can't run on this phone.
   final VoidCallback? onAppFreeze;
 
-  /// Null hides the ice chip (App freeze not set up yet).
+  /// Null hides the ice chip (App freeze can't run on this phone).
   final int? iceCount;
   final bool iceKeepOnly;
   final VoidCallback onIce;
@@ -562,7 +581,16 @@ class _IceChip extends StatelessWidget {
                     children: [
                       Ic('freeze', size: 18, color: colors.textMed),
                       const SizedBox(width: 6),
-                      Text('Nothing on ice', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed)),
+                      // Ellipsise like the task chip above: at large text
+                      // sizes the chip is wider than the screen.
+                      Flexible(
+                        child: Text(
+                          'Nothing on ice',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.textMed),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -580,11 +608,22 @@ class _IceChip extends StatelessWidget {
                   children: [
                     const Ic('freeze', size: 18, color: Color(0xFF6B5CF0)),
                     const SizedBox(width: 7),
-                    Text('The usual', style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                    Flexible(
+                      child: Text(
+                        'The usual',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                      ),
+                    ),
                     const SizedBox(width: 7),
-                    Text(
-                      keepOnly ? (count == 0 ? 'everything' : 'all but $count') : '$count on ice',
-                      style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
+                    Flexible(
+                      child: Text(
+                        keepOnly ? (count == 0 ? 'everything' : 'all but $count') : '$count on ice',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 13, weight: FontWeight.w500, color: colors.textDim),
+                      ),
                     ),
                     AppIcon(Icons.expand_more, size: 20, color: colors.textDim),
                   ],

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +6,7 @@ import '../../../../core/theme/app_text.dart';
 import '../../../../services/haptics/haptics_service.dart';
 import '../../../../shared/icons/app_icon.dart';
 import '../../../../shared/widgets/app_toggle.dart';
+import '../../../../shared/widgets/ic.dart';
 import '../../../settings/providers/prism_settings_provider.dart';
 
 /// fc-prism — anchored Prism mode picker dropdown.
@@ -24,25 +23,26 @@ Future<String?> showPrismPicker(BuildContext context, {String? current}) {
   );
 }
 
-/// A selectable Prism mode descriptor.
+/// A selectable Prism mode: its name, its glyph and its colour.
+///
+/// v11 `PRISM_MARK` / `PrismGlyph`: each mode is drawn by the icon pack's
+/// Tier 3 state mark in the mode colour (Review borrows Creative, the
+/// design's own "loosest fit"), and No sound is the pack's `mute`. The same
+/// marks and colours as onboarding's Meet Prism cards.
 class _PrismMode {
-  const _PrismMode({
-    required this.label,
-    required this.color,
-    this.mute = false,
-  });
+  const _PrismMode({required this.label, required this.glyph, required this.color});
 
   final String label;
-  final Color color;
-  final bool mute;
+  final String glyph;
+  final Color Function(AppColors c) color;
 }
 
-const List<_PrismMode> _modes = [
-  _PrismMode(label: 'Deep Work', color: Color(0xFF6B5CF0)),
-  _PrismMode(label: 'Flow', color: Color(0xFF2A9D6B)),
-  _PrismMode(label: 'Review', color: Color(0xFFE8A430)),
-  _PrismMode(label: 'Wind-down', color: Color(0xFF777777)),
-  _PrismMode(label: 'No sound', color: Color(0xFFC0C0C0), mute: true),
+final List<_PrismMode> _modes = [
+  _PrismMode(label: 'Deep Work', glyph: 'state_deep_focus', color: (c) => c.accent),
+  _PrismMode(label: 'Flow', glyph: 'state_focus', color: (c) => c.success),
+  _PrismMode(label: 'Review', glyph: 'state_creative', color: (c) => c.warn),
+  _PrismMode(label: 'Wind-down', glyph: 'state_relax', color: (c) => c.textMed),
+  _PrismMode(label: 'No sound', glyph: 'mute', color: (c) => c.textDim),
 ];
 
 class _PrismPickerOverlay extends StatelessWidget {
@@ -122,6 +122,7 @@ class _ModeRow extends ConsumerWidget {
         Navigator.of(context).pop(mode.label);
       },
       child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
         decoration: BoxDecoration(
           color: active ? colors.accentSoft : null,
@@ -131,23 +132,20 @@ class _ModeRow extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            CustomPaint(
-              size: const Size.square(22),
-              painter: _PrismGlyphPainter(color: mode.color, mute: mode.mute),
-            ),
+            Ic(mode.glyph, size: 22, color: mode.color(colors)),
             const SizedBox(width: 11),
             Expanded(
               child: Text(
                 mode.label,
                 style: AppText.sans(
-                  size: 14,
+                  size: 17,
                   weight: active ? FontWeight.w700 : FontWeight.w500,
                   color: active ? colors.accent : colors.text,
                 ),
               ),
             ),
             if (active)
-              AppIcon(Icons.check, size: 12, color: colors.accent),
+              AppIcon(Icons.check, size: 20, color: colors.accent),
           ],
         ),
       ),
@@ -155,56 +153,10 @@ class _ModeRow extends ConsumerWidget {
   }
 }
 
-/// 22×22 Prism glyph: r9 outer circle (stroke 1.6) + either 5 soundwave bars
-/// `[4,7,10,7,4]` or a diagonal mute slash.
-class _PrismGlyphPainter extends CustomPainter {
-  const _PrismGlyphPainter({required this.color, required this.mute});
-
-  final Color color;
-  final bool mute;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawCircle(center, 9, stroke);
-
-    if (mute) {
-      const d = 9 / math.sqrt2;
-      canvas.drawLine(
-        Offset(center.dx - d, center.dy - d),
-        Offset(center.dx + d, center.dy + d),
-        stroke,
-      );
-      return;
-    }
-
-    const heights = [4.0, 7.0, 10.0, 7.0, 4.0];
-    const gap = 2.6;
-    final totalWidth = (heights.length - 1) * gap;
-    var x = center.dx - totalWidth / 2;
-    for (final h in heights) {
-      canvas.drawLine(
-        Offset(x, center.dy - h / 2),
-        Offset(x, center.dy + h / 2),
-        stroke,
-      );
-      x += gap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PrismGlyphPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.mute != mute;
-}
-
-/// Footer row with the "Autoplay Prism" toggle (top border). Persisted via
-/// [prismAutoplayProvider] and shared with Settings → Prism.
+/// Footer row with the "Autoplay" toggle (top border). Persisted via
+/// [prismAutoplayProvider] and shared with Settings → Prism ("Play Prism in
+/// Focus" there, where the row has no Prism menu around it to say whose
+/// autoplay it is). Here the menu does, so the word alone is enough.
 class _AutoplayFooter extends ConsumerWidget {
   const _AutoplayFooter({required this.colors});
 
@@ -214,18 +166,19 @@ class _AutoplayFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final autoplay = ref.watch(prismAutoplayProvider);
     return Container(
+      constraints: const BoxConstraints(minHeight: 52),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: colors.border)),
       ),
       child: Row(
         children: [
-          AppIcon(Icons.music_note, size: 15, color: colors.textMed),
+          Ic('prism', size: 19, color: colors.textMed),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Autoplay Prism',
-              style: AppText.sans(size: 12.5, color: colors.text),
+              'Autoplay',
+              style: AppText.sans(size: 17, color: colors.text),
             ),
           ),
           AppToggle(

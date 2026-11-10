@@ -148,7 +148,6 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
           _IosPick(
             count: _set.iosCount,
             picks: fzTokensOf(ref, _set) ?? const [],
-            keepOnly: _set.keepOnly,
             busy: _picking,
             onTap: _pickIos,
           )
@@ -218,39 +217,49 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
   }
 }
 
-/// iOS: one row that opens Apple's picker, and the promise beside it. The
-/// row shows the first picks as the system draws them, or the count where it
-/// can't. There are no Suggested tiles here: an iOS app can't see what is
-/// installed, so the picker is the whole list.
+/// iOS: the same list Android shows (fz-select) — an add row that opens
+/// Apple's picker, then each pick as a row with its icon and name, drawn by
+/// FamilyControls through [FzListRow]'s token view — and the promise beside
+/// it. Where the picks can't be drawn (below iOS 16, the ids not in yet) the
+/// row says how many instead. There are no Suggested tiles here: an iOS app
+/// can't see what is installed, so the picker is the whole list.
 class _IosPick extends StatelessWidget {
-  const _IosPick({required this.count, required this.picks, required this.keepOnly, required this.busy, required this.onTap});
+  const _IosPick({required this.count, required this.picks, required this.busy, required this.onTap});
+
+  /// Rows before "N more": a sheet keeps its platform views few (§7.1).
+  static const maxRows = 6;
 
   final int count;
 
   /// The picks as token tiles; empty when they can't be drawn.
   final List<FzAppRef> picks;
-  final bool keepOnly;
   final bool busy;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final label = count == 0 ? 'Nothing picked yet' : (count == 1 ? '1 picked' : '$count picked');
+    final shown = picks.take(maxRows).toList();
+    final more = picks.length - shown.length;
+    // What follows the picks: "N more" past the cap, or the count alone where
+    // the picks can't be drawn.
+    final tail = more > 0
+        ? '$more more'
+        : (picks.isEmpty && count > 0 ? (count == 1 ? '1 picked' : '$count picked') : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FzField(
-          label: keepOnly ? 'Keep open' : 'Choose what freezes',
-          onTap: busy ? null : onTap,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
+        FzWell(
+          child: Column(
             children: [
-              if (picks.isNotEmpty)
-                FzStack(apps: picks.take(3).toList(), more: picks.length > 3 ? picks.length - 3 : 0, edge: colors.bg)
-              else
-                Text(label, style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
-              Ic('chevron_right', size: 20, color: colors.textDim),
+              FzListRow(
+                onAdd: busy ? null : onTap,
+                addLabel: 'Choose apps or sites',
+                last: shown.isEmpty && tail == null,
+              ),
+              for (var i = 0; i < shown.length; i++) FzListRow(app: shown[i], last: i == shown.length - 1 && tail == null),
+              if (tail != null)
+                FzListRow(app: FzAppRef('ios.$tail', tail), sub: 'Chosen in Screen Time', glyph: 'hourglass_empty', last: true),
             ],
           ),
         ),

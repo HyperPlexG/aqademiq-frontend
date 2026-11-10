@@ -48,6 +48,9 @@ class _AdaLoadingScreenState extends ConsumerState<AdaLoadingScreen> {
       if (!mounted) return;
       // The plan appears: thud at 60%. The loader itself stays silent.
       ref.read(hapticsProvider).play(HapticMoment.adaPlanReady);
+      // The one landing that stays on the Plan, not Focus (`appHome`): this
+      // screen has just said "Building your first plan", and the haptic is
+      // the plan arriving. Every later launch opens on Focus.
       context.go(Routes.plan);
     } on AgeRestrictedException {
       // Under 18 — the server refused; send the user to the block screen.

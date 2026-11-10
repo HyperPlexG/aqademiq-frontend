@@ -5,6 +5,7 @@ import 'package:aqademiq/core/theme/app_colors.dart';
 import 'package:aqademiq/core/theme/app_theme.dart';
 import 'package:aqademiq/features/focus/presentation/sheets/prism_picker.dart';
 import 'package:aqademiq/services/haptics/haptics_service.dart';
+import 'package:aqademiq/shared/widgets/ic.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -61,5 +62,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(results, ['Deep Work']);
     expect(haptics.events, isEmpty);
+  });
+
+  // v11 fc-prism: each mode is the pack's state mark in the mode colour (the
+  // same marks as Meet Prism), and the footer reads just "Autoplay".
+  testWidgets("the picker draws the design's marks and says Autoplay", (tester) async {
+    await pumpPicker(tester);
+    final names = [for (final ic in tester.widgetList<Ic>(find.byType(Ic))) ic.name];
+    expect(names, containsAllInOrder(['state_deep_focus', 'state_focus', 'state_creative', 'state_relax', 'mute', 'prism']));
+    expect(find.text('Autoplay'), findsOneWidget);
+    expect(find.text('Autoplay Prism'), findsNothing);
   });
 }

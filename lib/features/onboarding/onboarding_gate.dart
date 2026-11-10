@@ -12,8 +12,12 @@ import '../../data/repositories/profile_repository.dart';
 /// onboarding flow if the account hasn't finished it yet, otherwise straight
 /// to the app. Guests and mock mode skip onboarding. On any error we fall
 /// through to the app rather than trapping the user on the auth wall.
+///
+/// "The app" is the Focus tab: Aqademiq opens on the timer, whether from a
+/// cold launch (the splash routes through here), a sign-in or a restored
+/// session. A widget's or a Start 5's own destination still wins.
 Future<void> routeAfterAuth(BuildContext context, WidgetRef ref) async {
-  var target = Routes.plan;
+  var target = appHome;
   if (!Env.useMocks && Env.hasSupabase && !_isGuest()) {
     try {
       final skip = await ref.read(profileRepositoryProvider).shouldSkipOnboarding();
@@ -25,11 +29,14 @@ Future<void> routeAfterAuth(BuildContext context, WidgetRef ref) async {
   // A widget or a Start 5 press that launched the app asked to land somewhere
   // specific. Honoured only when going into the app: an account that still
   // owes onboarding does that first.
-  if (target == Routes.plan) {
+  if (target == appHome) {
     target = ref.read(pendingLaunchRouteProvider.notifier).take() ?? target;
   }
   if (context.mounted) context.go(target);
 }
+
+/// Where the app lands when nothing asked for anywhere else: Focus.
+const String appHome = Routes.timer;
 
 /// A guest, decided locally from the session rather than asked of the server.
 ///
