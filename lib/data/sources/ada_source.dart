@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/utils/mime_type.dart';
 import '../dtos/ada_message_dto.dart';
 import '../models/ada_action.dart';
 import 'api_helpers.dart';
@@ -154,7 +155,10 @@ class MockAdaSource implements AdaSource {
     required List<int> bytes,
   }) {
     conversationId ??= 'mock-convo';
-    return mockDelay((key: 'mock/$name', name: name, mimeType: mimeType), ms: 500);
+    return mockDelay(
+      (key: 'mock/$name', name: name, mimeType: uploadMimeType(name: name, declared: mimeType, bytes: bytes)),
+      ms: 500,
+    );
   }
 
   @override
@@ -330,7 +334,8 @@ class ApiAdaSource implements AdaSource {
     required List<int> bytes,
   }) async {
     final cid = await _ensureConversation();
-    final contentType = mimeType ?? 'application/octet-stream';
+    // The iOS picker reports no type; the bytes and the name decide.
+    final contentType = uploadMimeType(name: name, declared: mimeType, bytes: bytes);
     // Presign against Ada's own upload endpoint, then PUT bytes straight to
     // storage (bare Dio so the signed URL isn't sent our API base/auth headers).
     final init = await _dio.postMap('/ada/uploads', {
@@ -351,7 +356,9 @@ class ApiAdaSource implements AdaSource {
         },
       ),
     );
-    return (key: key, name: name, mimeType: mimeType);
+    // The resolved type rides on the message's attachments, so the agent
+    // knows what it is opening.
+    return (key: key, name: name, mimeType: contentType);
   }
 
   /// How long to wait for the agent, as opposed to an ordinary request.
