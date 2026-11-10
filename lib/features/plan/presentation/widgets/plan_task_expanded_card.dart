@@ -79,7 +79,11 @@ class PlanTaskExpandedCard extends StatelessWidget {
                             children: [
                               Text(
                                 task.title,
-                                style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1.25, color: colors.text),
+                                style: AppText.sans(size: 17, weight: FontWeight.w800, height: 1.25, color: colors.text).copyWith(
+                                  decoration: task.done ? TextDecoration.lineThrough : null,
+                                  decorationColor: colors.text,
+                                  decorationThickness: 2,
+                                ),
                               ),
                               _AdaBadge(steps: subtasks.length),
                             ],
