@@ -14,6 +14,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../plan/presentation/widgets/swipe_haptics.dart';
@@ -53,8 +54,10 @@ class SubjectDetailScreen extends ConsumerWidget {
     final subject = byId[id];
     if (subject == null) {
       return Scaffold(
-        backgroundColor: colors.bg,
-        body: Center(child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed))),
+        backgroundColor: colors.page,
+        body: Center(
+          child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed)),
+        ),
       );
     }
     final color = hexColor(subject.color);
@@ -65,12 +68,13 @@ class SubjectDetailScreen extends ConsumerWidget {
     // The page paints its own background. It is pushed inside the Subjects
     // tab's navigator, above the list, and it used to be a bare ListView: for
     // the whole push (the iOS slide, Android's zoom) and every back swipe the
-    // subject list showed through it, the hero's fading gradient and the cards
-    // drawn over the rows underneath. Opaque, the platform transition is clean.
+    // subject list showed through it. Opaque, the platform transition is clean.
     return ColoredBox(
-      color: colors.bg,
+      color: colors.page,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 96),
+        // Runs on under the shell's nav and its fade; the end padding lifts the
+        // last row clear of the bar on every device.
+        padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
         children: [
           _Hero(
             subject: subject,
@@ -96,7 +100,10 @@ class SubjectDetailScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('You feel', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
+                                  Text(
+                                    'You feel',
+                                    style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim),
+                                  ),
                                   Text(
                                     MoodScale.labels[mood],
                                     maxLines: 1,
@@ -121,7 +128,10 @@ class SubjectDetailScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('This week', style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim)),
+                                  Text(
+                                    'This week',
+                                    style: AppText.sans(size: 12, weight: FontWeight.w700, color: colors.textDim),
+                                  ),
                                   Text(
                                     '${subject.focusHours ?? 0}h focus',
                                     maxLines: 1,
@@ -152,7 +162,10 @@ class SubjectDetailScreen extends ConsumerWidget {
                           children: [
                             Ic('add', size: 16, color: colors.accent),
                             const SizedBox(width: 2),
-                            Text('Add file', style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent)),
+                            Text(
+                              'Add file',
+                              style: AppText.sans(size: 13, weight: FontWeight.w800, color: colors.accent),
+                            ),
                           ],
                         ),
                       ),
@@ -248,7 +261,8 @@ class SubjectDetailScreen extends ConsumerWidget {
     }
   }
 
-  static const _keepsHistory = 'Its tasks stay on your plan without a subject, '
+  static const _keepsHistory =
+      'Its tasks stay on your plan without a subject, '
       'and past focus sessions and Ada chats keep their history.';
 
   /// SUB-6: the API and `SubjectsController.remove` both existed; nothing on
@@ -263,8 +277,7 @@ class SubjectDetailScreen extends ConsumerWidget {
       context,
       title: 'Delete ${subject.name}?',
       message: [
-        if (files > 0)
-          '${files == 1 ? 'Its file' : 'All $files of its files'} will be deleted for good.',
+        if (files > 0) '${files == 1 ? 'Its file' : 'All $files of its files'} will be deleted for good.',
         _keepsHistory,
       ].join(' '),
       confirmLabel: 'Delete subject',
@@ -377,7 +390,10 @@ class _Hero extends StatelessWidget {
             ),
             const SizedBox(height: 3),
           ],
-          Text(subject.name, style: AppText.sans(size: 28, weight: FontWeight.w800, height: 1.15, color: Colors.white)),
+          Text(
+            subject.name,
+            style: AppText.sans(size: 28, weight: FontWeight.w800, height: 1.15, color: Colors.white),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 10,
@@ -409,7 +425,10 @@ class _Hero extends StatelessWidget {
                     children: [
                       const Ic('goal', size: 14, color: Colors.white),
                       const SizedBox(width: 3),
-                      Text('Target ${subject.targetGrade}', style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white)),
+                      Text(
+                        'Target ${subject.targetGrade}',
+                        style: AppText.sans(size: 13, weight: FontWeight.w800, color: Colors.white),
+                      ),
                     ],
                   ),
                 ),
@@ -501,7 +520,12 @@ class _FileRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text)),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 15, weight: FontWeight.w700, color: colors.text),
+                      ),
                       Text(size, style: AppText.sans(size: 12, color: colors.textDim)),
                     ],
                   ),

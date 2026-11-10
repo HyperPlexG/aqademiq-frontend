@@ -44,8 +44,31 @@ class BottomNav extends StatelessWidget {
   /// `AppScaffold.navClearanceOf`.
   static const double height = 61;
 
-  /// Gap between the floating bar and the bottom safe-area edge (see AppShell).
+  /// v11 `BNav` sits 22 above the phone's bottom edge and 22 clear of each
+  /// side. The design phone has a home indicator (a 34 inset), and the bar
+  /// floats *inside* that inset, over the indicator zone — the indicator
+  /// itself is drawn in the bottom ~13, well clear of the bar.
+  static const double designBottom = 22;
+  static const double sideInset = 22;
+
+  /// A bottom inset this tall or taller is a bar of real buttons (Android
+  /// 3-button navigation is 48dp), not a gesture handle (the iOS home
+  /// indicator is 34, iPad 20, Android's gesture pill ~16–24). Over a
+  /// gesture handle the bar keeps the design's 22; over buttons it has to
+  /// clear them.
+  static const double buttonBarInset = 40;
+
+  /// Gap between the bar and the top of an Android 3-button navigation bar.
   static const double bottomGap = 8;
+
+  /// Distance from the physical bottom of the screen to the bar's bottom edge.
+  ///
+  /// Reads `viewPadding`, so it does not move while the keyboard is up (the
+  /// shell hides the bar then anyway).
+  static double bottomOffsetOf(BuildContext context) {
+    final inset = MediaQuery.viewPaddingOf(context).bottom;
+    return inset >= buttonBarInset ? inset + bottomGap : designBottom;
+  }
 
   static const List<_NavItem> _items = [
     _NavItem('subjects', NavTab.subjects),
@@ -117,6 +140,23 @@ class BottomNav extends StatelessWidget {
   }
 }
 
+/// Published by the shell over its tab pages: whether the floating
+/// [BottomNav] is on screen. It steps aside while the keyboard is up, so a
+/// focused field sits right above the keyboard instead of above the bar;
+/// `AppScaffold.navClearanceOf` reads this to stop reserving room for it.
+class BottomNavScope extends InheritedWidget {
+  const BottomNavScope({super.key, required this.visible, required super.child});
+
+  final bool visible;
+
+  /// Null outside the shell (a full-screen route has no bar).
+  static bool? visibleOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<BottomNavScope>()?.visible;
+
+  @override
+  bool updateShouldNotify(BottomNavScope oldWidget) => oldWidget.visible != visible;
+}
+
 class _StandardTab extends StatelessWidget {
   const _StandardTab({required this.icon, required this.active});
   final String icon;
@@ -126,11 +166,11 @@ class _StandardTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    // v11 NAV_ON: a soft grey pill in light, the accent in dark.
+    // v11 NAV_ON: HILITE in light (a soft grey pill), the accent in dark.
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: active ? (dark ? colors.accent : const Color(0xFFECECEC)) : Colors.transparent,
+        color: active ? (dark ? colors.accent : colors.hilite) : Colors.transparent,
         borderRadius: BorderRadius.circular(27),
       ),
       child: AqIcon.named(icon, fill: active, color: active ? (dark ? Colors.white : colors.text) : colors.textMed),

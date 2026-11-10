@@ -37,10 +37,8 @@ class AdaLook {
           ? const <BoxShadow>[]
           : const [BoxShadow(color: Color(0x14000000), blurRadius: 26, offset: Offset(0, 6))],
       placeholder: dark ? const Color(0xFF999999) : const Color(0xFF6F7174),
-      // The design's light bubble (#f1f0f0) is one step under its #fcfcfc
-      // page; on the app's warmer page it would all but vanish, so light mode
-      // takes the next fill down, as the design does for fills on the page.
-      bubble: dark ? const Color(0xFF212121) : colors.hilite,
+      // v11 adaTheme: the light bubble is #f1f0f0, one step under the page.
+      bubble: dark ? const Color(0xFF212121) : const Color(0xFFF1F0F0),
       bubbleInk: dark ? const Color(0xFFE0E0E0) : colors.text,
       reply: dark ? const Color(0xFFE0E0E0) : colors.text,
       speakBg: dark && violet ? const Color(0xFF2A2170) : colors.accentSoft,

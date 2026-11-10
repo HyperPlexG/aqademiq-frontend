@@ -106,7 +106,7 @@ class _IceBreakerScreenState extends ConsumerState<IceBreakerScreen> {
     final breaker = _breaker;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: colors.page,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

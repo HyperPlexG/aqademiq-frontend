@@ -261,7 +261,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
     return PopScope(
       canPop: !_saving,
       child: Scaffold(
-        backgroundColor: colors.bg,
+        backgroundColor: colors.page,
         body: Stack(
           children: [
             DismissKeyboard(
@@ -429,7 +429,7 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
               Positioned.fill(
                 child: AbsorbPointer(
                   child: ColoredBox(
-                    color: colors.bg.withValues(alpha: 0.55),
+                    color: colors.page.withValues(alpha: 0.55),
                     child: Center(
                       child: CircularProgressIndicator(
                         color: colors.accent,

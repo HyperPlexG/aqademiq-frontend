@@ -40,6 +40,9 @@ class StatsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(statsProvider);
     return AppScaffold(
+      // The list runs on under the nav and its fade, and pads its own end
+      // (AppScaffold.navClearanceOf) so the last row still scrolls clear.
+      bottomClearance: 0,
       child: statsAsync.when(
         loading: () => Center(child: CircularProgressIndicator(color: context.colors.accent)),
         error: (_, _) => Center(
@@ -82,7 +85,7 @@ class _Body extends ConsumerWidget {
         : ReportCopy.weekRange(week.weekStart, week.weekEnd);
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         // ProfileTopHead: the name in a 44 pill, share and settings beside it.
         Row(

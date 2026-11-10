@@ -126,10 +126,12 @@ class FreezeGroupScreen extends ConsumerWidget {
     ];
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: colors.page,
       body: AppScaffold(
+        bottomClearance: 0,
         child: ListView(
-          padding: const EdgeInsets.only(top: 4, bottom: 24),
+          // Runs on under the nav and its fade; the end padding lifts the last row clear.
+          padding: EdgeInsets.only(top: 4, bottom: 24 + AppScaffold.navClearanceOf(context)),
           children: [
             FzPageHead(title: _title),
             const SizedBox(height: 18),

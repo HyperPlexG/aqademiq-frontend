@@ -197,6 +197,9 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     final dateCtrl = ref.read(selectedDateProvider.notifier);
 
     return AppScaffold(
+      // The list runs on under the nav and its fade, and pads its own end
+      // (AppScaffold.navClearanceOf) so the last row still scrolls clear.
+      bottomClearance: 0,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -476,7 +479,7 @@ class _PlanTimeline extends StatelessWidget {
       ..sort((a, b) => a.startTime!.compareTo(b.startTime!));
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         Padding(
           padding: EdgeInsets.only(bottom: anytimeOpen ? 10 : 12),
@@ -693,7 +696,7 @@ class _PlanListGrouped extends ConsumerWidget {
     };
 
     return ListView(
-      padding: EdgeInsets.zero,
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         for (final part in _order)
           if (empty || groups[part]!.isNotEmpty) ...[
@@ -778,7 +781,9 @@ class _EmptyDay extends StatelessWidget {
     // answer. So the door sits underneath, secondary, and never instead.
     return CustomScrollView(
       slivers: [
-        SliverFillRemaining(
+        SliverPadding(
+          padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
+          sliver: SliverFillRemaining(
           hasScrollBody: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -816,6 +821,7 @@ class _EmptyDay extends StatelessWidget {
               const _ShowMeHowButton(),
             ],
           ),
+        ),
         ),
       ],
     );

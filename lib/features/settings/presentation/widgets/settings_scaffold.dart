@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text.dart';
 import '../../../../shared/icons/app_icon.dart';
+import '../../../../shared/widgets/scroll_fade.dart';
 
 /// Shared scaffold for full-screen settings routes: a `bg` page, a back button +
 /// title header (compact, or `big` with a gear), and a scrollable body with
@@ -24,53 +25,64 @@ class SettingsScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    // The list runs on to the screen's bottom edge, under the home indicator /
+    // Android navigation bar, and dissolves there instead of being cut at the
+    // safe area; its end padding lifts the last row clear.
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     return Scaffold(
-      backgroundColor: colors.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-              child: big
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SettingsBackButton(),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            if (gear) ...[
-                              AppIcon(Icons.settings, size: 25, color: colors.text),
-                              const SizedBox(width: 9),
+      backgroundColor: colors.page,
+      body: ScrollEdgeFades(
+        bottom: true,
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                child: big
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SettingsBackButton(),
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              if (gear) ...[
+                                AppIcon(Icons.settings, size: 25, color: colors.text),
+                                const SizedBox(width: 9),
+                              ],
+                              Text(
+                                title,
+                                style: AppText.sans(size: 34, weight: FontWeight.w800, color: colors.text),
+                              ),
                             ],
-                            Text(title, style: AppText.sans(size: 34, weight: FontWeight.w800, color: colors.text)),
-                          ],
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        const SettingsBackButton(),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
                           ),
-                        ),
-                      ],
-                    ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                children: children,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          const SettingsBackButton(),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
+                            ),
+                          ),
+                        ],
+                      ),
               ),
-            ),
-          ],
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + bottomInset),
+                  children: children,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

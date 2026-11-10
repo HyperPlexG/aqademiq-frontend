@@ -79,12 +79,14 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
     final anyActive = active.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: colors.bg,
+      backgroundColor: colors.page,
       body: Stack(
         children: [
           AppScaffold(
+            bottomClearance: 0,
             child: ListView(
-              padding: const EdgeInsets.only(top: 4, bottom: 24),
+              // Runs on under the nav and its fade; the end padding lifts the last row clear.
+              padding: EdgeInsets.only(top: 4, bottom: 24 + AppScaffold.navClearanceOf(context)),
               children: [
                 FzPageHead(title: 'App freeze', onAdd: () => unawaited(showNewFrostSheet(context, ref))),
                 if (standingDown)
