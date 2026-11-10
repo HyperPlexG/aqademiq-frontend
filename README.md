@@ -48,17 +48,20 @@ The files in `/prototypes` are **high-fidelity design references** (self-contain
 Map these into a Flutter `ThemeData` + `AppColors` / `AppText` / `AppSpacing` token classes. Values are lifted directly from the prototype. CSS shadows map to Flutter `BoxShadow`.
 
 ### Color — Light (default)
+v11 light, the design's default "Cool" warmth (`applyTweaks` in `prototypes/v11/app.jsx`).
+
 | Token | Value | Use |
 |---|---|---|
-| `bg` | `#f4f3f0` | App background (warm paper) |
+| `page` | `#fbfcfd` | Screen background (v11 `PAGE`): scaffolds, the shell, scroll-edge fades |
+| `bg` | `#eceff3` | The well: fills on white surfaces — inputs, chips, tiles, tracks (v11 `BG`) |
 | `surface` | `#ffffff` | Cards, sheets, rows |
-| `text` | `#111111` | Primary text |
-| `textMed` | `#777777` | Secondary text |
-| `textDim` | `#c0c0c0` | Tertiary / placeholder / muted icons |
+| `text` | `#111717` | Primary text |
+| `textMed` | `#646464` | Secondary text |
+| `textDim` | `#a7a7a7` | Tertiary / placeholder / muted icons |
 | `border` | `rgba(0,0,0,0.07)` | Hairline dividers, row borders |
-| `hilite` | `#eceae7` | Inset chips / unselected segmented bg |
-| `ink` | `#111111` | High-emphasis filled buttons |
-| `shadow` | `0 2px 16px rgba(0,0,0,0.08)` | Card elevation |
+| `hilite` | `#e8ebf0` | Stronger fill, visible on white; the selected nav tab (v11 `HILITE` / `NAV_ON`) |
+| `ink` | `#111717` | High-emphasis filled buttons |
+| `shadow` | `0 4px 22px rgba(0,0,0,0.06)` | Card elevation |
 
 ### Color — Brand accent (themeable)
 Default `accent = #6b5cf0` (violet); also shipped `#e85476` (pink), `#2a9d6b` (green).
@@ -70,7 +73,7 @@ success `#2a9d6b` · warn `#e8a430` · danger `#e85476`.
 Study-tag palette: Lecture `#5cbbff` · Class `#6b5cf0` · Exam `#e85476` · Assignment `#2a9d6b` · Report `#e8a430` · Presentation `#c0497b` · Reading `#9aa3b2`.
 
 ### Color — Dark mode
-`bg #0e0e0e` · `surface #1b1b1b` · `text #efefef` · `textMed #888888` · `textDim #505050` · `border rgba(255,255,255,0.07)` · `hilite #33333a` · `shadow 0 2px 20px rgba(0,0,0,0.55)`. Appearance picker offers **Light / Dark / System** (`ThemeMode`).
+`page #0e0e0e` · `bg #0e0e0e` · `surface #1b1b1b` · `text #efefef` · `textMed #888888` · `textDim #505050` · `border rgba(255,255,255,0.07)` · `hilite #33333a` · `shadow 0 2px 20px rgba(0,0,0,0.55)`. Appearance picker offers **Light / Dark / System** (`ThemeMode`).
 
 ### Typography
 - **Body / UI / headings — `Plus Jakarta Sans`** (weights 400/500/600/700/800). **All text uses this**, including screen titles and sheet titles.

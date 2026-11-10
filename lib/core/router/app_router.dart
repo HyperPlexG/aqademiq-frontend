@@ -56,6 +56,7 @@ import '../../features/shell/presentation/app_shell.dart';
 import '../../features/stats/presentation/stats_screen.dart';
 import '../../features/subjects/presentation/subject_detail_screen.dart';
 import '../../features/subjects/presentation/subjects_screen.dart';
+import '../../shared/widgets/dismiss_keyboard.dart';
 
 /// Route paths. Tab branch order MUST match the `NavTab` semantic indices
 /// (subjects 0 · planner 1 · timer 2 · stats 3 · ada 4).
@@ -166,6 +167,9 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootKey,
     initialLocation: Routes.splash,
+    // The keyboard never outlives the page it was opened on. One observer per
+    // navigator: this one for full-screen routes, one per tab branch below.
+    observers: [DismissKeyboardObserver()],
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.welcome, builder: (_, _) => const WelcomeScreen()),
@@ -248,6 +252,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           // 0 — Subjects
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(
                 path: Routes.subjects,
@@ -263,12 +268,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // 1 — Planner
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.plan, builder: (_, _) => const PlanScreen()),
             ],
           ),
           // 2 — Timer
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(
                 path: Routes.timer,
@@ -289,12 +296,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           // 3 — Stats
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.stats, builder: (_, _) => const StatsScreen()),
             ],
           ),
           // 4 — Ada
           StatefulShellBranch(
+            observers: [DismissKeyboardObserver()],
             routes: [
               GoRoute(path: Routes.ada, builder: (_, _) => const AdaScreen()),
             ],

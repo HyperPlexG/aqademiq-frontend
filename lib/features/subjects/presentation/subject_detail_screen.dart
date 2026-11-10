@@ -14,6 +14,7 @@ import '../../../core/utils/launch_external.dart';
 import '../../../data/models/subject.dart';
 import '../../../data/repositories/subjects_repository.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/mood_blob.dart';
 import '../../plan/presentation/widgets/swipe_haptics.dart';
@@ -53,7 +54,7 @@ class SubjectDetailScreen extends ConsumerWidget {
     final subject = byId[id];
     if (subject == null) {
       return Scaffold(
-        backgroundColor: colors.bg,
+        backgroundColor: colors.page,
         body: Center(child: Text('Subject not found', style: AppText.sans(size: 15, color: colors.textMed))),
       );
     }
@@ -63,7 +64,9 @@ class SubjectDetailScreen extends ConsumerWidget {
     final mood = (subject.mood ?? 2).clamp(0, 4);
 
     return ListView(
-      padding: const EdgeInsets.only(bottom: 96),
+      // Runs on under the shell's nav and its fade; the end padding lifts the
+      // last row clear of the bar on every device.
+      padding: EdgeInsets.only(bottom: AppScaffold.navClearanceOf(context)),
       children: [
         _Hero(
           subject: subject,

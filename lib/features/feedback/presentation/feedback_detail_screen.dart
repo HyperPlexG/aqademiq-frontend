@@ -11,6 +11,7 @@ import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/ic.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/scroll_fade.dart';
 import '../providers/feedback_providers.dart';
 import 'sheets/create_account_prompt.dart';
 import 'widgets/feedback_bits.dart';
@@ -93,70 +94,72 @@ class _FeedbackDetailScreenState extends ConsumerState<FeedbackDetailScreen> {
         postsAsync.value?.where((p) => p.id == widget.id).firstOrNull;
 
     return Scaffold(
-      backgroundColor: colors.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(
-                children: [
-                  const CircleBackButton(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      post == null ? 'Suggestion' : 'Suggestion #${post.number}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
+      backgroundColor: colors.page,
+      body: ScrollEdgeFades(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  children: [
+                    const CircleBackButton(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        post == null ? 'Suggestion' : 'Suggestion #${post.number}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 22, weight: FontWeight.w800, color: colors.text),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: postsAsync.when(
+                  loading: () => Center(
+                    child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
+                  ),
+                  error: (_, _) => Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AppIcon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Couldn't load this suggestion",
+                          style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () => ref.invalidate(feedbackPostsProvider),
+                          child: Text(
+                            'Try again',
+                            style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: postsAsync.when(
-                loading: () => Center(
-                  child: CircularProgressIndicator(color: colors.accent, strokeWidth: 2.5),
+                  data: (_) => post == null
+                      ? Center(
+                          child: Text(
+                            'This suggestion is gone.',
+                            style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
+                          ),
+                        )
+                      : _PostBody(post: post),
                 ),
-                error: (_, _) => Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AppIcon(Icons.cloud_off_rounded, size: 40, color: colors.textDim),
-                      const SizedBox(height: 12),
-                      Text(
-                        "Couldn't load this suggestion",
-                        style: AppText.sans(size: 17, weight: FontWeight.w800, color: colors.text),
-                      ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () => ref.invalidate(feedbackPostsProvider),
-                        child: Text(
-                          'Try again',
-                          style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.accent),
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              if (post != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                  child: _buildComposer(colors, isGuest: isGuest),
                 ),
-                data: (_) => post == null
-                    ? Center(
-                        child: Text(
-                          'This suggestion is gone.',
-                          style: AppText.sans(size: 17, weight: FontWeight.w500, color: colors.textMed),
-                        ),
-                      )
-                    : _PostBody(post: post),
-              ),
-            ),
-            if (post != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-                child: _buildComposer(colors, isGuest: isGuest),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

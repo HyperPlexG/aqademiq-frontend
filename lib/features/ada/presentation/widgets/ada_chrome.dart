@@ -50,7 +50,7 @@ class AdaHeader extends StatelessWidget {
     final colors = context.colors;
     return Container(
       height: kAdaHeaderHeight,
-      color: colors.bg,
+      color: colors.page,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Row(
         children: [
@@ -190,7 +190,7 @@ class AdaEdgeFade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final page = context.colors.bg;
+    final page = context.colors.page;
     final s = height <= 0 ? 0.0 : (solid / height).clamp(0.0, 1.0);
     return IgnorePointer(
       child: SizedBox(

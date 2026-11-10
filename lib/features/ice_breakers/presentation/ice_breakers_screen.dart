@@ -12,6 +12,7 @@ import '../../../shared/mascot/ada_mascot.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/circle_back_button.dart';
 import '../../../shared/widgets/ic.dart';
+import '../../../shared/widgets/scroll_fade.dart';
 import '../ice_breaker.dart';
 import '../ice_breakers_providers.dart';
 import 'ice_breakers_card.dart';
@@ -35,60 +36,63 @@ class IceBreakersScreen extends ConsumerWidget {
     final started = state.watchedCount > 0;
 
     return Scaffold(
-      backgroundColor: colors.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            IceBreakersHead(onBack: () => context.pop()),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                children: [
-                  if (state.allWatched)
-                    const _AllWatchedBanner()
-                  else if (state.oneLeft)
-                    const _OneLeftBanner()
-                  else if (state.next != null && !started)
-                    _StartHereHero(breaker: state.next!),
-
-                  // On a first visit the hero already carries #01, so it is not
-                  // repeated in the list beneath it.
-                  if (rest.isNotEmpty || started) ...[
-                    SizedBox(height: started ? 10 : 9),
-                    AppCard(
-                      padding: started
-                          ? const EdgeInsets.fromLTRB(14, 6, 14, 12)
-                          : const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                      child: Column(
-                        children: [
-                          for (final breaker in rest) ...[
-                            IceBreakerRow(breaker: breaker, tight: !started),
-                            if (breaker != rest.last) const IceBreakerRowDivider(),
+      backgroundColor: colors.page,
+      body: ScrollEdgeFades(
+        bottom: true,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IceBreakersHead(onBack: () => context.pop()),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  children: [
+                    if (state.allWatched)
+                      const _AllWatchedBanner()
+                    else if (state.oneLeft)
+                      const _OneLeftBanner()
+                    else if (state.next != null && !started)
+                      _StartHereHero(breaker: state.next!),
+  
+                    // On a first visit the hero already carries #01, so it is not
+                    // repeated in the list beneath it.
+                    if (rest.isNotEmpty || started) ...[
+                      SizedBox(height: started ? 10 : 9),
+                      AppCard(
+                        padding: started
+                            ? const EdgeInsets.fromLTRB(14, 6, 14, 12)
+                            : const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        child: Column(
+                          children: [
+                            for (final breaker in rest) ...[
+                              IceBreakerRow(breaker: breaker, tight: !started),
+                              if (breaker != rest.last) const IceBreakerRowDivider(),
+                            ],
+                            if (started) ...[
+                              if (rest.isNotEmpty) const SizedBox(height: 2),
+                              _WatchedDisclosure(state: state, first: rest.isEmpty),
+                              const SizedBox(height: 8),
+                              IceBreakersProgress(state: state),
+                            ],
                           ],
-                          if (started) ...[
-                            if (rest.isNotEmpty) const SizedBox(height: 2),
-                            _WatchedDisclosure(state: state, first: rest.isEmpty),
-                            const SizedBox(height: 8),
-                            IceBreakersProgress(state: state),
-                          ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                  if (started) ...[
-                    const SizedBox(height: 10),
-                    Center(
-                      child: Text(
-                        'More coming soon',
-                        style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim),
+                    ],
+                    if (started) ...[
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Text(
+                          'More coming soon',
+                          style: AppText.sans(size: 13, weight: FontWeight.w700, color: colors.textDim),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

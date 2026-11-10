@@ -14,6 +14,7 @@ import '../../../data/models/tag.dart';
 import '../../../data/repositories/tags_repository.dart';
 import '../../../shared/icons/app_icon.dart';
 import '../../../shared/widgets/primary_button.dart';
+import '../../../shared/widgets/scroll_fade.dart';
 import '../../../shared/widgets/settings_row.dart';
 import '../../plan/providers/plan_providers.dart';
 import '../../settings/presentation/widgets/settings_scaffold.dart';
@@ -30,31 +31,33 @@ class ImportReviewScreen extends ConsumerWidget {
     final colors = context.colors;
     final s = ref.watch(importSessionProvider);
     return Scaffold(
-      backgroundColor: colors.bg,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-              child: Row(
-                children: [
-                  const SettingsBackButton(),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      s.title.isEmpty ? 'Import' : s.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.text),
+      backgroundColor: colors.page,
+      body: ScrollEdgeFades(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+                child: Row(
+                  children: [
+                    const SettingsBackButton(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        s.title.isEmpty ? 'Import' : s.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.sans(size: 20, weight: FontWeight.w800, color: colors.text),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Expanded(child: _ReviewBody()),
-            const _ReviewFooter(),
-          ],
+              const Expanded(child: _ReviewBody()),
+              const _ReviewFooter(),
+            ],
+          ),
         ),
       ),
     );
