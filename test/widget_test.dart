@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
-  testWidgets('entry flow: splash -> welcome -> guest -> plan timeline', (tester) async {
+  testWidgets('entry flow: splash -> welcome -> guest -> focus', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: AqademiqApp()));
     await tester.pump();
     expect(find.text('Aqademiq'), findsOneWidget);
@@ -22,7 +22,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump();
 
-    expect(find.text('ANYTIME (2)'), findsOneWidget);
-    expect(find.text('PLANNED (2)'), findsOneWidget);
+    // The app opens on Focus (TestFlight), guests included.
+    expect(find.text('Start focus'), findsOneWidget);
   });
 }
