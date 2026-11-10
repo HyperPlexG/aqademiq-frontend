@@ -49,6 +49,12 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
     });
   }
 
+  /// "Until I stop" means there is a stop: the same breath as a thaw, then the
+  /// freeze ends for good. Frosts and groups are untouched.
+  Future<void> _stopFreezing() async {
+    await context.push<ThawGrant>(Routes.freezeThaw, extra: const ThawRequest(target: ThawGrant.allApps, stopNow: true));
+  }
+
   Future<void> _openFrost(Frost f, FreezeData data) async {
     final now = DateTime.now();
     final running = FreezeEngine.active(data, now).any((a) => a.id == f.id);
@@ -135,6 +141,16 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                       ],
                     ),
                   ),
+                  // A Freeze now with no end ("Until I stop"): the way out. Not
+                  // for a session's freeze, which ends with the session, and
+                  // never for a Deep freeze (those always have an end).
+                  if (data.now case FreezeNow(endsAt: null, deep: false, withFocus: false)) ...[
+                    const SizedBox(height: 14),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FzLink('Stop freezing', color: colors.accent, weight: FontWeight.w700, onTap: () => unawaited(_stopFreezing())),
+                    ),
+                  ],
                 ],
                 if (data.frosts.isEmpty) ...[
                   FzSec(title: 'Student frosts', chevron: true, onTap: () => unawaited(showNewFrostSheet(context, ref))),
