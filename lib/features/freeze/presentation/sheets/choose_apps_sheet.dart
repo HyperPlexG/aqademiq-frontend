@@ -60,6 +60,8 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
           title: _set.keepOnly ? 'Keep only these' : 'Choose what freezes',
         );
     if (!mounted) return;
+    // The selection under this id is new: its token icons are stale.
+    if (result != null) ref.invalidate(fzSelectionTokensProvider(id));
     setState(() {
       _picking = false;
       if (result != null) _set = _set.copyWith(iosSelection: result.selectionId, iosCount: result.count);
@@ -143,7 +145,13 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
           const SizedBox(height: 10),
         ],
         if (apps.ios)
-          _IosPick(count: _set.iosCount, keepOnly: _set.keepOnly, busy: _picking, onTap: _pickIos)
+          _IosPick(
+            count: _set.iosCount,
+            picks: fzTokensOf(ref, _set) ?? const [],
+            keepOnly: _set.keepOnly,
+            busy: _picking,
+            onTap: _pickIos,
+          )
         else
           FzWell(
             child: Column(
@@ -210,11 +218,17 @@ class _ChooseAppsState extends ConsumerState<_ChooseApps> {
   }
 }
 
-/// iOS: one row that opens Apple's picker, and the promise beside it.
+/// iOS: one row that opens Apple's picker, and the promise beside it. The
+/// row shows the first picks as the system draws them, or the count where it
+/// can't. There are no Suggested tiles here: an iOS app can't see what is
+/// installed, so the picker is the whole list.
 class _IosPick extends StatelessWidget {
-  const _IosPick({required this.count, required this.keepOnly, required this.busy, required this.onTap});
+  const _IosPick({required this.count, required this.picks, required this.keepOnly, required this.busy, required this.onTap});
 
   final int count;
+
+  /// The picks as token tiles; empty when they can't be drawn.
+  final List<FzAppRef> picks;
   final bool keepOnly;
   final bool busy;
   final VoidCallback onTap;
@@ -232,7 +246,10 @@ class _IosPick extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(label, style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
+              if (picks.isNotEmpty)
+                FzStack(apps: picks.take(3).toList(), more: picks.length > 3 ? picks.length - 3 : 0, edge: colors.bg)
+              else
+                Text(label, style: AppText.sans(size: 15, weight: FontWeight.w500, color: colors.textMed)),
               Ic('chevron_right', size: 20, color: colors.textDim),
             ],
           ),

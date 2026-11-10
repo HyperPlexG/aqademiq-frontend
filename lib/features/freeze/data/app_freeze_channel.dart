@@ -159,6 +159,18 @@ class AppFreezeChannel {
   Future<void> deleteSelection(String selectionId) =>
       _call<void>('deleteSelection', {'selection_id': selectionId});
 
+  /// iOS: the token ids in a saved selection (`app_…`, `cat_…`, `web_…`),
+  /// categories first, in a stable order — for the `aqademiq/fz_token`
+  /// platform view, which draws each one without the app learning its name.
+  /// The ids never leave the phone. Null where tokens can't be drawn
+  /// (Android, iOS below 16, a build without the entitlement, no native
+  /// side); empty for a selection that holds nothing.
+  Future<List<String>?> selectionTokens(String selectionId) async {
+    final raw = await _call<List<Object?>>('selectionTokens', {'selection_id': selectionId});
+    if (raw == null) return null;
+    return [for (final t in raw) if (t is String && t.isNotEmpty) t];
+  }
+
   /// Android: launchable apps, without Aqademiq itself.
   Future<List<DeviceApp>> installedApps() async {
     final raw = await _call<List<Object?>>('installedApps');

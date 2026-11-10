@@ -40,6 +40,7 @@ best-effort on the Dart side: `MissingPluginException` means "unsupported".
 | `floorApps` | – | `{phone, messages, maps, wallet}` → package | `{}` | default dialer, SMS app, a `geo:` handler, a wallet if installed |
 | `applyPolicy` | `{policy: <JSON string>}` | – | store, re-shield now, reschedule | store, (re)start or stop the monitor |
 | `takeEvents` | – | `[{type, at, target?, label?}]` | reads + clears the App Group queue | reads + clears prefs queue |
+| `selectionTokens` | `{selection_id}` | `[String]` token ids, or `null` | the selection's ids (§7.1), `null` below 16 / without the entitlement | `null` (not implemented) |
 
 Native → Dart: `eventsWaiting` (no args) when an event is queued while the
 engine is attached. Dart then calls `takeEvents`.
@@ -377,6 +378,10 @@ with ink text, the thaw glyph in `#6B5CF0`.
 * **Build**: Runner stays at iOS 13; FamilyControls, ManagedSettings and
   DeviceActivity are weak-linked (`OTHER_LDFLAGS`). `status.notifications` is
   notification permission `authorized` or `provisional`.
+* **Token icons (§7.1)**: where Android draws an app's icon, iOS draws the
+  pick itself through a platform view, so the hub's Frozen row, the groups,
+  the Freeze now / frost / Choose apps summaries, the active frost sheet, a
+  thaw and onboarding's pick show real icons — see below.
 * **Privacy manifests**: each extension carries its own
   `PrivacyInfo.xcprivacy` (no tracking, nothing collected,
   `NSPrivacyAccessedAPICategoryUserDefaults` for reason `1C8F.1`, the App
@@ -395,3 +400,39 @@ with ink text, the thaw glyph in `#6B5CF0`.
   every door into App freeze — the two onboarding steps (Study hours goes
   straight to Prism), the timer's App freeze pill and ice chip, and the
   Settings row. Android always shows them (Android 8+).
+
+### 7.1 Token icons
+
+iOS never tells the app what was picked, but FamilyControls will draw a token
+for it: SwiftUI's `Label(token)` renders the icon (and name) in-process
+without handing either to the app. So:
+
+* `selectionTokens {selection_id}` answers the token ids in a saved selection
+  — `cat_…` first, then `app_…`, then `web_…`, each kind sorted by id (a
+  `Set`'s order changes per process). They are the same ids a `thaw_request`
+  carries (`FreezeStore.tokenId`, which also keeps the token under
+  `fz.tok.<id>`), so they are hashes, never names, and stay on the phone like
+  everything else here. `null` below iOS 16 or without the entitlement.
+* The platform view `aqademiq/fz_token` (`FreezeTokenViewFactory` in
+  `AppFreezePlugin.swift`, registered in `AppDelegate`) draws one id. Creation
+  params: `id`, `style` `icon` (default; fills its frame, clipped natively to
+  continuous corners so Flutter never clips a platform view) or `title` (with
+  `font_size`, `weight`, `color` ARGB). An id that does not resolve draws
+  nothing and Dart's placeholder squircle shows. The view takes no touches.
+* Dart: `fzSelectionTokensProvider` (cached for the session; Choose apps and
+  onboarding invalidate it after Apple's picker), `fzTokensOf` (an `AppSet` →
+  `FzAppRef.token` tiles, or `null` → keep the count tile), and
+  `fzFrozenTokens` (the Frozen row's iOS twin of `frozenNow`). `FzAppIcon`,
+  `FzStack` and `FzListRow` draw a token ref through `FzTokenView`, so the
+  Android layouts carry over unchanged.
+* Few and small: the hub's Frozen row shows six picks then `+N`, a group cell
+  three then `+N`, a summary three then `+N`, a frost card two, a group page
+  eight rows (icon and name) then "N more".
+* A Frozen tile thaws its own pick (a grant naming the token id — what the
+  shield's Thaw already does; a category tile thaws the category). Always
+  open and Never open are matched by id, best-effort: iOS does not promise
+  that one app picked into two selections gives byte-identical tokens. The
+  shield follows the native rules either way.
+* Not possible on iOS: Suggested tiles (an app can't list installed apps),
+  removing a single pick from Aqademiq's own lists (that is Apple's picker),
+  and a name in Dart — the thaw toast still says "App thawed".

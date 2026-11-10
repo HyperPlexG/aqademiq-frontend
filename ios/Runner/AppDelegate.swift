@@ -63,6 +63,10 @@ import UIKit
     haptics = HapticsPlugin(messenger: messenger)
     deviceImport = DeviceImportPlugin(messenger: messenger)
     appFreeze = AppFreezePlugin(messenger: messenger)
+    // App freeze's token icons: FamilyControls draws each picked app, so the
+    // app can show it without ever learning which app it is.
+    engineBridge.pluginRegistry.registrar(forPlugin: "AqademiqFreezeTokenView")?
+      .register(FreezeTokenViewFactory(), withId: AppFreezePlugin.tokenViewType)
     screenshot = ScreenshotPlugin(messenger: messenger)
   }
 

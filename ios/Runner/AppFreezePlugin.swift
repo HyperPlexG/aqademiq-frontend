@@ -21,9 +21,15 @@ import UserNotifications
 /// iOS never tells an app which apps were picked — only opaque tokens, saved
 /// in the App Group. That is why `installedApps`, `appIcon` and `floorApps`
 /// answer empty here: there is nothing to list, and Phone and emergency calls
-/// are never shieldable, so iOS needs no floor.
+/// are never shieldable, so iOS needs no floor. What the app *can* do is ask
+/// FamilyControls to draw a token for it (`FreezeTokenViewFactory`, below):
+/// Dart gets token ids from `selectionTokens` and shows each one in a
+/// platform view, so the icons appear without the app ever learning a name.
 final class AppFreezePlugin: NSObject {
     static let channelName = "aqademiq/app_freeze"
+
+    /// The platform view that draws one token (`FreezeTokenViewFactory`).
+    static let tokenViewType = "aqademiq/fz_token"
 
     private let channel: FlutterMethodChannel
     private var observers: [NSObjectProtocol] = []
@@ -97,6 +103,8 @@ final class AppFreezePlugin: NSObject {
             applyPolicy(args, result: result)
         case "takeEvents":
             result(FreezeStore.takeEvents())
+        case "selectionTokens":
+            result(Self.selectionTokens(args["selection_id"] as? String) ?? NSNull())
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -161,6 +169,25 @@ final class AppFreezePlugin: NSObject {
         FreezeStore.savePolicy(json)
         Self.reapply()
         result(nil)
+    }
+
+    /// The token ids in a saved selection, for `aqademiq/fz_token` to draw:
+    /// categories first (one stands for many apps), then apps, then sites,
+    /// each kind sorted by id so the order is the same on every call (a
+    /// `Set`'s order is not). nil where tokens cannot be drawn — below iOS 16
+    /// or without the entitlement — so Dart falls back to the count. An
+    /// unknown or empty selection is `[]`.
+    ///
+    /// The ids are the ones `thaw_request` uses (`FreezeStore.tokenId`, which
+    /// also keeps the token under `fz.tok.<id>` for the view to resolve). They
+    /// are hashes, never names, and they stay on the phone.
+    static func selectionTokens(_ id: String?) -> [String]? {
+        guard #available(iOS 16.0, *), entitled else { return nil }
+        guard let selection = FreezeStore.selection(id) else { return [] }
+        let categories = selection.categoryTokens.compactMap { FreezeStore.tokenId($0, kind: FreezeStore.categoryKind) }
+        let apps = selection.applicationTokens.compactMap { FreezeStore.tokenId($0, kind: FreezeStore.appKind) }
+        let sites = selection.webDomainTokens.compactMap { FreezeStore.tokenId($0, kind: FreezeStore.webKind) }
+        return categories.sorted() + apps.sorted() + sites.sorted()
     }
 
     // MARK: - Applying
@@ -308,5 +335,164 @@ private struct FreezePickerView: View {
                     }
                 }
         }
+    }
+}
+
+// MARK: - Token view
+
+/// `aqademiq/fz_token`: one app, category or site, drawn by FamilyControls.
+///
+/// Apple's `Label(token)` renders the icon and name inside the app's process
+/// without handing either to the app, so this is how App freeze shows icons on
+/// iOS at all. Creation args: `id` (a token id from `selectionTokens` or a
+/// `thaw_request`), `style` (`icon` — the default — or `title`), and for a
+/// title `font_size`, `weight` (100…900) and `color` (ARGB). An id that does
+/// not resolve draws nothing, and Dart's placeholder tile shows through.
+final class FreezeTokenViewFactory: NSObject, FlutterPlatformViewFactory {
+    func create(withFrame frame: CGRect, viewIdentifier viewId: Int64, arguments args: Any?) -> FlutterPlatformView {
+        FreezeTokenPlatformView(frame: frame, args: args as? [String: Any] ?? [:])
+    }
+
+    func createArgsCodec() -> FlutterMessageCodec & NSObjectProtocol {
+        FlutterStandardMessageCodec.sharedInstance()
+    }
+}
+
+private final class FreezeTokenPlatformView: NSObject, FlutterPlatformView {
+    /// Holds the SwiftUI host for as long as Flutter shows the view.
+    private let host: UIViewController?
+    private let root: UIView
+
+    init(frame: CGRect, args: [String: Any]) {
+        if #available(iOS 16.0, *),
+           let id = args["id"] as? String,
+           let target = FreezeStore.resolve(id) {
+            let controller = UIHostingController(rootView: FreezeTokenLabel(target: target, style: FreezeTokenLabel.Style(args)))
+            controller.view.backgroundColor = .clear
+            controller.view.frame = frame
+            // Touches belong to Flutter: a tile's tap is a Flutter gesture.
+            controller.view.isUserInteractionEnabled = false
+            host = controller
+            root = controller.view
+        } else {
+            host = nil
+            root = UIView(frame: frame)
+            root.backgroundColor = .clear
+            root.isUserInteractionEnabled = false
+        }
+        super.init()
+    }
+
+    func view() -> UIView { root }
+}
+
+@available(iOS 16.0, *)
+private struct FreezeTokenLabel: View {
+    enum Style {
+        case icon
+        case title(size: CGFloat, weight: Font.Weight, color: Color)
+
+        init(_ args: [String: Any]) {
+            guard args["style"] as? String == "title" else {
+                self = .icon
+                return
+            }
+            let size = (args["font_size"] as? NSNumber).map { CGFloat($0.doubleValue) } ?? 17
+            let weight = Self.weight((args["weight"] as? NSNumber)?.intValue ?? 500)
+            let argb = (args["color"] as? NSNumber)?.uint32Value ?? 0xFF1A_1320
+            let color = Color(
+                .sRGB,
+                red: Double((argb >> 16) & 0xFF) / 255,
+                green: Double((argb >> 8) & 0xFF) / 255,
+                blue: Double(argb & 0xFF) / 255,
+                opacity: Double((argb >> 24) & 0xFF) / 255
+            )
+            self = .title(size: size, weight: weight, color: color)
+        }
+
+        private static func weight(_ w: Int) -> Font.Weight {
+            switch w {
+            case ..<200: return .ultraLight
+            case ..<300: return .thin
+            case ..<400: return .light
+            case ..<500: return .regular
+            case ..<600: return .medium
+            case ..<700: return .semibold
+            case ..<800: return .bold
+            case ..<900: return .heavy
+            default: return .black
+            }
+        }
+    }
+
+    let target: FreezeTarget
+    let style: Style
+
+    var body: some View {
+        switch style {
+        case .icon:
+            GeometryReader { geo in
+                let side = min(geo.size.width, geo.size.height)
+                FreezeFitted(side: side) {
+                    label.labelStyle(.iconOnly).font(.system(size: max(side * 0.8, 1)))
+                }
+                // Apple's continuous corners: the same outline as Dart's
+                // fzSquircle, clipped here so Flutter never clips a platform
+                // view.
+                .clipShape(RoundedRectangle(cornerRadius: side * 0.225, style: .continuous))
+                .frame(width: geo.size.width, height: geo.size.height)
+            }
+        case let .title(size, weight, color):
+            label
+                .labelStyle(.titleOnly)
+                .font(.system(size: size, weight: weight))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder private var label: some View {
+        switch target {
+        case let .app(token): Label(token)
+        case let .category(token): Label(token)
+        case let .webDomain(token): Label(token)
+        }
+    }
+}
+
+/// Scales its content to fill a `side` × `side` square, whatever size it
+/// draws at on its own. FamilyControls does not document how big the icon of
+/// a `Label(token)` is, so it is measured rather than assumed.
+@available(iOS 16.0, *)
+private struct FreezeFitted<Content: View>: View {
+    let side: CGFloat
+    @ViewBuilder let content: () -> Content
+    @State private var natural: CGSize = .zero
+
+    var body: some View {
+        content()
+            .fixedSize()
+            .background(GeometryReader { g in
+                Color.clear.preference(key: FreezeNaturalSize.self, value: g.size)
+            })
+            .onPreferenceChange(FreezeNaturalSize.self) { natural = $0 }
+            .scaleEffect(scale)
+            .frame(width: side, height: side)
+    }
+
+    private var scale: CGFloat {
+        let m = max(natural.width, natural.height)
+        return m > 0 && side > 0 ? side / m : 1
+    }
+}
+
+private struct FreezeNaturalSize: PreferenceKey {
+    static let defaultValue: CGSize = .zero
+
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        let next = nextValue()
+        if next != .zero { value = next }
     }
 }

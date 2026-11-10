@@ -108,7 +108,9 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                     clipBehavior: Clip.none,
                     child: Row(
                       children: [
-                        if (apps.ios || frozen.isEmpty)
+                        if (apps.ios)
+                          ..._iosFrozenRow(data, active, now)
+                        else if (frozen.isEmpty)
                           for (final a in active) ...[
                             GestureDetector(
                               onTap: () => unawaited(_thaw(ThawGrant.allApps, null)),
@@ -174,7 +176,7 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                             status: FreezeText.status(data, f, now),
                             session: f.kind == FrostKind.session,
                             live: active.any((a) => a.id == f.id),
-                            apps: apps.ios || f.apps.keepOnly ? const [] : apps.of(f.apps),
+                            apps: f.apps.keepOnly ? const [] : (apps.ios ? fzTokensOf(ref, f.apps) ?? const [] : apps.of(f.apps)),
                             count: f.apps.count,
                             onTap: () => unawaited(_openFrost(f, data)),
                           ),
@@ -210,6 +212,58 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
         ],
       ),
     );
+  }
+
+  /// The most picks the iOS Frozen row draws before "+N": each is a
+  /// platform view, so the row stays a handful, not the whole selection.
+  static const _iosRowCap = 6;
+
+  /// iOS's Frozen row: each running freeze's picks as tiles, drawn by the
+  /// system — frozen ones thaw just that pick, as the shield's Thaw does.
+  /// A freeze whose picks can't be drawn (Keep only, below iOS 16, the ids
+  /// not in yet) keeps the count tile, which thaws everything.
+  List<Widget> _iosFrozenRow(FreezeData data, List<ActiveFreeze> active, DateTime now) {
+    final out = <Widget>[];
+    final seen = <String>{};
+    var hidden = 0;
+    for (final a in active) {
+      final tiles = fzFrozenTokens(ref, data, a.apps, deep: a.deep, now: now);
+      if (tiles == null) {
+        out.addAll([
+          GestureDetector(
+            onTap: () => unawaited(_thaw(ThawGrant.allApps, null)),
+            child: FzCountTile(
+              // Keep only freezes everything but its list; the kept count is
+              // not the frozen count.
+              count: a.apps.keepOnly ? 0 : a.apps.count,
+              frozen: FreezeEngine.grantFor(data, ThawGrant.allApps, now) == null || a.deep,
+            ),
+          ),
+          const SizedBox(width: 18),
+        ]);
+        continue;
+      }
+      for (final f in tiles) {
+        if (!seen.add(f.app.id)) continue;
+        if (seen.length > _iosRowCap) {
+          hidden++;
+          continue;
+        }
+        out.addAll([
+          FzAppTile(
+            app: f.app,
+            state: f.grant == null ? FzTileState.frozen : FzTileState.thawed,
+            minutesLeft: f.grant == null ? null : (f.grant!.until.difference(now).inSeconds / 60).ceil(),
+            progress: f.grant == null ? 0 : _share(f.grant!, now),
+            // iOS never names the pick: the thaw screen shows its icon.
+            onTap: f.grant == null ? () => unawaited(_thaw(f.app.id, null)) : null,
+          ),
+          const SizedBox(width: 18),
+        ]);
+      }
+    }
+    if (hidden > 0) out.addAll([FzMoreTile(more: hidden), const SizedBox(width: 18)]);
+    return out;
   }
 
   static double _share(ThawGrant g, DateTime now) {
@@ -316,16 +370,18 @@ class _GroupsRow extends StatelessWidget {
   static String _count(int n) => n == 1 ? '1 app' : '$n apps';
 }
 
-class _Cells extends StatelessWidget {
+class _Cells extends ConsumerWidget {
   const _Cells({required this.set, required this.apps});
 
   final AppSet set;
   final FreezeApps apps;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
-    final list = apps.ios ? const <FzAppRef>[] : apps.of(set);
+    // iOS: the picks themselves, drawn by the system; the count where they
+    // can't be.
+    final list = apps.ios ? fzTokensOf(ref, set) ?? const <FzAppRef>[] : apps.of(set);
     final over = list.length > 4;
     Widget cell(int i) {
       Widget inner = const SizedBox.shrink();
@@ -337,7 +393,7 @@ class _Cells extends StatelessWidget {
         inner = LayoutBuilder(
           builder: (_, c) => FzAppIcon(app: list[i], size: c.maxWidth, glyph: apps.glyphOf(list[i].id)),
         );
-      } else if (apps.ios && i == 0 && set.count > 0) {
+      } else if (apps.ios && list.isEmpty && i == 0 && set.count > 0) {
         inner = Text('${set.count}', style: AppText.sans(size: 17, weight: FontWeight.w700, color: colors.text));
       }
       return AspectRatio(
