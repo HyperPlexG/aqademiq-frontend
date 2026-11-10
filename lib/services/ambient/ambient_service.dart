@@ -33,10 +33,10 @@ import 'ambient_state.dart';
 /// controller emits a new session state every second (the in-app timer counts
 /// up), and all but a handful of those are dropped. What survives is a melt
 /// stage changing, a freeze, or a change in what is being worked on.
-final ambientServiceProvider = Provider<void>((ref) {
+final ambientServiceProvider = Provider<AmbientService>((ref) {
   final service = AmbientService(ref);
   ref.onDispose(service.dispose);
-  service.start();
+  return service..start();
 });
 
 class AmbientService {
@@ -78,6 +78,11 @@ class AmbientService {
 
   /// Until the stored total is read, a glance would publish a false 0m.
   bool _focusReady = false;
+
+  /// Set by [forgetAccount]: until the mood week has been fetched again, what
+  /// `moodWeekProvider` still holds (a reload keeps the previous value) is the
+  /// last account's, and must not go back out to the widgets.
+  bool _moodsStale = false;
 
   static const _kFocusDay = 'ambient_focus_day';
   static const _kFocusSec = 'ambient_focus_sec';
@@ -134,7 +139,9 @@ class AmbientService {
     final seenOn = _todayTasksOn;
     final tasks =
         seenOn != null && AppDate.sameDay(seenOn, today) ? _todayTasks : null;
-    final logs = _ref.read(moodWeekProvider).value;
+    final mood = _ref.read(moodWeekProvider);
+    if (_moodsStale && mood.hasValue && !mood.isLoading && !mood.hasError) _moodsStale = false;
+    final logs = _moodsStale ? null : mood.value;
     // Nothing loaded yet: publishing an empty payload would blank a widget
     // that is currently showing something perfectly good.
     if (tasks == null && logs == null) return;
@@ -153,6 +160,38 @@ class AmbientService {
     if (encoded == _lastGlance) return;
     _lastGlance = encoded;
     unawaited(_bridge.publish(state));
+  }
+
+  /// Signed out, or another account on this phone: the widgets, the lock
+  /// screen and the watch stop showing the last one's next task, mood week and
+  /// minutes focused today.
+  ///
+  /// Called after the session itself has been reset, so a session that was
+  /// running has already stood down (and its minutes have been counted — into
+  /// the total cleared here).
+  void forgetAccount() {
+    if (_disposed) return;
+    _todayTasks = null;
+    _todayTasksOn = null;
+    _moodsStale = true;
+    // Today, at zero: a stored total still being read is not adopted either.
+    _focusDay = ambientDay(DateTime.now());
+    _focusSec = 0;
+    unawaited(_storeFocusToday());
+    // Blanked on purpose — `_publishGlance` declines to publish nothing.
+    final blank = glanceState(tasks: const [], weekLogs: const [], session: _published);
+    _lastGlance = jsonEncode(blank.toMap());
+    unawaited(_bridge.publish(blank));
+  }
+
+  Future<void> _storeFocusToday() async {
+    try {
+      final prefs = _prefs ?? await SharedPreferences.getInstance();
+      await prefs.setString(_kFocusDay, _focusDay ?? ambientDay(DateTime.now()));
+      await prefs.setInt(_kFocusSec, _focusSec);
+    } on Object catch (e) {
+      debugPrint('AmbientService: focus total not stored — $e');
+    }
   }
 
   /// Read today's stored focus total. Never throws: with no store (a test, a

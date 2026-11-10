@@ -23,6 +23,22 @@ App freeze — the design promises "We never see your picks".
 | Android | `android/app/src/main/kotlin/com/aqademiq/aqademiq/freeze/` |
 | Tests | `test/freeze_engine_test.dart` |
 
+**Routes.** The hub and its group pages live in the Focus tab
+(`/timer/freeze`, `/timer/freeze/always` …). Settings reaches a full-screen
+copy at `/settings/app-freeze/frosts` (groups under it). A page on the root
+navigator — Settings, intro, permission — must never push a route inside the
+shell: go_router builds a second shell, the branch navigators' keys clash, the
+page comes up blank and the Focus tab stops opening. The setup pages hand over
+with `replaceWithFreezeHub`, which picks the hub by what is under them.
+
+**Signing out** (or another account arriving) forgets App freeze through
+`FreezeController.forgetAll`: frosts, groups, The usual, a running Freeze now,
+thaws, stand-down and the thaw log go, the empty policy is applied (Android
+stops its monitor, iOS clears its stores and activities), the iOS picks are
+deleted (the fixed `sel-usual`/`sel-always`/… ids too, since the picker opens
+preloaded with whatever its id holds) and the event queue is drained. It runs
+from `sessionResetProvider` in `lib/data/auth/session_reset.dart`.
+
 ## 1. Channel `aqademiq/app_freeze`
 
 One `MethodChannel`, the same calls on both platforms. Every call is

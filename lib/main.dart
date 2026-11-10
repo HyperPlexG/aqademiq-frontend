@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
 import 'core/env/env.dart';
 import 'core/error/global_error_handler.dart';
+import 'data/auth/account_owner_store.dart';
 import 'features/focus/providers/prism_voice_hold.dart';
 import 'features/freeze/data/freeze_store.dart';
 import 'features/report/report_optout.dart';
@@ -41,6 +42,9 @@ Future<void> _start() async {
   // App freeze is device-local and read synchronously by its controller, so
   // the Focus tab's ice chip and the hub never flash empty on a cold start.
   await FreezeStore.instance.init();
+  // Whose that state is, so an account arriving after a session died while
+  // the app was closed does not inherit the last one's frosts.
+  await AccountOwnerStore.instance.init();
   // Started here so a cold start *from* a referral link has the code in hand
   // before onboarding renders. Best-effort inside: it never blocks startup.
   await _deepLinks.start();

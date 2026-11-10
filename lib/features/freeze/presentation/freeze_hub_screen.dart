@@ -14,6 +14,7 @@ import '../domain/freeze_engine.dart';
 import '../domain/freeze_models.dart';
 import '../providers/freeze_controller.dart';
 import 'freeze_apps.dart';
+import 'freeze_group_screen.dart';
 import 'sheets/freeze_now_sheet.dart';
 import 'sheets/frost_sheets.dart';
 import 'thaw_screen.dart';
@@ -21,9 +22,15 @@ import 'widgets/fz_widgets.dart';
 
 /// The App freeze hub (fz-hub, fz-hub-empty, fz-hub-standdown): what is frozen
 /// now, the frosts, and the three groups. Pushed from Focus's App freeze pill,
-/// inside the Focus tab so the bar stays.
+/// inside the Focus tab so the bar stays; from Settings it is the full-screen
+/// copy at `Routes.freezeHubSettings`.
 class FreezeHubScreen extends ConsumerStatefulWidget {
-  const FreezeHubScreen({super.key});
+  const FreezeHubScreen({super.key, this.at = Routes.freeze});
+
+  /// Where this hub is mounted. Its group pages are pushed under it, so a hub
+  /// on the root navigator never pushes a page into the shell (see
+  /// `Routes.freezeHubSettings`).
+  final String at;
 
   @override
   ConsumerState<FreezeHubScreen> createState() => _FreezeHubScreenState();
@@ -203,7 +210,7 @@ class _FreezeHubScreenState extends ConsumerState<FreezeHubScreen> {
                   ),
                 ],
                 const FzSec(title: 'Groups', top: 12),
-                _GroupsRow(data: data, apps: apps),
+                _GroupsRow(data: data, apps: apps, at: widget.at),
               ],
             ),
           ),
@@ -336,18 +343,22 @@ class _Card extends StatelessWidget {
 
 /// Always open · Never open · Distracting (FzGroups).
 class _GroupsRow extends StatelessWidget {
-  const _GroupsRow({required this.data, required this.apps});
+  const _GroupsRow({required this.data, required this.apps, required this.at});
 
   final FreezeData data;
   final FreezeApps apps;
 
+  /// The hub's own path; the group pages go under it.
+  final String at;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    String path(FreezeGroup g) => '$at/${FreezeGroupScreen.segmentFor(g)}';
     final groups = [
-      ('Always open', data.groups.alwaysOpen, Routes.freezeAlways),
-      ('Never open', data.groups.neverOpen, Routes.freezeNever),
-      ('Distracting', data.groups.distracting, Routes.freezeDistract),
+      ('Always open', data.groups.alwaysOpen, path(FreezeGroup.alwaysOpen)),
+      ('Never open', data.groups.neverOpen, path(FreezeGroup.neverOpen)),
+      ('Distracting', data.groups.distracting, path(FreezeGroup.distracting)),
     ];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,

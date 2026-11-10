@@ -99,7 +99,11 @@ class AppFreezeSettingsScreen extends ConsumerWidget {
               label: 'Frosts & groups',
               value: down ? 'Paused' : (frostCount == 1 ? '1 frost' : '$frostCount frosts'),
               showChevron: true,
-              onTap: () => unawaited(context.push(data.setUp ? Routes.freeze : Routes.freezeIntro)),
+              // Settings is on the root navigator: its hub is the full-screen one.
+              // `Routes.freeze` is inside the Focus tab's shell, and pushing it
+              // from here built a second shell — a blank page, and a Focus tab
+              // that no longer opened.
+              onTap: () => unawaited(context.push(data.setUp ? Routes.freezeHubSettings : Routes.freezeIntro)),
             ),
             SettingsRow(
               icon: Ic.materialFor('thaw'),
