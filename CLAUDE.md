@@ -341,3 +341,16 @@ Aqademiq haptic architecture: 22 ice patterns, one rule — the sanctuary is qui
 mood → study hours → App freeze → pick apps → Prism → loading. Study hours become
 the Study hours and Wellness time frosts on the phone; `heard_from` and
 `study_hours` go to `POST /onboarding/complete` (contract §2.1).
+
+## Web app (`webapp/`, branch `v2`)
+
+Aqademiq on the web, in the v11 design, on the **same accounts and API as the phone**
+(Supabase Auth + `/functions/v1/api/v1`); a guest plan lives in the browser and is offered
+to the account once on sign-in. Not Flutter web: React from a CDN, compiled by `webapp/build.js`
+from `webapp/src/*.jsx` on top of `prototypes/v11/app.jsx`. `webapp/dist/` is the committed
+static site. Full map, hosting and the Google/Apple redirect setup: `webapp/README.md`.
+- Rebuild `dist/` after any change to `webapp/src/` or `prototypes/v11/app.jsx`; commit both.
+- Device-only features (App freeze, widgets, lock screen, haptics, phone calendars) show the
+  "Get the app" card (`APP_ONLY` in `core.jsx`) rather than a web stand-in.
+- The account store (`acct.jsx`) creates tasks exactly as the phone does (`repeat: none`) so a
+  task edited on one device behaves the same on the other.

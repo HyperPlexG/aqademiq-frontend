@@ -63,3 +63,6 @@ ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 *.keystore
 *.p12
 key.properties
+
+# Web app build dependency
+/webapp/node_modules/

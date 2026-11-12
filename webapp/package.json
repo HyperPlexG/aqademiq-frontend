@@ -1,0 +1,11 @@
+{
+  "name": "aqademiq-webapp",
+  "private": true,
+  "description": "Aqademiq on the web: the v11 design, same accounts as the phone app.",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "@babel/standalone": "7.29.0"
+  }
+}
